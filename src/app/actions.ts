@@ -49,9 +49,23 @@ export async function executeWorkflow(steps: WorkflowStep[], initialContext: any
 
         // Accumulate context from result
         context = { ...context, ...result };
+        
+        // Handle file movement after markdown file creation
+        if (step.action === 'create_markdown_file' && result.success && result.folderId) {
+            const fileIds = context.fileIds || initialContext.fileIds || [];
+            if (fileIds.length > 0 && (step.params?.moveToFolder || step.params?.copyToFolder)) {
+                if (step.params.moveToFolder) {
+                    const moveResult = await moveFilesToFolder(fileIds, result.folderId);
+                    context.filesMoved = moveResult;
+                } else if (step.params.copyToFolder) {
+                    const copyResult = await copyFilesToFolder(fileIds, result.folderId);
+                    context.filesCopied = copyResult;
+                }
+            }
+        }
     }
 
-    return { success: results.every(r => r.success), results };
+    return { success: results.every(r => r.success), results, context };
 }
 
 export async function updateTaskStatus(id: string, status: string) {
@@ -595,6 +609,7 @@ export async function createMarkdownFile(data: { filename: string, content: stri
         }
 
         let targetParentId = data.parentId;
+        let createdFolderId: string | undefined;
 
         if (data.folderName) {
             const folder = await prisma.workspaceFile.create({
@@ -606,6 +621,7 @@ export async function createMarkdownFile(data: { filename: string, content: stri
                 }
             });
             targetParentId = folder.id;
+            createdFolderId = folder.id;
         }
 
         const fileName = data.filename.endsWith('.md') ? data.filename : `${data.filename}.md`;
@@ -623,10 +639,76 @@ export async function createMarkdownFile(data: { filename: string, content: stri
         });
 
         revalidatePath('/');
-        return { success: true, file, createdFolder: !!data.folderName };
+        return { success: true, file, createdFolder: !!data.folderName, folderId: createdFolderId };
     } catch (error) {
         console.error(error);
         return { success: false, message: 'Failed to create markdown file' };
+    }
+}
+
+/**
+ * Move multiple files to a target folder
+ */
+export async function moveFilesToFolder(fileIds: string[], targetFolderId: string) {
+    try {
+        if (!fileIds.length) {
+            return { success: true, moved: 0, message: 'No files to move' };
+        }
+
+        const results = await Promise.all(
+            fileIds.map(id => 
+                prisma.workspaceFile.update({
+                    where: { id },
+                    data: { parentId: targetFolderId }
+                }).catch(() => null)
+            )
+        );
+
+        const movedCount = results.filter(r => r !== null).length;
+        revalidatePath('/');
+        return { success: true, moved: movedCount, message: `Moved ${movedCount} file(s) to target folder` };
+    } catch (error) {
+        console.error('Failed to move files:', error);
+        return { success: false, moved: 0, message: 'Failed to move files' };
+    }
+}
+
+/**
+ * Copy multiple files to a target folder (preserves originals)
+ */
+export async function copyFilesToFolder(fileIds: string[], targetFolderId: string) {
+    try {
+        if (!fileIds.length) {
+            return { success: true, copied: 0, message: 'No files to copy' };
+        }
+
+        const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+        if (!user) throw new Error('User not found');
+
+        const copies = await Promise.all(
+            fileIds.map(async (id) => {
+                const original = await prisma.workspaceFile.findUnique({ where: { id } });
+                if (!original || original.type === 'folder') return null;
+
+                const newName = `${original.name.split('.')[0]} (copy).${original.name.split('.').pop()}`;
+                return await prisma.workspaceFile.create({
+                    data: {
+                        name: newName,
+                        type: original.type,
+                        size: original.size,
+                        userId: user.id,
+                        parentId: targetFolderId
+                    }
+                }).catch(() => null);
+            })
+        );
+
+        const copiedCount = copies.filter(c => c !== null).length;
+        revalidatePath('/');
+        return { success: true, copied: copiedCount, message: `Copied ${copiedCount} file(s) to target folder` };
+    } catch (error) {
+        console.error('Failed to copy files:', error);
+        return { success: false, copied: 0, message: 'Failed to copy files' };
     }
 }
 

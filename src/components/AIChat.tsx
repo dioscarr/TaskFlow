@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, Send, X, Loader2, Paperclip, MessageSquare, Sparkles, BrainCircuit, FileText, Image as ImageIcon, ExternalLink, Settings, Plus, Check, Trash2, ChevronRight, Layout, Edit2, Pin, PinOff, Folder, Search, Receipt, DollarSign, Save } from 'lucide-react';
 import { chatWithAI, getPrompts, createPrompt, updatePrompt, setActivePrompt, deletePrompt, generateSystemPrompt, getIntentRules, getWorkspaceFiles } from '@/app/actions';
-import { createChatSession, getChatSessions, getChatSession, addChatMessage, updateChatSessionTitle } from '@/app/chatActions';
+import { createChatSession, getChatSessions, getChatSession, addChatMessage, updateChatSessionTitle, deleteChatSession } from '@/app/chatActions';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { TOOL_LIBRARY, DEFAULT_TOOLS } from '@/lib/toolLibrary';
@@ -51,6 +51,8 @@ export default function AIChat() {
     const [isPinned, setIsPinned] = useState(false);
     const [activeTool, setActiveTool] = useState<string | null>(null);
     const [historyIndex, setHistoryIndex] = useState(-1);
+    const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+    const [renamingSessionTitle, setRenamingSessionTitle] = useState('');
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -131,6 +133,35 @@ export default function AIChat() {
         setChatSessions(prev => [res.session, ...prev]);
     };
 
+    const handleRenameSession = async (sessionId: string) => {
+        if (!renamingSessionTitle.trim()) {
+            toast.error('Title cannot be empty');
+            return;
+        }
+        await updateChatSessionTitle(sessionId, renamingSessionTitle);
+        setChatSessions(prev => prev.map(s => s.id === sessionId ? { ...s, title: renamingSessionTitle } : s));
+        if (activeSessionId === sessionId) {
+            setActiveSessionTitle(renamingSessionTitle);
+        }
+        setRenamingSessionId(null);
+        setRenamingSessionTitle('');
+        toast.success('Chat renamed');
+    };
+
+    const handleDeleteSession = async (sessionId: string) => {
+        if (!confirm('Are you sure you want to delete this chat? This cannot be undone.')) {
+            return;
+        }
+        await deleteChatSession(sessionId);
+        setChatSessions(prev => prev.filter(s => s.id !== sessionId));
+        if (activeSessionId === sessionId) {
+            setActiveSessionId(null);
+            setMessages([]);
+            setActiveSessionTitle('New Chat');
+        }
+        toast.success('Chat deleted');
+    };
+
     const renderSessionsView = () => (
         <div className="h-full p-6 space-y-4 overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between mb-4">
@@ -151,24 +182,89 @@ export default function AIChat() {
                     const preview = session.messages?.[0]?.content || 'No messages yet';
                     const messageCount = session._count?.messages ?? 0;
                     const isActive = session.id === activeSessionId;
+                    const isRenaming = session.id === renamingSessionId;
 
                     return (
-                        <button
+                        <div
                             key={session.id}
-                            onClick={() => openSession(session.id)}
                             className={cn(
-                                "w-full p-4 rounded-2xl border transition-all text-left",
+                                "w-full p-4 rounded-2xl border transition-all group",
                                 isActive ? "bg-blue-600/10 border-blue-500/30" : "bg-white/5 border-white/5 hover:border-white/10"
                             )}
                         >
-                            <div className="flex items-center justify-between gap-2">
-                                <span className="text-[12px] font-bold text-white truncate">{session.title || 'New Chat'}</span>
-                                <span className="text-[10px] text-white/40">{messageCount}</span>
-                            </div>
-                            <p className="text-[10px] text-white/40 leading-relaxed line-clamp-2 mt-2">
-                                {preview}
-                            </p>
-                        </button>
+                            {isRenaming ? (
+                                <div className="space-y-3">
+                                    <input
+                                        type="text"
+                                        value={renamingSessionTitle}
+                                        onChange={(e) => setRenamingSessionTitle(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleRenameSession(session.id);
+                                            if (e.key === 'Escape') {
+                                                setRenamingSessionId(null);
+                                                setRenamingSessionTitle('');
+                                            }
+                                        }}
+                                        placeholder="Enter new title..."
+                                        className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        autoFocus
+                                    />
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleRenameSession(session.id)}
+                                            className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold transition-all"
+                                        >
+                                            Save
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setRenamingSessionId(null);
+                                                setRenamingSessionTitle('');
+                                            }}
+                                            className="flex-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/60 rounded-lg text-[10px] font-bold transition-all"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                        <button
+                                            onClick={() => openSession(session.id)}
+                                            className="flex-1 text-left"
+                                        >
+                                            <span className="text-[12px] font-bold text-white truncate">{session.title || 'New Chat'}</span>
+                                        </button>
+                                        <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={() => {
+                                                    setRenamingSessionId(session.id);
+                                                    setRenamingSessionTitle(session.title || 'New Chat');
+                                                }}
+                                                className="p-1.5 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white rounded-lg transition-all"
+                                                title="Rename"
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteSession(session.id)}
+                                                className="p-1.5 bg-red-500/10 hover:bg-red-500 text-red-300 hover:text-white rounded-lg transition-all"
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[10px] text-white/40 leading-relaxed line-clamp-2 flex-1">
+                                            {preview}
+                                        </p>
+                                        <span className="text-[10px] text-white/40 ml-2 shrink-0">{messageCount}</span>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     );
                 })}
             </div>
