@@ -1,0 +1,171 @@
+{
+  "node": {
+    "409eaf763d3b720c6ceee864a801211fdabfb9328f": {
+      "workers": {
+        "app/page": {
+          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "deleteTask",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "deleteTask"
+    },
+    "6036adab841a1208210e6b77555fb31f86fccc8de0": {
+      "workers": {
+        "app/page": {
+          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "updateTaskStatus",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "updateTaskStatus"
+    },
+    "404c94fdde79678f687fe6e145c9125183a0492331": {
+      "workers": {
+        "app/page": {
+          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "deleteFile",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "deleteFile"
+    },
+    "40f88b9485509e0f3578873a851e23b7febe4d423a": {
+      "workers": {
+        "app/page": {
+          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "createFile",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "createFile"
+    },
+    "401c0a725fc3780f50e6bbcc64ad9211da5fed6535": {
+      "workers": {
+        "app/page": {
+          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "uploadFile",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "uploadFile"
+    },
+    "60ac834eb5dc13ecb9420d1033c6aa7b175515deae": {
+      "workers": {
+        "app/page": {
+          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "moveFile",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "moveFile"
+    },
+    "60ebd62f829cb1a1ba299aa2f77c3948a8042b0507": {
+      "workers": {
+        "app/page": {
+          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "renameFile",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "renameFile"
+    },
+    "40e53ee1e528cbd6712c61e6d14deaa5a8dcdc2cc3": {
+      "workers": {
+        "app/page": {
+          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "toggleFileShare",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "toggleFileShare"
+    },
+    "406ce59f5ef05e22b2405e9e02b09ea415009e7f41": {
+      "workers": {
+        "app/page": {
+          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "reorderFiles",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "reorderFiles"
+    },
+    "4000960904e166730c01c0fc76606c1ac94f3e570f": {
+      "workers": {
+        "app/page": {
+          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "createTask",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "createTask"
+    },
+    "404e54b06f011516ded8f500f3d2d71a9e27eb0829": {
+      "workers": {
+        "app/page": {
+          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "simulateIncomingEmail",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "simulateIncomingEmail"
+    }
+  },
+  "edge": {},
+  "encryptionKey": "Es6sVirhBwwR5CD4nyGWrRZ8HqyNprZ2X4rHUMFmgoA="
+}

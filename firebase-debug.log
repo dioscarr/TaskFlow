@@ -1,0 +1,702 @@
+[debug] [2026-01-24T05:23:13.724Z] ----------------------------------------------------------------------
+[debug] [2026-01-24T05:23:13.726Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Drod\Source\a\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-01-24T05:23:13.727Z] CLI Version:   15.4.0
+[debug] [2026-01-24T05:23:13.727Z] Platform:      win32
+[debug] [2026-01-24T05:23:13.727Z] Node Version:  v23.9.0
+[debug] [2026-01-24T05:23:13.727Z] Time:          Fri Jan 23 2026 21:23:13 GMT-0800 (Pacific Standard Time)
+[debug] [2026-01-24T05:23:13.727Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-01-24T05:23:15.381Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-24T05:23:15.381Z] > authorizing via signed-in user (dioscarr@gmail.com)
+[debug] [2026-01-24T05:23:15.381Z] [iam] checking project taskflow-demo-app for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-01-24T05:23:15.382Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:15.382Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:15.383Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions [none]
+[debug] [2026-01-24T05:23:15.383Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions x-goog-quota-user=projects/taskflow-demo-app
+[debug] [2026-01-24T05:23:15.383Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:23:15.612Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions 200
+[debug] [2026-01-24T05:23:15.613Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:23:15.613Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:15.613Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:15.613Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app [none]
+[debug] [2026-01-24T05:23:15.979Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app 200
+[debug] [2026-01-24T05:23:15.979Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app {"projectId":"taskflow-demo-app","projectNumber":"780037848343","displayName":"taskflow-demo-app","name":"projects/taskflow-demo-app","resources":{"hostingSite":"taskflow-demo-app"},"state":"ACTIVE","etag":"1_3e960a26-0601-4ddb-a353-602a15955a37"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 15.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-01-24T05:23:24.614Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:24.614Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:24.614Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:23:24.984Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:23:24.985Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[info] ▲ Next.js 16.1.4 (Turbopack)
+
+[info] - Environments: .env
+- Experiments (use with caution):
+  · serverActions
+
+
+[info]   Creating an optimized production build ...
+
+[info] ✓ Compiled successfully in 2.4s
+
+[info]   Running TypeScript ...
+
+[info]   Collecting page data using 7 workers ...
+
+[info]   Generating static pages using 7 workers (0/5) ...
+
+[info]   Generating static pages using 7 workers (1/5) 
+
+[info]   Generating static pages using 7 workers (2/5) 
+
+[info]   Generating static pages using 7 workers (3/5) 
+
+[info] ✓ Generating static pages using 7 workers (5/5) in 702.2ms
+
+[info]   Finalizing page optimization ...
+
+[info] 
+
+[info] Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/[...nextauth]
+└ ○ /test-delete
+
+
+
+[info] ○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • non-static component /api/auth/[...nextauth]/route
+[info]  • route with server action /
+[info]  • route with server action /test-delete
+[info] 
+[debug] [2026-01-24T05:23:35.128Z] skipping / due to server action
+[debug] [2026-01-24T05:23:35.128Z] skipping /test-delete due to server action
+[debug] [2026-01-24T05:23:35.229Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:35.229Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:35.229Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:23:35.598Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:23:35.599Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-01-24T05:23:39.974Z] Error: EPERM: operation not permitted, symlink 'C:\Users\Drod\Source\a\node_modules\@prisma\client' -> 'C:\Users\Drod\Source\a\.firebase\taskflow-demo-app\functions\.next\node_modules\@prisma\client-2c3a283f134fdcb6'
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2026-01-24T05:23:45.937Z] ----------------------------------------------------------------------
+[debug] [2026-01-24T05:23:45.940Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Drod\Source\a\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting --debug
+[debug] [2026-01-24T05:23:45.940Z] CLI Version:   15.4.0
+[debug] [2026-01-24T05:23:45.940Z] Platform:      win32
+[debug] [2026-01-24T05:23:45.940Z] Node Version:  v23.9.0
+[debug] [2026-01-24T05:23:45.941Z] Time:          Fri Jan 23 2026 21:23:45 GMT-0800 (Pacific Standard Time)
+[debug] [2026-01-24T05:23:45.941Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-01-24T05:23:47.531Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-24T05:23:47.532Z] > authorizing via signed-in user (dioscarr@gmail.com)
+[debug] [2026-01-24T05:23:47.532Z] [iam] checking project taskflow-demo-app for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-01-24T05:23:47.533Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:47.533Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:47.534Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions [none]
+[debug] [2026-01-24T05:23:47.534Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions x-goog-quota-user=projects/taskflow-demo-app
+[debug] [2026-01-24T05:23:47.535Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:23:47.823Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions 200
+[debug] [2026-01-24T05:23:47.823Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:23:47.824Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:47.824Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:47.825Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app [none]
+[debug] [2026-01-24T05:23:48.186Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app 200
+[debug] [2026-01-24T05:23:48.187Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app {"projectId":"taskflow-demo-app","projectNumber":"780037848343","displayName":"taskflow-demo-app","name":"projects/taskflow-demo-app","resources":{"hostingSite":"taskflow-demo-app"},"state":"ACTIVE","etag":"1_3e960a26-0601-4ddb-a353-602a15955a37"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 15.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-01-24T05:23:56.629Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:56.629Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:23:56.630Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:23:56.995Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:23:56.995Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[info] ▲ Next.js 16.1.4 (Turbopack)
+
+[info] - Environments: .env
+- Experiments (use with caution):
+  · serverActions
+
+
+[info]   Creating an optimized production build ...
+
+[info] 
+
+[info] [207.96ms] [@tailwindcss/postcss] src\app\globals.css
+[  0.08ms]   ↳ Quick bail check
+[ 31.63ms]   ↳ Setup compiler
+[  0.50ms]     ↳ PostCSS AST -> Tailwind CSS AST
+[ 31.11ms]     ↳ Create compiler
+[  0.18ms]   ↳ Register full rebuild paths
+[  6.89ms]   ↳ Setup scanner
+[ 37.49ms]   ↳ Scan for candidates
+[ 34.05ms]   ↳ Register dependency messages
+[ 69.36ms]   ↳ Build utilities
+[ 25.14ms]   ↳ Optimization
+[  1.02ms]     ↳ AST -> CSS
+
+[info] [ 14.01ms]     ↳ Lightning CSS
+[ 10.06ms]     ↳ CSS -> PostCSS AST
+[  2.53ms]   ↳ Update PostCSS AST
+
+
+[info] ✓ Compiled successfully in 2.7s
+
+[info]   Running TypeScript ...
+
+[info]   Collecting page data using 7 workers ...
+
+[info]   Generating static pages using 7 workers (0/5) ...
+
+[info]   Generating static pages using 7 workers (1/5) 
+
+[info]   Generating static pages using 7 workers (2/5) 
+
+[info]   Generating static pages using 7 workers (3/5) 
+
+[info] ✓ Generating static pages using 7 workers (5/5) in 717.2ms
+
+[info]   Finalizing page optimization ...
+
+[info] 
+
+[info] Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/[...nextauth]
+└ ○ /test-delete
+
+
+[info] 
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • non-static component /api/auth/[...nextauth]/route
+[info]  • route with server action /
+[info]  • route with server action /test-delete
+[info] 
+[debug] [2026-01-24T05:24:07.741Z] skipping / due to server action
+[debug] [2026-01-24T05:24:07.741Z] skipping /test-delete due to server action
+[debug] [2026-01-24T05:24:08.042Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:24:08.042Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:24:08.042Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:24:08.388Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:24:08.388Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-01-24T05:24:10.449Z] Error: EPERM: operation not permitted, symlink 'C:\Users\Drod\Source\a\node_modules\@prisma\client' -> 'C:\Users\Drod\Source\a\.firebase\taskflow-demo-app\functions\.next\node_modules\@prisma\client-2c3a283f134fdcb6'
+[debug] [2026-01-24T05:24:32.420Z] ----------------------------------------------------------------------
+[debug] [2026-01-24T05:24:32.422Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Drod\Source\a\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-01-24T05:24:32.423Z] CLI Version:   15.4.0
+[debug] [2026-01-24T05:24:32.423Z] Platform:      win32
+[debug] [2026-01-24T05:24:32.423Z] Node Version:  v23.9.0
+[debug] [2026-01-24T05:24:32.423Z] Time:          Fri Jan 23 2026 21:24:32 GMT-0800 (Pacific Standard Time)
+[debug] [2026-01-24T05:24:32.424Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-01-24T05:24:33.961Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-24T05:24:33.961Z] > authorizing via signed-in user (dioscarr@gmail.com)
+[debug] [2026-01-24T05:24:33.961Z] [iam] checking project taskflow-demo-app for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-01-24T05:24:33.962Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:24:33.962Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:24:33.963Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions [none]
+[debug] [2026-01-24T05:24:33.963Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions x-goog-quota-user=projects/taskflow-demo-app
+[debug] [2026-01-24T05:24:33.963Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:24:34.155Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions 200
+[debug] [2026-01-24T05:24:34.155Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:24:34.156Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:24:34.156Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:24:34.156Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app [none]
+[debug] [2026-01-24T05:24:34.425Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app 200
+[debug] [2026-01-24T05:24:34.425Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app {"projectId":"taskflow-demo-app","projectNumber":"780037848343","displayName":"taskflow-demo-app","name":"projects/taskflow-demo-app","resources":{"hostingSite":"taskflow-demo-app"},"state":"ACTIVE","etag":"1_3e960a26-0601-4ddb-a353-602a15955a37"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 15.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-01-24T05:24:42.814Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:24:42.814Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:24:42.814Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:24:43.202Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:24:43.202Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[info] ▲ Next.js 16.1.4 (Turbopack)
+
+[info] - Environments: .env
+- Experiments (use with caution):
+  · serverActions
+
+
+[info]   Creating an optimized production build ...
+
+[info] ✓ Compiled successfully in 2.7s
+
+[info]   Running TypeScript ...
+
+[info]   Collecting page data using 7 workers ...
+
+[info]   Generating static pages using 7 workers (0/5) ...
+
+[info]   Generating static pages using 7 workers (1/5) 
+
+[info]   Generating static pages using 7 workers (2/5) 
+
+[info]   Generating static pages using 7 workers (3/5) 
+
+[info] ✓ Generating static pages using 7 workers (5/5) in 643.3ms
+
+[info]   Finalizing page optimization ...
+
+[info] 
+
+[info] Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/[...nextauth]
+└ ○ /test-delete
+
+
+
+[info] ○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • non-static component /api/auth/[...nextauth]/route
+[info]  • route with server action /
+[info]  • route with server action /test-delete
+[info] 
+[debug] [2026-01-24T05:24:53.641Z] skipping / due to server action
+[debug] [2026-01-24T05:24:53.641Z] skipping /test-delete due to server action
+[debug] [2026-01-24T05:24:53.720Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:24:53.721Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:24:53.721Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:24:54.075Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:24:54.076Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-01-24T05:24:55.916Z] Error: EPERM: operation not permitted, symlink 'C:\Users\Drod\Source\a\node_modules\@prisma\client' -> 'C:\Users\Drod\Source\a\.firebase\taskflow-demo-app\functions\.next\node_modules\@prisma\client-2c3a283f134fdcb6'
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2026-01-24T05:27:11.257Z] ----------------------------------------------------------------------
+[debug] [2026-01-24T05:27:11.260Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Drod\Source\a\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-01-24T05:27:11.260Z] CLI Version:   15.4.0
+[debug] [2026-01-24T05:27:11.260Z] Platform:      win32
+[debug] [2026-01-24T05:27:11.260Z] Node Version:  v23.9.0
+[debug] [2026-01-24T05:27:11.260Z] Time:          Fri Jan 23 2026 21:27:11 GMT-0800 (Pacific Standard Time)
+[debug] [2026-01-24T05:27:11.260Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-01-24T05:27:12.750Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-24T05:27:12.751Z] > authorizing via signed-in user (dioscarr@gmail.com)
+[debug] [2026-01-24T05:27:12.751Z] [iam] checking project taskflow-demo-app for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-01-24T05:27:12.752Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:12.752Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:12.753Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions [none]
+[debug] [2026-01-24T05:27:12.753Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions x-goog-quota-user=projects/taskflow-demo-app
+[debug] [2026-01-24T05:27:12.753Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:27:13.084Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions 200
+[debug] [2026-01-24T05:27:13.084Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:27:13.084Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:13.084Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:13.085Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app [none]
+[debug] [2026-01-24T05:27:13.482Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app 200
+[debug] [2026-01-24T05:27:13.482Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app {"projectId":"taskflow-demo-app","projectNumber":"780037848343","displayName":"taskflow-demo-app","name":"projects/taskflow-demo-app","resources":{"hostingSite":"taskflow-demo-app"},"state":"ACTIVE","etag":"1_3e960a26-0601-4ddb-a353-602a15955a37"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 15.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-01-24T05:27:22.006Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:22.006Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:22.006Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:27:22.385Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:27:22.385Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[info] ▲ Next.js 16.1.4 (Turbopack)
+
+[info] - Environments: .env
+- Experiments (use with caution):
+  · serverActions
+
+
+[info]   Creating an optimized production build ...
+
+[info] ✓ Compiled successfully in 2.6s
+
+[info]   Running TypeScript ...
+
+[info]   Collecting page data using 7 workers ...
+
+[info]   Generating static pages using 7 workers (0/5) ...
+
+[info]   Generating static pages using 7 workers (1/5) 
+
+[info]   Generating static pages using 7 workers (2/5) 
+
+[info]   Generating static pages using 7 workers (3/5) 
+
+[info] ✓ Generating static pages using 7 workers (5/5) in 679.5ms
+
+[info]   Finalizing page optimization ...
+
+[info] 
+
+[info] Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/[...nextauth]
+└ ○ /test-delete
+
+
+
+[info] ○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • non-static component /api/auth/[...nextauth]/route
+[info]  • route with server action /
+[info]  • route with server action /test-delete
+[info] 
+[debug] [2026-01-24T05:27:32.827Z] skipping / due to server action
+[debug] [2026-01-24T05:27:32.827Z] skipping /test-delete due to server action
+[debug] [2026-01-24T05:27:33.222Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:33.222Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:33.222Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:27:33.630Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:27:33.630Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-01-24T05:27:33.917Z] Error: EPERM: operation not permitted, symlink 'C:\Users\Drod\Source\a\node_modules\@prisma\client' -> 'C:\Users\Drod\Source\a\.firebase\taskflow-demo-app\functions\.next\node_modules\@prisma\client-2c3a283f134fdcb6'
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2026-01-24T05:27:40.115Z] ----------------------------------------------------------------------
+[debug] [2026-01-24T05:27:40.118Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Drod\Source\a\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting --debug
+[debug] [2026-01-24T05:27:40.118Z] CLI Version:   15.4.0
+[debug] [2026-01-24T05:27:40.118Z] Platform:      win32
+[debug] [2026-01-24T05:27:40.118Z] Node Version:  v23.9.0
+[debug] [2026-01-24T05:27:40.119Z] Time:          Fri Jan 23 2026 21:27:40 GMT-0800 (Pacific Standard Time)
+[debug] [2026-01-24T05:27:40.119Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-01-24T05:27:41.603Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-24T05:27:41.604Z] > authorizing via signed-in user (dioscarr@gmail.com)
+[debug] [2026-01-24T05:27:41.604Z] [iam] checking project taskflow-demo-app for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-01-24T05:27:41.605Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:41.606Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:41.607Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions [none]
+[debug] [2026-01-24T05:27:41.607Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions x-goog-quota-user=projects/taskflow-demo-app
+[debug] [2026-01-24T05:27:41.607Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:27:41.917Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions 200
+[debug] [2026-01-24T05:27:41.918Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:27:41.918Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:41.918Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:41.919Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app [none]
+[debug] [2026-01-24T05:27:42.304Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app 200
+[debug] [2026-01-24T05:27:42.305Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app {"projectId":"taskflow-demo-app","projectNumber":"780037848343","displayName":"taskflow-demo-app","name":"projects/taskflow-demo-app","resources":{"hostingSite":"taskflow-demo-app"},"state":"ACTIVE","etag":"1_3e960a26-0601-4ddb-a353-602a15955a37"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 15.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-01-24T05:27:50.488Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:50.489Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:27:50.489Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:27:50.844Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:27:50.845Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[info] ▲ Next.js 16.1.4 (Turbopack)
+
+[info] - Environments: .env
+- Experiments (use with caution):
+  · serverActions
+
+
+[info]   Creating an optimized production build ...
+
+[info] 
+
+[info] [190.64ms] [@tailwindcss/postcss] src\app\globals.css
+[  0.08ms]   ↳ Quick bail check
+[ 34.44ms]   ↳ Setup compiler
+[  0.47ms]     ↳ PostCSS AST -> Tailwind CSS AST
+[ 33.94ms]     ↳ Create compiler
+[  0.24ms]   ↳ Register full rebuild paths
+[  1.63ms]   ↳ Setup scanner
+[ 27.61ms]   ↳ Scan for candidates
+[ 35.03ms]   ↳ Register dependency messages
+[ 70.29ms]   ↳ Build utilities
+[ 17.77ms]   ↳ Optimization
+[  1.54ms]     ↳ AST -> CSS
+[ 10.14ms]     ↳ Lightning CSS
+[  6.05ms]     ↳ CSS -> PostCSS AST
+[  3.01ms]   ↳ Update PostCSS AST
+
+
+[info] ✓ Compiled successfully in 2.4s
+
+[info]   Running TypeScript ...
+
+[info]   Collecting page data using 7 workers ...
+
+[info]   Generating static pages using 7 workers (0/5) ...
+
+[info]   Generating static pages using 7 workers (1/5) 
+
+[info]   Generating static pages using 7 workers (2/5) 
+
+[info]   Generating static pages using 7 workers (3/5) 
+
+[info] ✓ Generating static pages using 7 workers (5/5) in 660.9ms
+
+[info]   Finalizing page optimization ...
+
+[info] 
+
+[info] Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/[...nextauth]
+└ ○ /test-delete
+
+
+
+[info] ○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • non-static component /api/auth/[...nextauth]/route
+[info]  • route with server action /
+[info]  • route with server action /test-delete
+[info] 
+[debug] [2026-01-24T05:28:00.968Z] skipping / due to server action
+[debug] [2026-01-24T05:28:00.968Z] skipping /test-delete due to server action
+[debug] [2026-01-24T05:28:01.066Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:28:01.067Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:28:01.067Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:28:01.479Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:28:01.480Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-01-24T05:28:01.748Z] Error: EPERM: operation not permitted, symlink 'C:\Users\Drod\Source\a\node_modules\@prisma\client' -> 'C:\Users\Drod\Source\a\.firebase\taskflow-demo-app\functions\.next\node_modules\@prisma\client-2c3a283f134fdcb6'
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2026-01-24T05:39:51.498Z] ----------------------------------------------------------------------
+[debug] [2026-01-24T05:39:51.500Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Drod\Source\a\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-01-24T05:39:51.501Z] CLI Version:   15.4.0
+[debug] [2026-01-24T05:39:51.501Z] Platform:      win32
+[debug] [2026-01-24T05:39:51.501Z] Node Version:  v23.9.0
+[debug] [2026-01-24T05:39:51.501Z] Time:          Fri Jan 23 2026 21:39:51 GMT-0800 (Pacific Standard Time)
+[debug] [2026-01-24T05:39:51.501Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-01-24T05:39:53.078Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-24T05:39:53.079Z] > authorizing via signed-in user (dioscarr@gmail.com)
+[debug] [2026-01-24T05:39:53.079Z] [iam] checking project taskflow-demo-app for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-01-24T05:39:53.080Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:39:53.080Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:39:53.081Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions [none]
+[debug] [2026-01-24T05:39:53.081Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions x-goog-quota-user=projects/taskflow-demo-app
+[debug] [2026-01-24T05:39:53.081Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:39:53.435Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions 200
+[debug] [2026-01-24T05:39:53.435Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:39:53.436Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:39:53.436Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:39:53.436Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app [none]
+[debug] [2026-01-24T05:39:53.812Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app 200
+[debug] [2026-01-24T05:39:53.812Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app {"projectId":"taskflow-demo-app","projectNumber":"780037848343","displayName":"taskflow-demo-app","name":"projects/taskflow-demo-app","resources":{"hostingSite":"taskflow-demo-app"},"state":"ACTIVE","etag":"1_3e960a26-0601-4ddb-a353-602a15955a37"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 15.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-01-24T05:40:02.024Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:40:02.024Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:40:02.024Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:40:02.414Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:40:02.414Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[info] ▲ Next.js 16.1.4 (Turbopack)
+
+[info] - Environments: .env
+- Experiments (use with caution):
+  · serverActions
+
+
+[info]   Creating an optimized production build ...
+
+[info] ✓ Compiled successfully in 2.6s
+
+[info]   Running TypeScript ...
+
+[info]   Collecting page data using 7 workers ...
+
+[info]   Generating static pages using 7 workers (0/5) ...
+
+[info]   Generating static pages using 7 workers (1/5) 
+
+[info]   Generating static pages using 7 workers (2/5) 
+
+[info]   Generating static pages using 7 workers (3/5) 
+
+[info] ✓ Generating static pages using 7 workers (5/5) in 2.7s
+
+[info]   Finalizing page optimization ...
+
+[info] 
+
+[info] Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/[...nextauth]
+└ ○ /test-delete
+
+
+[info] 
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • non-static component /api/auth/[...nextauth]/route
+[info]  • route with server action /
+[info]  • route with server action /test-delete
+[info] 
+[debug] [2026-01-24T05:40:15.805Z] skipping / due to server action
+[debug] [2026-01-24T05:40:15.805Z] skipping /test-delete due to server action
+[debug] [2026-01-24T05:40:15.916Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:40:15.916Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:40:15.917Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:40:16.328Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:40:16.329Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-01-24T05:40:16.847Z] Error: EPERM: operation not permitted, symlink 'C:\Users\Drod\Source\a\node_modules\@prisma\client' -> 'C:\Users\Drod\Source\a\.firebase\taskflow-demo-app\functions\.next\node_modules\@prisma\client-2c3a283f134fdcb6'
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2026-01-24T05:40:27.606Z] ----------------------------------------------------------------------
+[debug] [2026-01-24T05:40:27.608Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Drod\Source\a\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-01-24T05:40:27.609Z] CLI Version:   15.4.0
+[debug] [2026-01-24T05:40:27.609Z] Platform:      win32
+[debug] [2026-01-24T05:40:27.609Z] Node Version:  v23.9.0
+[debug] [2026-01-24T05:40:27.609Z] Time:          Fri Jan 23 2026 21:40:27 GMT-0800 (Pacific Standard Time)
+[debug] [2026-01-24T05:40:27.609Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-01-24T05:40:29.197Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-24T05:40:29.197Z] > authorizing via signed-in user (dioscarr@gmail.com)
+[debug] [2026-01-24T05:40:29.198Z] [iam] checking project taskflow-demo-app for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-01-24T05:40:29.198Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:40:29.199Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:40:29.199Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions [none]
+[debug] [2026-01-24T05:40:29.199Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions x-goog-quota-user=projects/taskflow-demo-app
+[debug] [2026-01-24T05:40:29.200Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:40:29.512Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions 200
+[debug] [2026-01-24T05:40:29.512Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskflow-demo-app:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-01-24T05:40:29.512Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:40:29.512Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:40:29.513Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app [none]
+[debug] [2026-01-24T05:40:29.897Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app 200
+[debug] [2026-01-24T05:40:29.897Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/taskflow-demo-app {"projectId":"taskflow-demo-app","projectNumber":"780037848343","displayName":"taskflow-demo-app","name":"projects/taskflow-demo-app","resources":{"hostingSite":"taskflow-demo-app"},"state":"ACTIVE","etag":"1_3e960a26-0601-4ddb-a353-602a15955a37"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 15.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-01-24T05:40:38.462Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:40:38.462Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:40:38.462Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:40:38.798Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:40:38.798Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[info] ▲ Next.js 16.1.4 (Turbopack)
+
+[info] - Environments: .env
+- Experiments (use with caution):
+  · serverActions
+
+
+[info]   Creating an optimized production build ...
+
+[info] ✓ Compiled successfully in 3.0s
+
+[info]   Running TypeScript ...
+
+[info]   Collecting page data using 7 workers ...
+
+[info]   Generating static pages using 7 workers (0/5) ...
+
+[info]   Generating static pages using 7 workers (1/5) 
+
+[info]   Generating static pages using 7 workers (2/5) 
+
+[info]   Generating static pages using 7 workers (3/5) 
+
+[info] ✓ Generating static pages using 7 workers (5/5) in 2.7s
+
+[info]   Finalizing page optimization ...
+
+[info] 
+
+[info] Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/[...nextauth]
+└ ○ /test-delete
+
+
+
+[info] ○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • non-static component /api/auth/[...nextauth]/route
+[info]  • route with server action /
+[info]  • route with server action /test-delete
+[info] 
+[debug] [2026-01-24T05:40:51.621Z] skipping / due to server action
+[debug] [2026-01-24T05:40:51.621Z] skipping /test-delete due to server action
+[debug] [2026-01-24T05:40:51.772Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:40:51.773Z] Checked if tokens are valid: true, expires at: 1769235660945
+[debug] [2026-01-24T05:40:51.773Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app [none]
+[debug] [2026-01-24T05:40:52.112Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app 200
+[debug] [2026-01-24T05:40:52.112Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/taskflow-demo-app/sites/taskflow-demo-app {"name":"projects/taskflow-demo-app/sites/taskflow-demo-app","defaultUrl":"https://taskflow-demo-app.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-01-24T05:40:52.614Z] Error: EPERM: operation not permitted, symlink 'C:\Users\Drod\Source\a\node_modules\@prisma\client' -> 'C:\Users\Drod\Source\a\.firebase\taskflow-demo-app\functions\.next\node_modules\@prisma\client-2c3a283f134fdcb6'
+[error] 
+[error] Error: An unexpected error has occurred.

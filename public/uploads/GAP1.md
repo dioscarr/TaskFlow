@@ -1,0 +1,6 @@
+| Field                     | Value                                                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| RNC                       | 101019921                                                                                                                      |
+| DGII Verification URL     | [https://dgii.gov.do/app/WebApps/ConsultasWeb2/ConsultasWeb/consultas/rnc.aspx](https://dgii.gov.do/app/WebApps/ConsultasWeb2/ConsultasWeb/consultas/rnc.aspx) |
+| NCF                       | B011940611500000000                                                                                                                      |
+| ITBIS                     | 513.07                                                                                                                              |

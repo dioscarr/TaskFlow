@@ -1,0 +1,12 @@
+Dear Redwood Materials Hiring Team,
+
+I was incredibly excited to discover the DevOps Software Engineer position at Redwood Materials. The opportunity to contribute to a company so clearly dedicated to revolutionizing energy storage and building a sustainable future, particularly through innovative approaches to battery recycling and material production, is truly inspiring. I've been following Redwood's progress with great interest, and I'm eager to leverage my skills to support your mission of localizing a global battery supply chain.
+
+My experience in building and managing infrastructure in hybrid AWS and Kubernetes environments aligns perfectly with the requirements outlined in the job description. As you can see from my resume, I have a proven track record of using infrastructure-as-code tools to create, manage, and support both self-hosted and AWS EKS-based Kubernetes clusters. Furthermore, my experience with designing and deploying scalable and reliable applications, particularly in previous roles involving predictive analytics and real-time data processing, would allow me to immediately contribute to the development of the web integrations, machine controllers, and battery-based energy products mentioned. I find the prospect of building green field software experiences that will have a significant impact on Redwood's operations and ability to scale AMAZING.
+
+I am particularly drawn to the opportunity to work on applications that span from web integrations with auto manufacturers to predictive machine controllers. This breadth of application aligns with my passion for tackling diverse technical challenges and contributing to a company that's not afraid to push boundaries. I am confident that my experience with AWS, Kubernetes, and infrastructure-as-code, coupled with my dedication to building scalable and reliable systems, makes me a strong candidate to contribute to your team's success.
+
+Thank you for considering my application. I am eager to learn more about this opportunity and discuss how my skills and experience can benefit Redwood Materials. I am available for an interview at your earliest convenience. RMjYwMzo3MDgwOjQzZjA6NzI5MDpmMDBkOmU2NmY6M2EyZDpjYmVl
+
+---
+✨ Generated with Google AI Gemini (gemini-2.0-flash-exp)

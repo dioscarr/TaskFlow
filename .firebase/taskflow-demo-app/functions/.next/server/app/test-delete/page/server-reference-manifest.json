@@ -1,0 +1,35 @@
+{
+  "node": {
+    "40fd0f8f255289daf72cc1280255ae52934abf34e6": {
+      "workers": {
+        "app/test-delete/page": {
+          "moduleId": 23848,
+          "async": false,
+          "exportedName": "deleteTask",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/test-delete/page": "action-browser"
+      },
+      "exportedName": "deleteTask",
+      "filename": "src/app/actions.ts"
+    },
+    "4063451e9e270eb371b12c68a9a1751324298d14f2": {
+      "workers": {
+        "app/test-delete/page": {
+          "moduleId": 23848,
+          "async": false,
+          "exportedName": "deleteFile",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/test-delete/page": "action-browser"
+      },
+      "exportedName": "deleteFile",
+      "filename": "src/app/actions.ts"
+    }
+  },
+  "edge": {}
+}

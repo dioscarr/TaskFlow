@@ -1,0 +1,55 @@
+// PATCH FOR AIChat.tsx
+// This file contains the changes needed to fix markdown table rendering
+
+// ============================================
+// STEP 1: Add import at the top (after line 13)
+// ============================================
+// Add this line after: import remarkGfm from 'remark-gfm';
+
+import { normalizeMarkdown, hasMarkdownTable } from '@/utils/markdownUtils';
+
+// ============================================
+// STEP 2: Remove the old normalizeMarkdown function (lines 21-32)
+// ============================================
+// DELETE these lines:
+/*
+const normalizeMarkdown = (text: string) => {
+    // 1. Remove blank lines within potential markdown tables
+    let normalized = text.replace(/(\\|[^\\n]+\\|)\\n\\s*\\n(\\|[^\\n]+\\|)/g, '$1\\n$2');
+    
+    // 2. Fix broken markdown links (newlines between [label] and (url))
+    normalized = normalized.replace(/\\[([^\\]]+)\\]\\s*\\n\\s*\\(([^)]+)\\)/g, '[$1]($2)');
+    
+    // 3. Fix broken URLs (newlines within the parentheses of a markdown link)
+    normalized = normalized.replace(/\\((https?:\\/\\/[^\\s)]+)\\n\\s*([^\\s)]+)\\)/g, '($1$2)');
+    
+    return normalized;
+};
+*/
+
+// ============================================
+// STEP 3: Update the "Save as Markdown" button condition (around line 280)
+// ============================================
+// FIND this line:
+// {msg.role === 'ai' && msg.content.includes('|') && msg.content.includes('---') && (
+
+// REPLACE with:
+{msg.role === 'ai' && hasMarkdownTable(msg.content) && (
+
+// ============================================
+// STEP 4: Do the same for the floating chat view (around line 500)
+// ============================================
+// FIND this line:
+// {msg.role === 'ai' && msg.content.includes('|') && msg.content.includes('---') && (
+
+// REPLACE with:
+{msg.role === 'ai' && hasMarkdownTable(msg.content) && (
+
+// ============================================
+// VERIFICATION
+// ============================================
+// After making these changes:
+// 1. Save the file
+// 2. The dev server should auto-reload
+// 3. Check the browser console for the new debug logs (🔍 and ✅)
+// 4. Test by asking AI to create a table

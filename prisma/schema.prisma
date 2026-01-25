@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  tasks         Task[]
+  workflows     Workflow[]
+  files         WorkspaceFile[]
+  prompts       AIPromptSet[]
+  alegraBills   AlegraBill[]
+  chatSessions  ChatSession[]
+  intentRules   IntentRule[]
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model IntentRule {
+  id        String   @id @default(cuid())
+  name      String
+  action    String
+  keywords  String[]
+  enabled   Boolean  @default(true)
+  config    Json?
+  steps     Json?    // Array of WorkflowStep: { id, action, params }
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+ 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+ 
+  @@unique([identifier, token])
+}
+
+// Application Specific Models
+
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  status      String   @default("pending") // pending, completed
+  dueDate     DateTime?
+  
+  // Link to original email if applicable
+  emailId     String?  // GMail Message ID
+  emailSource String?  // JSON blob of email metadata
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Workflow {
+  id        String   @id @default(cuid())
+  name      String
+  trigger   String   // e.g., "manual", "email_keyword"
+  action    String   // e.g., "create_sheet", "calendar_event"
+  config    String?  // JSON config for the action
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WorkspaceFile {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   // folder, pdf, image, etc.
+  size      String?
+  items     String?  // For folders
+  shared    Boolean  @default(false)
+  order     Float    @default(0)
+
+  parentId  String?
+  parent    WorkspaceFile?    @relation("FolderContents", fields: [parentId], references: [id], onDelete: Cascade)
+  children  WorkspaceFile[]   @relation("FolderContents")
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  alegraBill AlegraBill?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AIPromptSet {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  description     String?
+  prompt          String   @db.Text
+  isActive        Boolean  @default(false)
+  tools           String[] @default([]) // Array of tool IDs from tool library
+  workflows       Json?    // Array of WorkflowStep
+  triggerKeywords String[] @default([]) // Keywords to trigger the workflow
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AlegraBill {
+  id              String   @id @default(cuid())
+  date            String
+  dueDate         String
+  providerName    String
+  providerId      String?
+  identification  String?
+  ncf             String?
+  items           String   @db.Text // JSON blob
+  observations    String?  @db.Text
+  totalAmount     Float
+  status          String   @default("draft") // draft, exported
+  
+  // DGII Verification
+  isVerified      Boolean  @default(false)
+  verifiedName    String?
+  ncfType         String?  // 01-10 classification
+
+  fileId          String?  @unique
+  file            WorkspaceFile? @relation(fields: [fileId], references: [id])
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ChatSession {
+  id          String   @id @default(cuid())
+  title       String   @default("New Chat")
+  messages    ChatMessage[]
+  
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ChatMessage {
+  id          String   @id @default(cuid())
+  role        String   // 'user' or 'ai'
+  content     String   @db.Text
+  fileIds     String[] @default([]) // Array of attached file IDs
+  toolUsed    String?  // Tool that was executed (if any)
+  
+  sessionId   String
+  session     ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+}
