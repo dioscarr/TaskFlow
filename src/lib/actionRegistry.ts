@@ -37,9 +37,12 @@ export function getAllActions(customIntents: IntentRuleDefinition[] = []): Actio
     // Add extra common internal processes
     const extraIntents: ActionDefinition[] = [
         { id: 'create_markdown_file', name: 'Save to Markdown', description: 'Creates a markdown file and saves it to a folder', type: 'intent', category: 'Internal Processes' },
+        { id: 'highlight_file', name: 'Highlight File', description: 'Highlights a file with custom colors and font weight', type: 'intent', category: 'Internal Processes' },
+        { id: 'move_attachments_to_folder', name: 'Move Attachments to Folder', description: 'Moves attached files into the target folder (defaults to last created folder)', type: 'intent', category: 'Internal Processes' },
+        { id: 'copy_attachments_to_folder', name: 'Copy Attachments to Folder', description: 'Copies attached files into the target folder (defaults to last created folder)', type: 'intent', category: 'Internal Processes' },
         { id: 'extract_alegra_bill', name: 'Extract Alegra Bill', description: 'Extracts billing data for Alegra', type: 'intent', category: 'Internal Processes' },
         { id: 'verify_dgii_rnc', name: 'Verify RNC (DGII)', description: 'Verifies an RNC with DGII', type: 'intent', category: 'Internal Processes' },
-        { id: 'create_task', name: 'Create Task', description: 'Creates a new manual task', type: 'intent', category: 'Internal Processes' }
+        { id: 'create_folder', name: 'Create Folder', description: 'Creates a new folder with optional auto-generated name', type: 'intent', category: 'Internal Processes' },
     ];
 
     // Deduplicate and merge

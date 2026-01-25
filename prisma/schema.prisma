@@ -127,6 +127,11 @@ model WorkspaceFile {
   shared    Boolean  @default(false)
   order     Float    @default(0)
 
+  highlightBgColor     String?
+  highlightTextColor   String?
+  highlightBorderColor String?
+  highlightFontWeight  String?
+
   parentId  String?
   parent    WorkspaceFile?    @relation("FolderContents", fields: [parentId], references: [id], onDelete: Cascade)
   children  WorkspaceFile[]   @relation("FolderContents")

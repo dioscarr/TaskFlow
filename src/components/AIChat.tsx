@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { TOOL_LIBRARY, DEFAULT_TOOLS } from '@/lib/toolLibrary';
 import type { WorkspaceFile, AIPromptSet, IntentRule } from '@prisma/client';
 import PromptEditorModal from './PromptEditorModal';
+import ConfirmationModal from './ConfirmationModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { normalizeMarkdown, hasMarkdownTable } from '@/utils/markdownUtils';
@@ -53,6 +54,9 @@ export default function AIChat() {
     const [historyIndex, setHistoryIndex] = useState(-1);
     const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
     const [renamingSessionTitle, setRenamingSessionTitle] = useState('');
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null);
+    const [isDeletingSession, setIsDeletingSession] = useState(false);
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -148,18 +152,28 @@ export default function AIChat() {
         toast.success('Chat renamed');
     };
 
-    const handleDeleteSession = async (sessionId: string) => {
-        if (!confirm('Are you sure you want to delete this chat? This cannot be undone.')) {
-            return;
+    const handleDeleteSession = (sessionId: string) => {
+        setPendingDeleteSessionId(sessionId);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDeleteSession = async () => {
+        if (!pendingDeleteSessionId) return;
+        setIsDeletingSession(true);
+        try {
+            await deleteChatSession(pendingDeleteSessionId);
+            setChatSessions(prev => prev.filter(s => s.id !== pendingDeleteSessionId));
+            if (activeSessionId === pendingDeleteSessionId) {
+                setActiveSessionId(null);
+                setMessages([]);
+                setActiveSessionTitle('New Chat');
+            }
+            toast.success('Chat deleted');
+        } finally {
+            setIsDeletingSession(false);
+            setIsDeleteModalOpen(false);
+            setPendingDeleteSessionId(null);
         }
-        await deleteChatSession(sessionId);
-        setChatSessions(prev => prev.filter(s => s.id !== sessionId));
-        if (activeSessionId === sessionId) {
-            setActiveSessionId(null);
-            setMessages([]);
-            setActiveSessionTitle('New Chat');
-        }
-        toast.success('Chat deleted');
     };
 
     const renderSessionsView = () => (
@@ -385,7 +399,8 @@ export default function AIChat() {
         prompt: string, 
         description: string, 
         tools: string[],
-        workflows?: any[]
+        workflows?: any[],
+        triggerKeywords?: string[]
     }) => {
         let res;
         if (editingPromptId) {
@@ -639,7 +654,7 @@ export default function AIChat() {
                                 <div className="h-full p-6 space-y-4 overflow-y-auto custom-scrollbar">
                                     <div className="flex items-center justify-between mb-4">
                                         <h4 className="text-[10px] font-black uppercase text-white/30 tracking-widest">Archetypes</h4>
-                                        <button onClick={() => { setEditingPromptId(null); setNewPrompt({ name: '', description: '', prompt: '', tools: DEFAULT_TOOLS }); setIsEditorOpen(true); }} className="p-2 bg-blue-600 rounded-lg text-white">
+                                        <button onClick={() => { setEditingPromptId(null); setNewPrompt({ name: '', description: '', prompt: '', tools: DEFAULT_TOOLS, workflows: [], triggerKeywords: [] }); setIsEditorOpen(true); }} className="p-2 bg-blue-600 rounded-lg text-white">
                                             <Plus size={16} />
                                         </button>
                                     </div>
@@ -669,7 +684,22 @@ export default function AIChat() {
                     }}
                     onSave={handleSavePrompt}
                     initialData={editingPromptId ? newPrompt : undefined}
-                    customIntents={intentRules}
+                    customIntents={intentRules as unknown as import('@/lib/intentLibrary').IntentRuleDefinition[]}
+                />
+                <ConfirmationModal
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => {
+                        if (isDeletingSession) return;
+                        setIsDeleteModalOpen(false);
+                        setPendingDeleteSessionId(null);
+                    }}
+                    onConfirm={confirmDeleteSession}
+                    title="Delete chat?"
+                    message="Deleting chats is a premium feature. This action cannot be undone."
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    isDanger
+                    isLoading={isDeletingSession}
                 />
             </>
         );
@@ -1020,7 +1050,7 @@ export default function AIChat() {
                                                 <button
                                                     onClick={() => {
                                                         setEditingPromptId(null);
-                                                        setNewPrompt({ name: '', description: '', prompt: '', tools: DEFAULT_TOOLS });
+                                                        setNewPrompt({ name: '', description: '', prompt: '', tools: DEFAULT_TOOLS, workflows: [], triggerKeywords: [] });
                                                         setIsEditorOpen(true);
                                                     }}
                                                     className="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl shadow-xl shadow-blue-500/20 transition-all active:scale-95"
@@ -1143,7 +1173,22 @@ export default function AIChat() {
                     }}
                     onSave={handleSavePrompt}
                     initialData={editingPromptId ? newPrompt : undefined}
-                    customIntents={intentRules}
+                    customIntents={intentRules as unknown as import('@/lib/intentLibrary').IntentRuleDefinition[]}
+                />
+                <ConfirmationModal
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => {
+                        if (isDeletingSession) return;
+                        setIsDeleteModalOpen(false);
+                        setPendingDeleteSessionId(null);
+                    }}
+                    onConfirm={confirmDeleteSession}
+                    title="Delete chat?"
+                    message="Deleting chats is a premium feature. This action cannot be undone."
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    isDanger
+                    isLoading={isDeletingSession}
                 />
             </div >
         </>

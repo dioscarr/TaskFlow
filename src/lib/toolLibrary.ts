@@ -133,6 +133,86 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
                 required: ['title']
             }
         }
+    },
+    highlight_file: {
+        id: 'highlight_file',
+        name: 'Highlight File',
+        description: 'Highlights a workspace file with custom colors and styling.',
+        category: 'workspace',
+        icon: 'Highlighter',
+        schema: {
+            name: 'highlight_file',
+            description: 'Highlights a file with custom colors and font weight',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileId: { type: 'string', description: 'The ID of the file to highlight' },
+                    backgroundColor: { type: 'string', description: 'Background color (hex or name)' },
+                    textColor: { type: 'string', description: 'Text color (hex or name)' },
+                    borderColor: { type: 'string', description: 'Border color (hex or name)' },
+                    fontWeight: { type: 'string', enum: ['normal', 'bold', 'bolder'], description: 'Font weight' }
+                },
+                required: ['fileId']
+            }
+        }
+    },
+    move_attachments_to_folder: {
+        id: 'move_attachments_to_folder',
+        name: 'Move Attachments to Folder',
+        description: 'Moves files/attachments into a specific folder.',
+        category: 'workspace',
+        icon: 'FolderInput',
+        schema: {
+            name: 'move_attachments_to_folder',
+            description: 'Moves attached files into the target folder',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileIds: { type: 'array', items: { type: 'string' }, description: 'List of file IDs to move' },
+                    folderId: { type: 'string', description: 'Target folder ID' }
+                },
+                required: ['fileIds', 'folderId']
+            }
+        }
+    },
+    create_folder: {
+        id: 'create_folder',
+        name: 'Create Folder',
+        description: 'Creates a new folder with optional auto-generated name.',
+        category: 'workspace',
+        icon: 'FolderPlus',
+        schema: {
+            name: 'create_folder',
+            description: 'Creates a new folder with optional auto-naming',
+            parameters: {
+                type: 'object',
+                properties: {
+                    name: { type: 'string', description: 'Folder name (optional - will auto-generate if not provided)' },
+                    parentId: { type: 'string', description: 'Parent folder ID (optional)' },
+                    autoName: { type: 'boolean', description: 'Whether to auto-generate a name' },
+                    prefix: { type: 'string', description: 'Prefix for auto-generated names (default: "Folder")' }
+                }
+            }
+        }
+    },
+    copy_attachments_to_folder: {
+        id: 'copy_attachments_to_folder',
+        name: 'Copy Attachments to Folder',
+        description: 'Copies files/attachments into a specific folder (preserves originals).',
+        category: 'workspace',
+        icon: 'Copy',
+        schema: {
+            name: 'copy_attachments_to_folder',
+            description: 'Copies attached files into the target folder while preserving originals',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileIds: { type: 'array', items: { type: 'string' }, description: 'List of file IDs to copy' },
+                    folderId: { type: 'string', description: 'Target folder ID' }
+                },
+                required: ['fileIds', 'folderId']
+            }
+        }
     }
 };
 
@@ -176,6 +256,9 @@ export function getToolsByCategory() {
  */
 export const DEFAULT_TOOLS = [
     'verify_dgii_rnc',
-    'extract_alegra_bill',
-    'create_markdown_file'
+    'create_markdown_file',
+    'create_folder',
+    'highlight_file',
+    'move_attachments_to_folder',
+    'copy_attachments_to_folder'
 ];

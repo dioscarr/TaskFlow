@@ -23,12 +23,62 @@ export default function WorkflowDesigner({
     const [isAddingStep, setIsAddingStep] = useState(false);
     const [keywordInput, setKeywordInput] = useState('');
 
+    const normalizeWorkflows = (input: WorkflowDefinition[]) => {
+        let didChange = false;
+        const normalized = input.map(workflow => {
+            const nextSteps: WorkflowStep[] = [];
+
+            workflow.steps.forEach(step => {
+                if (step.action === 'create_markdown_file' && step.params) {
+                    const { moveToFolder, copyToFolder, ...rest } = step.params as Record<string, any>;
+
+                    if (moveToFolder || copyToFolder) {
+                        didChange = true;
+                        nextSteps.push({ ...step, params: rest });
+
+                        if (moveToFolder) {
+                            nextSteps.push({
+                                id: Math.random().toString(36).substr(2, 9),
+                                action: 'move_attachments_to_folder',
+                                params: { useLastMarkdownFolder: true }
+                            });
+                        } else if (copyToFolder) {
+                            nextSteps.push({
+                                id: Math.random().toString(36).substr(2, 9),
+                                action: 'copy_attachments_to_folder',
+                                params: { useLastMarkdownFolder: true }
+                            });
+                        }
+                        return;
+                    }
+                }
+
+                nextSteps.push(step);
+            });
+
+            return { ...workflow, steps: nextSteps };
+        });
+
+        return { normalized, didChange };
+    };
+
     useEffect(() => {
         setAvailableActions(getAllActions(customIntents));
         if (workflows.length > 0 && !activeWorkflowId) {
             setActiveWorkflowId(workflows[0].id);
         }
     }, [customIntents, workflows, activeWorkflowId]);
+
+    useEffect(() => {
+        const { normalized, didChange } = normalizeWorkflows(workflows);
+        if (!didChange) return;
+
+        const original = JSON.stringify(workflows);
+        const next = JSON.stringify(normalized);
+        if (original !== next) {
+            onChange(normalized);
+        }
+    }, [workflows, onChange]);
 
     const activeWorkflow = workflows.find(w => w.id === activeWorkflowId);
 
@@ -87,6 +137,13 @@ export default function WorkflowDesigner({
     const removeStep = (stepId: string) => {
         if (!activeWorkflow) return;
         updateActiveWorkflow({ steps: activeWorkflow.steps.filter(s => s.id !== stepId) });
+    };
+
+    const updateStepParams = (stepId: string, params: Record<string, any>) => {
+        if (!activeWorkflow) return;
+        updateActiveWorkflow({
+            steps: activeWorkflow.steps.map(s => s.id === stepId ? { ...s, params: { ...s.params, ...params } } : s)
+        });
     };
 
     const getActionInfo = (id: string) => {
@@ -249,7 +306,7 @@ export default function WorkflowDesigner({
                                             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black text-white/40">
                                                 {index + 1}
                                             </div>
-                                            <div className="flex-1 min-w-0">
+                                            <div className="flex-1 min-w-0 space-y-2">
                                                 <div className="flex items-center gap-2">
                                                     <span className={cn(
                                                         "text-[8px] font-black uppercase px-1.5 py-0.5 rounded",
@@ -259,6 +316,74 @@ export default function WorkflowDesigner({
                                                     </span>
                                                     <h4 className="text-sm font-bold text-white truncate">{info.name}</h4>
                                                 </div>
+
+                                                {(step.action === 'move_attachments_to_folder' || step.action === 'copy_attachments_to_folder') && (
+                                                    <div className="flex flex-wrap gap-2 items-center">
+                                                        <span className="text-[10px] text-white/40">
+                                                            {step.action === 'move_attachments_to_folder'
+                                                                ? 'Moves files into the last created folder.'
+                                                                : 'Copies files into the last created folder.'}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => updateStepParams(step.id, { useLastMarkdownFolder: !((step.params as any)?.useLastMarkdownFolder ?? true) })}
+                                                            className={cn(
+                                                                "px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all",
+                                                                ((step.params as any)?.useLastMarkdownFolder ?? true)
+                                                                    ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
+                                                                    : "bg-white/5 border-white/10 text-white/40 hover:text-white"
+                                                            )}
+                                                        >
+                                                            {((step.params as any)?.useLastMarkdownFolder ?? true) ? 'Using last folder' : 'Select folder later'}
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {step.action === 'highlight_file' && (
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <label className="text-[9px] uppercase tracking-widest text-white/40">
+                                                            Background
+                                                            <input
+                                                                type="color"
+                                                                value={(step.params as any)?.backgroundColor || '#0f172a'}
+                                                                onChange={(e) => updateStepParams(step.id, { backgroundColor: e.target.value })}
+                                                                className="mt-1 w-full h-8 rounded-md bg-transparent border border-white/10"
+                                                            />
+                                                        </label>
+                                                        <label className="text-[9px] uppercase tracking-widest text-white/40">
+                                                            Text
+                                                            <input
+                                                                type="color"
+                                                                value={(step.params as any)?.textColor || '#f8fafc'}
+                                                                onChange={(e) => updateStepParams(step.id, { textColor: e.target.value })}
+                                                                className="mt-1 w-full h-8 rounded-md bg-transparent border border-white/10"
+                                                            />
+                                                        </label>
+                                                        <label className="text-[9px] uppercase tracking-widest text-white/40">
+                                                            Border
+                                                            <input
+                                                                type="color"
+                                                                value={(step.params as any)?.borderColor || '#334155'}
+                                                                onChange={(e) => updateStepParams(step.id, { borderColor: e.target.value })}
+                                                                className="mt-1 w-full h-8 rounded-md bg-transparent border border-white/10"
+                                                            />
+                                                        </label>
+                                                        <label className="text-[9px] uppercase tracking-widest text-white/40">
+                                                            Font Weight
+                                                            <select
+                                                                value={(step.params as any)?.fontWeight || '600'}
+                                                                onChange={(e) => updateStepParams(step.id, { fontWeight: e.target.value })}
+                                                                className="mt-1 w-full h-8 rounded-md bg-white/5 border border-white/10 text-white/70 text-[10px]"
+                                                            >
+                                                                <option value="400">Regular</option>
+                                                                <option value="500">Medium</option>
+                                                                <option value="600">Semibold</option>
+                                                                <option value="700">Bold</option>
+                                                                <option value="800">Extra Bold</option>
+                                                            </select>
+                                                        </label>
+                                                    </div>
+                                                )}
                                             </div>
                                             <button
                                                 onClick={() => removeStep(step.id)}

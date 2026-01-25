@@ -864,8 +864,18 @@ export default function FileManager({ files }: FileManagerProps) {
             {/* File Grid */}
             {/* File Container */}
             <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col space-y-2"}>
-                {filteredFiles.map((file, index) => (
-                    <motion.div
+                {filteredFiles.map((file, index) => {
+                    const highlightStyles = {
+                        backgroundColor: file.highlightBgColor || undefined,
+                        borderColor: file.highlightBorderColor || undefined
+                    } as React.CSSProperties;
+                    const nameStyles = {
+                        color: file.highlightTextColor || undefined,
+                        fontWeight: file.highlightFontWeight || undefined
+                    } as React.CSSProperties;
+
+                    return (
+                        <motion.div
                         key={file.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -901,6 +911,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                 : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10",
                             (dragOverFolderId === file.id || dragOverFileId === file.id) ? "ring-2 ring-blue-500 bg-blue-500/20 scale-[1.05] z-30 shadow-xl shadow-blue-500/20" : ""
                         )}
+                        style={highlightStyles}
                     >
                         {/* Reorder Indicators */}
                         {reorderTarget?.id === file.id && reorderTarget.position === 'before' && (
@@ -944,7 +955,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <h3 className="text-sm font-medium text-white truncate px-1">{file.name}</h3>
+                                    <h3 className="text-sm font-medium text-white truncate px-1" style={nameStyles}>{file.name}</h3>
                                     <div className="flex items-center justify-between text-xs text-white/40 px-1">
                                         <span>{file.type === 'folder' ? file.items : file.size}</span>
                                         {file.shared && (
@@ -980,7 +991,7 @@ export default function FileManager({ files }: FileManagerProps) {
 
                                 {/* Name Column */}
                                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                    <h3 className="text-sm font-medium text-white truncate">{file.name}</h3>
+                                    <h3 className="text-sm font-medium text-white truncate" style={nameStyles}>{file.name}</h3>
                                     <span className="text-xs text-white/30 lg:hidden">
                                         {file.type === 'folder' ? file.items : file.size}
                                     </span>
@@ -1016,7 +1027,8 @@ export default function FileManager({ files }: FileManagerProps) {
                             </>
                         )}
                     </motion.div>
-                ))}
+                    );
+                })}
 
                 {/* Empty State */}
                 {filteredFiles.length === 0 && (

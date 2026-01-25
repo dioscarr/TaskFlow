@@ -33,13 +33,14 @@ export interface IntentRuleDefinition {
 
 export const DEFAULT_INTENT_RULES: IntentRuleDefinition[] = [
     {
-        name: 'Auto-create Markdown',
+        name: 'Auto-create & Move',
         action: 'create_markdown_file',
-        keywords: ['autocreate', 'auto create', 'just create it', 'create it', 'auto-create', 'auto save'],
+        keywords: ['autocreate', 'auto create', 'just create it', 'create it', 'auto-create', 'auto save', 'save and move'],
         enabled: true,
         config: {
             autoFolder: 'year',
-            autoFilename: 'timestamp'
+            autoFilename: 'timestamp',
+            moveToFolder: true
         }
     }
 ];

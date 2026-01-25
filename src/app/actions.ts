@@ -7,6 +7,9 @@ import { writeFile, readFile } from 'fs/promises';
 import { join } from 'path';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { DEFAULT_TOOLS } from '@/lib/toolLibrary';
+import { DEFAULT_SKILLS } from '@/lib/skillsLibrary';
+import { getSkillSchemas } from '@/lib/skillsLibrary';
+import { executeSkill } from '@/lib/skillsExecution';
 import { DEFAULT_INTENT_RULES, matchesIntentRule, WorkflowStep } from '@/lib/intentLibrary';
 import { TOOL_LIBRARY } from '@/lib/toolLibrary';
 
@@ -14,13 +17,21 @@ import { TOOL_LIBRARY } from '@/lib/toolLibrary';
 
 async function executeAction(actionId: string, args: any): Promise<{ success: boolean, message?: string, [key: string]: any }> {
     console.log(`🚀 Executing Action: ${actionId}`, args);
+    // Temporary bypass: skip Alegra export until pipeline is ready
+    if (actionId === 'extract_alegra_bill') {
+        return { success: true, skipped: true, silent: true, message: 'Alegra export temporarily disabled' };
+    }
     
     // Internal Intents
     if (actionId === 'create_markdown_file') return await createMarkdownFile(args);
     if (actionId === 'create_task') return await createTask(args);
+    if (actionId === 'create_folder') return await createFolder(args);
     if (actionId === 'extract_alegra_bill') return await createAlegraBill(args);
     if (actionId === 'record_alegra_payment') return await recordAlegraPayment(args);
     if (actionId === 'verify_dgii_rnc') return await verifyRNC(args.rnc);
+    if (actionId === 'highlight_file') return await highlightWorkspaceFile(args);
+    if (actionId === 'move_attachments_to_folder') return await moveFilesToFolder(args.fileIds || [], args.folderId);
+    if (actionId === 'copy_attachments_to_folder') return await copyFilesToFolder(args.fileIds || [], args.folderId);
 
     // Tools from library
     const tool = TOOL_LIBRARY[actionId];
@@ -35,33 +46,186 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
 }
 
 export async function executeWorkflow(steps: WorkflowStep[], initialContext: any = {}) {
+    console.log('🔄 executeWorkflow START', { stepsCount: steps.length, hasFileIds: !!initialContext.fileIds, fileIdsCount: initialContext.fileIds?.length });
     let context = { ...initialContext };
     const results = [];
+    let lastMarkdownFolderId: string | undefined;
+    let lastMarkdownParams: Record<string, any> | undefined;
+    let movementAttempted = false;
+
+    const resolveAttachmentIds = async (sourceContext: any, allowRecovery: boolean) => {
+        let fileIds = sourceContext?.fileIds || initialContext.fileIds || [];
+
+        if (!fileIds.length && allowRecovery) {
+            console.log('⚠️ No fileIds provided. Attempting to find recent orphaned files...');
+            try {
+                const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+                if (user) {
+                    const recentFiles = await prisma.workspaceFile.findMany({
+                        where: {
+                            userId: user.id,
+                            parentId: null,
+                            type: { in: ['jpg', 'jpeg', 'png', 'pdf', 'image'] },
+                            createdAt: { gt: new Date(Date.now() - 1000 * 60 * 60) }
+                        },
+                        select: { id: true, name: true }
+                    });
+
+                    if (recentFiles.length > 0) {
+                        console.log(`🔎 Found ${recentFiles.length} recent orphaned files to move:`, recentFiles.map(f => f.name));
+                        fileIds = recentFiles.map(f => f.id);
+                        context.fileIds = fileIds;
+                    }
+                }
+            } catch (err) {
+                console.error('Failed search for orphaned files:', err);
+            }
+        }
+
+        return fileIds;
+    };
+
+    const transferAttachments = async (
+        mode: 'move' | 'copy',
+        folderId: string,
+        sourceContext: any,
+        allowRecovery: boolean
+    ) => {
+        const fileIds = await resolveAttachmentIds(sourceContext, allowRecovery);
+
+        console.log('📂 transferAttachments called', { mode, folderId, fileIdsCount: fileIds.length, fileIds });
+
+        if (!fileIds.length) {
+            console.log('⚠️ No fileIds to move/copy');
+            return null;
+        }
+
+        if (mode === 'move') {
+            console.log('🚚 Moving files...');
+            const moveResult = await moveFilesToFolder(fileIds, folderId);
+            console.log('🚚 Move result:', moveResult);
+            context.filesMoved = moveResult;
+            // Update context with moved file IDs for subsequent steps
+            if (moveResult.movedFileIds && moveResult.movedFileIds.length > 0) {
+                context.lastProcessedFileIds = moveResult.movedFileIds;
+            }
+            return moveResult;
+        }
+
+        console.log('📎 Copying files...');
+        const copyResult = await copyFilesToFolder(fileIds, folderId);
+        context.filesCopied = copyResult;
+        // Update context with copied file IDs for subsequent steps
+        if (copyResult.copiedFileIds && copyResult.copiedFileIds.length > 0) {
+            context.lastProcessedFileIds = copyResult.copiedFileIds;
+        }
+        return copyResult;
+    };
 
     for (const step of steps) {
+        console.log(`👣 Step: ${step.action}`);
         // Merge step params with context (allowing basic path resolution if needed)
         const args = { ...step.params, ...context };
+
+        if (step.action === 'extract_alegra_bill') {
+            console.log('⏸️ Skipping Alegra export (disabled)');
+            context.lastSkippedAction = 'extract_alegra_bill';
+            results.push({ step: step.action, success: true, result: { success: true, skipped: true, silent: true } });
+            continue;
+        }
+
+        if (step.action === 'move_attachments_to_folder' || step.action === 'copy_attachments_to_folder') {
+            const useLast = (step.params as any)?.useLastMarkdownFolder ?? true;
+            if (useLast && lastMarkdownFolderId && !args.folderId) {
+                args.folderId = lastMarkdownFolderId;
+            }
+            // Fallback to context.folderId if no folderId specified (e.g., from create_folder step)
+            if (!args.folderId && context.folderId) {
+                args.folderId = context.folderId;
+            }
+
+            if (!args.fileIds || !Array.isArray(args.fileIds) || args.fileIds.length === 0) {
+                args.fileIds = await resolveAttachmentIds(context, true);
+            }
+        }
+
+        if (step.action === 'highlight_file') {
+            if (!args.fileId) {
+                // Priority 1: Use the file created in the previous step (e.g. Markdown report)
+                if (context.file?.id) {
+                    console.log('🎨 Highlighting newly created file:', context.file.name);
+                    args.fileId = context.file.id;
+                } 
+                // Priority 2: Use the files that were just moved/copied (e.g. attachments)
+                else if (context.lastProcessedFileIds && context.lastProcessedFileIds.length > 0) {
+                    console.log('🎨 Highlighting last processed file:', context.lastProcessedFileIds[0]);
+                    args.fileId = context.lastProcessedFileIds[0];
+                } else {
+                    // Fallback to resolving from initial context
+                    const resolved = await resolveAttachmentIds(context, true);
+                    args.fileId = resolved[0];
+                    console.log('🎨 Highlighting resolved attachment:', args.fileId);
+                }
+            }
+        }
+
+        if (step.action === 'create_folder') {
+            if (!args.name && !args.autoName) {
+                if (context.folderName) {
+                    args.name = context.folderName;
+                } else {
+                    args.autoName = true;
+                    args.prefix = args.prefix || 'Receipts';
+                }
+            }
+        }
         const result = await executeAction(step.action, args);
         
         results.push({ step: step.action, success: result.success, result });
-        
-        if (!result.success) break; // Stop on failure for now
+
+        if (!result.success) {
+            console.log(`❌ Step failed: ${step.action}`);
+            if (!movementAttempted && lastMarkdownFolderId && lastMarkdownParams) {
+                console.log('🚑 Attempting recovery transfer...');
+                if (lastMarkdownParams.moveToFolder) {
+                    const transfer = await transferAttachments('move', lastMarkdownFolderId, context, true);
+                    if (transfer) movementAttempted = true;
+                } else if (lastMarkdownParams.copyToFolder) {
+                    const transfer = await transferAttachments('copy', lastMarkdownFolderId, context, true);
+                    if (transfer) movementAttempted = true;
+                }
+            }
+            break; // Stop on failure for now
+        }
 
         // Accumulate context from result
         context = { ...context, ...result };
-        
-        // Handle file movement after markdown file creation
-        if (step.action === 'create_markdown_file' && result.success && result.folderId) {
-            const fileIds = context.fileIds || initialContext.fileIds || [];
-            if (fileIds.length > 0 && (step.params?.moveToFolder || step.params?.copyToFolder)) {
-                if (step.params.moveToFolder) {
-                    const moveResult = await moveFilesToFolder(fileIds, result.folderId);
-                    context.filesMoved = moveResult;
-                } else if (step.params.copyToFolder) {
-                    const copyResult = await copyFilesToFolder(fileIds, result.folderId);
-                    context.filesCopied = copyResult;
-                }
-            }
+
+        // If an action was skipped silently (e.g., Alegra export), avoid treating it as a user-facing tool use
+        if (result.silent) {
+            context.lastSkippedAction = step.action;
+        }
+
+        // Handle folder creation for subsequent steps
+        if (step.action === 'create_folder' && result.success && result.folder) {
+            console.log('✅ Folder created:', result.folder.name);
+            // Set context.folderId for use in later steps like move_attachments_to_folder
+            context.folderId = result.folder.id;
+        }
+    }
+
+    if (!movementAttempted && lastMarkdownFolderId) {
+        console.log('🏁 Workflow end, ensuring transfer...');
+        if (lastMarkdownParams?.moveToFolder) {
+            const transfer = await transferAttachments('move', lastMarkdownFolderId, context, true);
+            if (transfer) movementAttempted = true;
+        } else if (lastMarkdownParams?.copyToFolder) {
+            const transfer = await transferAttachments('copy', lastMarkdownFolderId, context, true);
+            if (transfer) movementAttempted = true;
+        } else if (context.fileIds && context.fileIds.length > 0) {
+            // Fallback: auto-move any provided chat attachments into the markdown folder
+            const transfer = await transferAttachments('move', lastMarkdownFolderId, context, true);
+            if (transfer) movementAttempted = true;
         }
     }
 
@@ -547,15 +711,34 @@ export async function createAlegraBill(data: any) {
     try {
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
         if (!user) throw new Error('User not found');
+        const providerName = (data.providerName || data.verifiedName || data.businessName || data.vendor || '').toString().trim();
+        if (!providerName) {
+            return { success: false, message: 'Missing providerName for Alegra bill' };
+        }
+        const rawTotal = data.totalAmount ?? data.total ?? data.amount ?? data.grandTotal;
+        const numericTotal = typeof rawTotal === 'string'
+            ? Number(rawTotal.replace(/[^0-9.-]/g, ''))
+            : Number(rawTotal);
+        if (Number.isNaN(numericTotal)) {
+            return { success: false, message: 'Missing or invalid totalAmount for Alegra bill' };
+        }
+        const itemsPayload = Array.isArray(data.items)
+            ? JSON.stringify(data.items)
+            : (typeof data.items === 'string' && data.items.trim() !== ''
+                ? data.items
+                : JSON.stringify([]));
+        const dateValue = data.date || new Date().toISOString().slice(0, 10);
+        const dueDateValue = data.dueDate || dateValue;
+
         const bill = await prisma.alegraBill.create({
             data: {
-                date: data.date,
-                dueDate: data.dueDate || data.date,
-                providerName: data.providerName,
+                date: dateValue,
+                dueDate: dueDateValue,
+                providerName,
                 identification: data.identification,
                 ncf: data.ncf,
-                totalAmount: data.totalAmount,
-                items: JSON.stringify(data.items),
+                totalAmount: numericTotal,
+                items: itemsPayload,
                 status: 'draft',
                 userId: user.id,
                 fileId: data.fileId,
@@ -599,7 +782,47 @@ export async function recordAlegraPayment(data: any) {
     }
 }
 
-export async function createMarkdownFile(data: { filename: string, content: string, folderName?: string, parentId?: string }) {
+export async function createFolder(data: { name?: string, parentId?: string, autoName?: boolean, prefix?: string }) {
+    try {
+        const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+        if (!user) throw new Error('User not found');
+
+        let folderName = data.name;
+        if (data.autoName || folderName === 'auto') {
+            const prefix = data.prefix || 'Folder';
+            folderName = `${prefix}-${Date.now()}`;
+        }
+
+        if (!folderName) {
+            return { success: false, message: 'Folder name is required' };
+        }
+
+        const folder = await prisma.workspaceFile.create({
+            data: {
+                name: folderName,
+                type: 'folder',
+                userId: user.id,
+                parentId: data.parentId || null
+            }
+        });
+
+        revalidatePath('/');
+        return { success: true, folder };
+    } catch (error) {
+        console.error('Failed to create folder:', error);
+        return { success: false, message: 'Failed to create folder' };
+    }
+}
+
+/**
+ * Create a markdown file with optional folder creation
+ */
+export async function createMarkdownFile(data: {
+    content: string;
+    filename: string;
+    folderName?: string;
+    parentId?: string;
+}) {
     try {
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
         if (!user) throw new Error('User not found');
@@ -652,7 +875,7 @@ export async function createMarkdownFile(data: { filename: string, content: stri
 export async function moveFilesToFolder(fileIds: string[], targetFolderId: string) {
     try {
         if (!fileIds.length) {
-            return { success: true, moved: 0, message: 'No files to move' };
+            return { success: true, moved: 0, movedFileIds: [], message: 'No files to move' };
         }
 
         const results = await Promise.all(
@@ -664,12 +887,43 @@ export async function moveFilesToFolder(fileIds: string[], targetFolderId: strin
             )
         );
 
-        const movedCount = results.filter(r => r !== null).length;
+        const movedFiles = results.filter(r => r !== null);
+        const movedCount = movedFiles.length;
+        const movedFileIds = movedFiles.map(f => f!.id);
+        
         revalidatePath('/');
-        return { success: true, moved: movedCount, message: `Moved ${movedCount} file(s) to target folder` };
+        return { success: true, moved: movedCount, movedFileIds, message: `Moved ${movedCount} file(s) to target folder` };
     } catch (error) {
         console.error('Failed to move files:', error);
-        return { success: false, moved: 0, message: 'Failed to move files' };
+        return { success: false, moved: 0, movedFileIds: [], message: 'Failed to move files' };
+    }
+}
+
+export async function highlightWorkspaceFile(data: {
+    fileId: string;
+    backgroundColor?: string;
+    textColor?: string;
+    borderColor?: string;
+    fontWeight?: string;
+}) {
+    try {
+        if (!data.fileId) return { success: false, message: 'Missing fileId for highlight' };
+
+        const updated = await prisma.workspaceFile.update({
+            where: { id: data.fileId },
+            data: {
+                highlightBgColor: data.backgroundColor || null,
+                highlightTextColor: data.textColor || null,
+                highlightBorderColor: data.borderColor || null,
+                highlightFontWeight: data.fontWeight || null
+            }
+        });
+
+        revalidatePath('/');
+        return { success: true, file: updated };
+    } catch (error) {
+        console.error('Failed to highlight file:', error);
+        return { success: false, message: 'Failed to highlight file' };
     }
 }
 
@@ -679,7 +933,7 @@ export async function moveFilesToFolder(fileIds: string[], targetFolderId: strin
 export async function copyFilesToFolder(fileIds: string[], targetFolderId: string) {
     try {
         if (!fileIds.length) {
-            return { success: true, copied: 0, message: 'No files to copy' };
+            return { success: true, copied: 0, copiedFileIds: [], message: 'No files to copy' };
         }
 
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
@@ -703,71 +957,19 @@ export async function copyFilesToFolder(fileIds: string[], targetFolderId: strin
             })
         );
 
-        const copiedCount = copies.filter(c => c !== null).length;
+        const copiedFiles = copies.filter(c => c !== null);
+        const copiedCount = copiedFiles.length;
+        const copiedFileIds = copiedFiles.map(f => f!.id);
+        
         revalidatePath('/');
-        return { success: true, copied: copiedCount, message: `Copied ${copiedCount} file(s) to target folder` };
+        return { success: true, copied: copiedCount, copiedFileIds, message: `Copied ${copiedCount} file(s) to target folder` };
     } catch (error) {
         console.error('Failed to copy files:', error);
-        return { success: false, copied: 0, message: 'Failed to copy files' };
+        return { success: false, copied: 0, copiedFileIds: [], message: 'Failed to copy files' };
     }
 }
 
-/**
- * Build Gemini-compatible tools from tool library
- */
-function buildGeminiTools(toolIds: string[]) {
-    const { TOOL_LIBRARY } = require('@/lib/toolLibrary');
 
-    const functionDeclarations = toolIds.map(toolId => {
-        const tool = TOOL_LIBRARY[toolId];
-        if (!tool) return null;
-
-        // Convert tool schema to Gemini format with proper SchemaType
-        const convertSchema = (schema: any): any => {
-            if (!schema) return schema;
-
-            const converted: any = {};
-
-            if (schema.type === 'object') {
-                converted.type = SchemaType.OBJECT;
-                if (schema.properties) {
-                    converted.properties = {};
-                    for (const [key, value] of Object.entries(schema.properties)) {
-                        converted.properties[key] = convertSchema(value);
-                    }
-                }
-                if (schema.required) {
-                    converted.required = schema.required;
-                }
-            } else if (schema.type === 'string') {
-                converted.type = SchemaType.STRING;
-                if (schema.description) converted.description = schema.description;
-                if (schema.enum) converted.enum = schema.enum;
-            } else if (schema.type === 'number') {
-                converted.type = SchemaType.NUMBER;
-                if (schema.description) converted.description = schema.description;
-            } else if (schema.type === 'boolean') {
-                converted.type = SchemaType.BOOLEAN;
-                if (schema.description) converted.description = schema.description;
-            } else if (schema.type === 'array') {
-                converted.type = SchemaType.ARRAY;
-                if (schema.items) {
-                    converted.items = convertSchema(schema.items);
-                }
-            }
-
-            return converted;
-        };
-
-        return {
-            name: tool.schema.name,
-            description: tool.schema.description,
-            parameters: convertSchema(tool.schema.parameters)
-        };
-    }).filter(Boolean);
-
-    return [{ functionDeclarations }] as any;
-}
 
 export async function chatWithAI(query: string, fileIds: string[] = [], history: { role: 'user' | 'model'; parts: { text: string }[] }[] = []) {
     try {
@@ -838,103 +1040,172 @@ export async function chatWithAI(query: string, fileIds: string[] = [], history:
             const rules = await prisma.intentRule.findMany({ where: { userId: demoUser.id, enabled: true } });
             
             // Check if input matches any of the AGENT'S custom trigger keywords
-            const workflows = (activePromptSet?.workflows as any[]) || [];
-            const matchedWorkflow = workflows.find(wf => 
-                wf.triggerKeywords?.some((kw: string) => query.toLowerCase().includes(kw.toLowerCase()))
-            );
+            const rawWorkflows = activePromptSet?.workflows as unknown;
+            let workflows: any[] = [];
+
+            if (Array.isArray(rawWorkflows)) {
+                workflows = rawWorkflows;
+            } else if (typeof rawWorkflows === 'string') {
+                try {
+                    workflows = JSON.parse(rawWorkflows);
+                } catch {
+                    workflows = [];
+                }
+            }
+
+            // Backward compatibility: if workflows is an array of steps (old structure)
+            if (workflows.length > 0 && !('steps' in workflows[0])) {
+                workflows = [{
+                    id: 'default',
+                    name: 'Main Flow',
+                    triggerKeywords: (activePromptSet?.triggerKeywords as string[]) || [],
+                    steps: workflows
+                }];
+            }
+
+            const normalizedQuery = query.toLowerCase();
+            const matchedWorkflow = workflows.find(wf => {
+                const keywords = Array.isArray(wf.triggerKeywords) ? wf.triggerKeywords : [];
+                const fallbackKeywords = wf.name ? [wf.name] : [];
+                return [...keywords, ...fallbackKeywords].some((kw: string) =>
+                    normalizedQuery.includes(kw.toLowerCase())
+                );
+            });
 
             if (matchedWorkflow) {
-                console.log(`⚡ Injection Workflow Plan: ${matchedWorkflow.name}`);
-                const stepsList = matchedWorkflow.steps.map((s: any, i: number) => 
-                    `${i+1}. Tool: "${s.action}"`
-                ).join('\n');
-                
+                console.log(`⚡ Server Workflow Execution: ${matchedWorkflow.name}`);
+                const lastAssistantText = getLastAssistantText();
+                const table = extractLastMarkdownTable(lastAssistantText);
+                const content = table || lastAssistantText;
+
+                const filename = getAutoFilename({ autoFilename: 'timestamp' });
+                const folderName = getAutoFolderName({ autoFolder: 'year' });
+
+                const res = await executeWorkflow(matchedWorkflow.steps as WorkflowStep[], {
+                    content,
+                    query,
+                    lastResponse: lastAssistantText,
+                    filename,
+                    folderName,
+                    fileIds
+                });
+
+                if (res.success) {
+                    let extra = '';
+                    if (res.context?.filesMoved?.moved) {
+                        extra += `\n• Moved ${res.context.filesMoved.moved} file(s) to folder.`;
+                    }
+                    if (res.context?.filesCopied?.copied) {
+                        extra += `\n• Copied ${res.context.filesCopied.copied} file(s) to folder.`;
+                    }
+
+                    const alegraSkipped = res.context?.lastSkippedAction === 'extract_alegra_bill';
+                    const toolUsed = alegraSkipped ? undefined : 'workflow';
+                    const text = alegraSkipped
+                        ? `✅ Workflow **${matchedWorkflow.name}** executed successfully (Alegra export disabled).${extra}`
+                        : `✅ Workflow **${matchedWorkflow.name}** executed successfully.${extra ? `\n${extra}` : ''}`;
+
+                    return {
+                        success: true,
+                        text,
+                        toolUsed
+                    };
+                }
+
+                // Fallback to injection instructions if server workflow fails
+                const stepsList = matchedWorkflow.steps.map((s: any, i: number) => `${i+1}. Tool: "${s.action}"`).join('\n');
                 workflowInstructions = `\n\nSYSTEM OVERRIDE: The user has triggered the workflow "${matchedWorkflow.name}".\n\nEXECUTION RULES:\n1. You are MANDATED to execute the following tools in this exact order to complete the workflow:\n${stepsList}\n2. IGNORE the rule about asking for folders. For this workflow, AUTOMATICALLY store files in "Receipts/${new Date().getFullYear()}" without asking.\n3. Analyze the provided image/context to extract any required parameters for these tools.\n4. Do not stop. Execute all steps sequentially now.`;
             } else {
+                const rules = await prisma.intentRule.findMany({ where: { userId: demoUser.id, enabled: true } });
                 const matchedRule = rules.find(rule => matchesIntentRule(query, rule.keywords));
                 
-                if (matchedRule?.action === 'create_markdown_file') {
+                if (matchedRule) {
+                    console.log(`⚡ Intent Rule Triggered: ${matchedRule.name}`);
                     const lastAssistantText = getLastAssistantText();
                     const table = extractLastMarkdownTable(lastAssistantText);
                     const content = table || lastAssistantText;
 
-                    if (content) {
-                        const config = (matchedRule.config || {}) as { autoFolder?: string; autoFilename?: string };
-                        const folderName = getAutoFolderName(config);
-                        const filename = getAutoFilename(config);
+                    const config = (matchedRule.config || {}) as any;
+                    const folderName = getAutoFolderName(config);
+                    const filename = getAutoFilename(config);
 
-                        const res = await createMarkdownFile({
-                            filename,
-                            content,
-                            folderName
-                        });
-
-                        if (res.success) {
-                            return {
-                                success: true,
-                                text: `✅ Action completed successfully.\n\nCreated ${res.file?.name}${folderName ? ` in folder ${folderName}` : ''}.`,
-                                toolUsed: 'create_markdown_file'
-                            };
+                    // If the rule has explicit steps, execute them as a workflow
+                    // Otherwise, simulate a workflow with the single action
+                    const steps = (matchedRule.steps as unknown as WorkflowStep[]) || [
+                        { 
+                            id: 'auto-step-1', 
+                            action: matchedRule.action, 
+                            params: { 
+                                ...config,
+                                folderName,
+                                filename,
+                                content
+                            } 
                         }
+                    ];
+
+                    const res = await executeWorkflow(steps, {
+                        content,
+                        query,
+                        lastResponse: lastAssistantText,
+                        filename,
+                        folderName,
+                        fileIds
+                    });
+
+                    if (res.success) {
+                        let extra = '';
+                        if (res.context?.filesMoved?.moved) extra += `\n• Moved ${res.context.filesMoved.moved} file(s) to folder.`;
+                        if (res.context?.filesCopied?.copied) extra += `\n• Copied ${res.context.filesCopied.copied} file(s) to folder.`;
+
+                        const alegraSkip = matchedRule.action === 'extract_alegra_bill';
+                        const text = alegraSkip
+                            ? `✅ Workflow completed. Alegra export is currently disabled.${extra}`
+                            : `✅ Action **${matchedRule.name}** completed successfully.${extra}`;
+
+                        return {
+                            success: true,
+                            text,
+                            toolUsed: alegraSkip ? undefined : matchedRule.action
+                        };
                     }
                 }
             }
         }
 
-        const defaultInstruction = `You are TaskFlow AI, an autonomous fiscal agent for Alegra RD. 
-- Expert in Dominican NCF, ITBIS, and 606 classification.
-- Can extract bills from receipts and record payments.
-- Can create Markdown files with tables or analysis.
-- PROACTIVE: If the user wants to save a file or content, ALWAYS ask if they would like to create a new folder to place it in.`;
+        const defaultInstruction = `You are TaskFlow AI, an intelligent fiscal agent for Alegra RD with advanced skills.
+    - SKILLS: receipt_intelligence, workspace_organization, fiscal_analysis, document_processing
+    - EXPERT: Dominican NCF, ITBIS, and 606 classification
+    - CAPABLE: Vision analysis, business verification, automated organization
+    - ALEGRA EXPORT: 'extract_alegra_bill' is temporarily disabled. Do NOT attempt it.`;
 
-        const toolInstructions = `
+                const toolInstructions = `
 OPERATIONAL RULES:
-1. BUSINESS NAMES: Use the 'verify_dgii_rnc' tool for ANY business name or status lookup. Do NOT guess.
-2. RECEIPT ANALYSIS WORKFLOW (CRITICAL):
-   - When a receipt IMAGE is attached, you MUST use your VISION capabilities to read and extract ALL data directly from the image
-   - DO NOT ask the user for information that is visible in the image (date, amount, RNC, NCF, ITBIS, etc.)
-   - Extract from the image: Date, Total Amount, RNC, NCF, ITBIS, Provider Name, and line items
-   - DISPLAY the extracted data in a MARKDOWN TABLE before processing:
-     Example format:
-     | Field | Value |
-     |-------|-------|
-     | Date | 2024-01-10 |
-     | Provider | ITBIS SRL |
-     | RNC | 131000225563 |
-     | NCF | E310002255623 |
-     | Total Amount | RD$ 231.59 |
-     | ITBIS | RD$ 31.59 |
-   - Follow this sequence:
-     a) Use VISION to extract the RNC from the receipt image
-     b) Immediately call 'verify_dgii_rnc' with the extracted RNC to validate the business
-     c) Use VISION to extract all other data (date, amount, NCF, ITBIS, items)
-     d) DISPLAY the extracted data in a markdown table
-     e) Call 'extract_alegra_bill' with the verified business name and ALL extracted data
-   - This ensures accurate business information from DGII's official database
-3. FISCAL ACTIONS: Use 'extract_alegra_bill' to process receipts and 'record_alegra_payment' for payments.
-4. WORKSPACE: Use 'create_markdown_file' to save reports. You MUST call this tool to actually save data. Saying "I have saved the file" without calling the tool is a CRITICAL FAILURE.
-5. FILE CREATION FLOW (CRITICAL):
-    - ALWAYS ask whether to create a new folder BEFORE creating a file.
-    - If the user says NO (or gives a filename only), DO NOT ask again. Proceed immediately with create_markdown_file and omit folderName.
-    - If the user provides a folder name, call create_markdown_file with folderName set.
-    - The create_markdown_file call MUST include full markdown content. If you already displayed a table, reuse it verbatim as the content.
-6. NO FICTION: Do not hallucinate successful actions. Once you have the filename and folder preference from the user, YOU MUST EXECUTE THE TOOL CALL in the next turn.
-7. ABSOLUTE MARKDOWN PRECISION (CRITICAL):
-   - CONTIGUOUS TABLES: Tables MUST be contiguous. NO blank lines between header, separator, and data rows.
-   - NO CODE BLOCKS: Do NOT wrap tables in backticks. Render as raw markdown.
-   - SINGLE-LINE LINKS: Markdown links [Label](URL) MUST be on a single continuous line.
+1. SKILLS OVER TOOLS: Use SKILLS instead of individual tools. Skills are intelligent capabilities that handle complex tasks automatically.
+2. RECEIPT INTELLIGENCE: When processing receipts, use the 'receipt_intelligence' skill which handles vision analysis, business verification, report creation, and file organization in one call.
+3. WORKSPACE ORGANIZATION: Use 'workspace_organization' skill for organizing files - it intelligently creates folders, moves files, and applies highlighting.
+4. FISCAL ANALYSIS: Use 'fiscal_analysis' skill for tax calculations and compliance checking.
+5. DOCUMENT PROCESSING: Use 'document_processing' skill for content extraction and categorization.
+6. BUSINESS NAMES: The skills handle DGII verification automatically - you don't need to call it separately.
+7. FILE CREATION FLOW: Skills handle folder creation automatically. Don't ask about folders - let the skills decide.
 8. CONTEXT: Current workspace has ${fileCount} files and ${taskCount} tasks.`;
 
         const baseInstruction = activePromptSet ? activePromptSet.prompt : defaultInstruction;
         const systemInstruction = baseInstruction + "\n" + toolInstructions;
 
-        // Load tools dynamically from tool library
-        const enabledTools = activePromptSet?.tools?.length > 0
-            ? activePromptSet.tools
-            : DEFAULT_TOOLS;
+        // Load skills dynamically from skills library
+        const enabledSkills = (activePromptSet && Array.isArray(activePromptSet.tools) && activePromptSet.tools.length > 0)
+            ? activePromptSet.tools.filter(skillId => skillId !== 'extract_alegra_bill') // Temporarily disable Alegra export
+            : DEFAULT_SKILLS;
 
-        console.log('🔧 Loading tools for agent:', enabledTools);
-        const tools = buildGeminiTools(enabledTools);
+        console.log('🧠 Loading skills for agent:', enabledSkills);
+        let tools = getSkillSchemas(enabledSkills);
+
+        // Fallback: if enabledSkills are legacy tool ids, load default skills
+        if (!tools.length) {
+            console.warn('⚠️ No skill schemas found for enabled tools. Falling back to default skills.');
+            tools = getSkillSchemas(DEFAULT_SKILLS);
+        }
 
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", systemInstruction, tools });
         let promptParts: any[] = [query + workflowInstructions];
@@ -970,7 +1241,8 @@ OPERATIONAL RULES:
             } else if (file.type === 'pdf') {
                 try {
                     const fileBuffer = await readFile(join(process.cwd(), 'public', 'uploads', file.name));
-                    const data = await pdf(fileBuffer);
+                    const parseModule: any = await import('pdf-parse');
+                    const data = await (parseModule.default ?? parseModule)(fileBuffer);
                     promptParts[0] += `\n\n=== CONTENT OF PDF: ${file.name} ===\n${data.text}\n=== END OF PDF ===\n`;
                 } catch (e) {
                     console.error(`Error parsing PDF ${file.name}:`, e);
@@ -995,31 +1267,21 @@ OPERATIONAL RULES:
             
             for (const call of calls) {
                 let res;
-                console.log(`⚙️ Executing tool: ${call.name}`);
-                if (call.name === 'create_task') res = await createTask(call.args as any);
-                if (call.name === 'extract_alegra_bill') res = await createAlegraBill(call.args as any);
-                if (call.name === 'record_alegra_payment') res = await recordAlegraPayment(call.args as any);
-                if (call.name === 'verify_dgii_rnc') res = await verifyRNC((call.args as any).rnc);
-                if (call.name === 'create_markdown_file') {
-                    const args = call.args as any;
-                    const normalizedFolder = args?.folderName ?? args?.folder;
-                    const folderName = typeof normalizedFolder === 'string' && ['no', 'none', 'n', 'false'].includes(normalizedFolder.trim().toLowerCase())
-                        ? undefined
-                        : normalizedFolder;
-
-                    let content = args?.content;
-                    if (!content || content.trim() === '') {
-                        const lastAssistant = getLastAssistantText();
-                        content = extractLastMarkdownTable(lastAssistant) || lastAssistant;
-                    }
-
-                    res = await createMarkdownFile({
-                        ...args,
-                        content,
-                        folderName
-                    } as any);
-                }
-                console.log(`✅ Tool result for ${call.name}:`, res);
+                console.log(`🎯 Executing skill: ${call.name}`);
+                
+                // Create skill context
+                const skillContext = {
+                    userId: demoUser?.id || '',
+                    fileIds: Array.from(resolvedFileIds),
+                    query,
+                    lastResponse: getLastAssistantText(),
+                    workspaceFiles: allFiles
+                };
+                
+                // Execute skill with intelligent context
+                res = await executeSkill(call.name, call.args, skillContext);
+                
+                console.log(`✅ Skill result for ${call.name}:`, res);
 
                 toolResults.push({ functionResponse: { name: call.name, response: res } } as any);
             }

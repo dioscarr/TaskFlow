@@ -12,7 +12,7 @@ export async function createChatSession(title?: string) {
         }
     });
 
-    return { success: true, session: chatSession };
+    return { success: true, session: chatSession, message: undefined };
 }
 
 /**
