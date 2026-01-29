@@ -22,6 +22,8 @@ model User {
   alegraBills   AlegraBill[]
   chatSessions  ChatSession[]
   intentRules   IntentRule[]
+  activities    AgentActivity[]
+  protoData     PrototypeData[]
  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -141,6 +143,10 @@ model WorkspaceFile {
 
   alegraBill AlegraBill?
 
+  tags      String[] @default([])
+  storagePath String?
+  magicRule String?  // 'invoices', 'cleanup', etc.
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -213,4 +219,33 @@ model ChatMessage {
   session     ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   createdAt   DateTime @default(now())
+}
+
+model AgentActivity {
+  id        String   @id @default(cuid())
+  type      String   // 'info', 'success', 'warning', 'error'
+  title     String
+  message   String   @db.Text
+  toolUsed  String?
+  fileId    String?  // Optional link to a specific file
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model PrototypeData {
+  id        String   @id @default(cuid())
+  appId     String   // The Folder ID acts as the App ID
+  collection String  // "leads", "todos", "settings"
+  data      Json
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([appId, collection])
 }

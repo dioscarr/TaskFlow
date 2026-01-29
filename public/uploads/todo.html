@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do App</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .glassmorphism-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 20px;
+            width: 80%;
+            max-width: 600px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #bb86fc;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: none;
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            border-radius: 5px;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="text"]::placeholder {
+            color: #ddd;
+        }
+
+        button {
+            background-color: #bb86fc;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #6200ee;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            padding: 10px;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        li span {
+            flex-grow: 1;
+        }
+
+        li button {
+            margin-left: 10px;
+            background-color: #e91e63;
+        }
+
+        li button:hover {
+            background-color: #c2185b;
+        }
+    </style>
+</head>
+<body>
+    <div class="glassmorphism-container">
+        <h1>To-Do List</h1>
+        <input type="text" id="taskInput" placeholder="Add new task">
+        <button onclick="addTask()">Add Task</button>
+        <ul id="taskList"></ul>
+    </div>
+
+    <script>
+        const APP_ID = "cmkxltt5e00228z8k31to7qc4"; // The ID you got from create_folder
+        const API_BASE = `/api/storage/${APP_ID}`;
+
+        const API = {
+            get: async (col) => (await fetch(`${API_BASE}/${col}`)).json(),
+            add: async (col, data) => (await fetch(`${API_BASE}/${col}`, { method: 'POST', body: JSON.stringify(data) })).json(),
+            del: async (col, id) => fetch(`${API_BASE}/${col}?id=${id}`, { method: 'DELETE' })
+        };
+
+        async function addTask() {
+            var taskInput = document.getElementById("taskInput");
+            var taskList = document.getElementById("taskList");
+
+            if (taskInput.value.trim() !== "") {
+                var taskText = taskInput.value.trim();
+
+                const newTask = await API.add('todos', { text: taskText, done: false });
+
+                var listItem = document.createElement("li");
+                listItem.innerHTML = `<span>${newTask.text}</span>` +
+                                     `<button onclick="removeTask(this, '${newTask._id}')">Remove</button>`;
+                taskList.appendChild(listItem);
+                taskInput.value = ""; // Clear the input
+            }
+        }
+
+        async function removeTask(element, id) {
+            await API.del('todos', id);
+            element.parentNode.remove();
+        }
+
+        // Load tasks on page load
+        window.onload = async () => {
+            const tasks = await API.get('todos');
+            const taskList = document.getElementById("taskList");
+            tasks.forEach(task => {
+                var listItem = document.createElement("li");
+                listItem.innerHTML = `<span>${task.text}</span>` +
+                                     `<button onclick="removeTask(this, '${task._id}')">Remove</button>`;
+                taskList.appendChild(listItem);
+            });
+        };
+    </script>
+</body>
+</html>

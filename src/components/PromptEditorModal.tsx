@@ -14,12 +14,12 @@ import { WorkflowStep, IntentRuleDefinition, WorkflowDefinition } from '@/lib/in
 interface PromptEditorModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (data: { 
-        name: string, 
-        prompt: string, 
-        description: string, 
+    onSave: (data: {
+        name: string,
+        prompt: string,
+        description: string,
         tools: string[],
-        workflows?: WorkflowDefinition[], 
+        workflows?: WorkflowDefinition[],
         triggerKeywords?: string[]
     }) => Promise<void>;
     initialData?: {
@@ -51,7 +51,7 @@ export default function PromptEditorModal({ isOpen, onClose, onSave, initialData
             setDescription(initialData.description || '');
             setPrompt(initialData.prompt || '');
             setSelectedTools(initialData.tools || DEFAULT_TOOLS);
-            
+
             // Handle migration from steps array to named workflows array if needed
             const rawWorkflows = initialData.workflows || [];
             if (rawWorkflows.length > 0 && !('steps' in rawWorkflows[0])) {
@@ -65,7 +65,7 @@ export default function PromptEditorModal({ isOpen, onClose, onSave, initialData
             } else {
                 setWorkflows(rawWorkflows as WorkflowDefinition[]);
             }
-            
+
             setTriggerKeywords(initialData.triggerKeywords || []);
         } else {
             setName('');
@@ -105,11 +105,11 @@ export default function PromptEditorModal({ isOpen, onClose, onSave, initialData
         }
         setIsSaving(true);
         try {
-            await onSave({ 
-                name, 
-                description, 
-                prompt, 
-                tools: selectedTools, 
+            await onSave({
+                name,
+                description,
+                prompt,
+                tools: selectedTools,
                 workflows,
                 triggerKeywords
             });
@@ -149,12 +149,12 @@ export default function PromptEditorModal({ isOpen, onClose, onSave, initialData
                                     <Command size={24} />
                                 </div>
                                 <div className="flex flex-col">
-                                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-400/60 mb-1 ml-1">Agent Identity</label>
+                                    <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/20 mb-1 ml-1">Agent Name</label>
                                     <input
                                         value={name}
                                         onChange={e => setName(e.target.value)}
-                                        placeholder="Enter Agent Name..."
-                                        className="bg-white/5 border border-white/0 hover:border-white/10 focus:border-blue-500/50 focus:bg-white/10 px-3 py-1.5 rounded-xl text-xl font-bold text-white focus:outline-none placeholder:text-white/10 transition-all min-w-[300px]"
+                                        placeholder="Name your agent..."
+                                        className="bg-transparent border-none focus:ring-0 px-1 py-1 text-xl font-bold text-white focus:outline-none placeholder:text-white/10 transition-all min-w-[300px]"
                                         autoFocus
                                     />
                                 </div>
@@ -247,10 +247,10 @@ export default function PromptEditorModal({ isOpen, onClose, onSave, initialData
                                                                         className="mt-0.5 w-4 h-4 rounded border-2 border-white/20 bg-white/5 checked:bg-purple-500 checked:border-purple-500 focus:ring-2 focus:ring-purple-500/50 cursor-pointer flex-shrink-0"
                                                                     />
                                                                     <div className="flex-1 min-w-0">
-                                                                        <div className="text-xs font-semibold text-white group-hover:text-purple-300 transition-colors">
+                                                                        <div className="text-[11px] font-medium text-white/70 group-hover:text-white transition-colors">
                                                                             {tool.name}
                                                                         </div>
-                                                                        <div className="text-[10px] text-white/30 mt-0.5 line-clamp-2">
+                                                                        <div className="text-[9px] text-white/20 mt-0.5 line-clamp-1 group-hover:line-clamp-none transition-all">
                                                                             {tool.description}
                                                                         </div>
                                                                     </div>
@@ -327,7 +327,7 @@ export default function PromptEditorModal({ isOpen, onClose, onSave, initialData
                                             <h2 className="text-2xl font-bold text-white mb-2">Multi-Workflow Designer</h2>
                                             <p className="text-sm text-white/40">Create different automation chains and trigger them with specific keywords.</p>
                                         </div>
-                                        <WorkflowDesigner 
+                                        <WorkflowDesigner
                                             workflows={workflows}
                                             onChange={setWorkflows}
                                             customIntents={customIntents}

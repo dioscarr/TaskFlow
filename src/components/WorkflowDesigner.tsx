@@ -13,9 +13,9 @@ interface WorkflowDesignerProps {
     customIntents?: IntentRuleDefinition[];
 }
 
-export default function WorkflowDesigner({ 
-    workflows = [], 
-    onChange, 
+export default function WorkflowDesigner({
+    workflows = [],
+    onChange,
     customIntents = []
 }: WorkflowDesignerProps) {
     const [availableActions, setAvailableActions] = useState<ActionDefinition[]>([]);
@@ -147,10 +147,10 @@ export default function WorkflowDesigner({
     };
 
     const getActionInfo = (id: string) => {
-        return availableActions.find(a => a.id === id) || { 
-            name: id, 
-            description: 'Unknown Action', 
-            type: 'tool' 
+        return availableActions.find(a => a.id === id) || {
+            name: id,
+            description: 'Unknown Action',
+            type: 'tool'
         };
     };
 
@@ -160,14 +160,14 @@ export default function WorkflowDesigner({
             <div className="w-1/4 flex flex-col gap-2 border-r border-white/10 pr-6">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">Workflows</h3>
-                    <button 
+                    <button
                         onClick={addWorkflow}
                         className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-all"
                     >
                         <Plus size={14} />
                     </button>
                 </div>
-                
+
                 <div className="flex flex-col gap-1 overflow-y-auto max-h-[600px] pr-2">
                     {workflows.map(w => (
                         <div key={w.id} className="relative group">
@@ -175,7 +175,7 @@ export default function WorkflowDesigner({
                                 onClick={() => setActiveWorkflowId(w.id)}
                                 className={cn(
                                     "w-full flex items-center gap-3 p-3 rounded-2xl border transition-all text-left",
-                                    activeWorkflowId === w.id 
+                                    activeWorkflowId === w.id
                                         ? "bg-blue-600/10 border-blue-500/30 text-blue-400"
                                         : "bg-white/5 border-white/5 text-white/40 hover:bg-white/10 hover:border-white/10"
                                 )}
@@ -183,7 +183,7 @@ export default function WorkflowDesigner({
                                 <List size={14} className={activeWorkflowId === w.id ? "text-blue-500" : "text-white/20"} />
                                 <span className="text-xs font-bold truncate pr-6">{w.name}</span>
                             </button>
-                            <button 
+                            <button
                                 onClick={(e) => { e.stopPropagation(); deleteWorkflow(w.id); }}
                                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-white/0 group-hover:text-red-400/50 hover:text-red-500 transition-all"
                             >
@@ -231,9 +231,9 @@ export default function WorkflowDesigner({
                                         <div className="flex flex-wrap gap-2 mb-3">
                                             {activeWorkflow.triggerKeywords.length > 0 ? (
                                                 activeWorkflow.triggerKeywords.map(kw => (
-                                                    <span key={kw} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl text-[10px] font-bold transition-all group">
+                                                    <span key={kw} className="flex items-center gap-1.5 px-2 py-1 bg-white/5 border border-white/10 text-white/50 rounded-lg text-[9px] font-medium transition-all group">
                                                         {kw}
-                                                        <button onClick={() => removeKeyword(kw)} className="hover:text-white transition-colors">
+                                                        <button onClick={() => removeKeyword(kw)} className="hover:text-red-400 transition-colors">
                                                             <X size={10} />
                                                         </button>
                                                     </span>
@@ -250,7 +250,7 @@ export default function WorkflowDesigner({
                                                 placeholder="e.g. sync, process, verify..."
                                                 className="bg-white/5 border border-white/5 hover:border-white/10 focus:border-blue-500/50 px-4 py-2 rounded-xl text-xs text-white placeholder:text-white/10 outline-none transition-all flex-1"
                                             />
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     if (keywordInput.trim()) {
                                                         const kw = keywordInput.trim().toLowerCase();
@@ -286,10 +286,10 @@ export default function WorkflowDesigner({
                                 </button>
                             </div>
 
-                            <Reorder.Group 
-                                axis="y" 
-                                values={activeWorkflow.steps} 
-                                onReorder={(newSteps) => updateActiveWorkflow({ steps: newSteps })} 
+                            <Reorder.Group
+                                axis="y"
+                                values={activeWorkflow.steps}
+                                onReorder={(newSteps) => updateActiveWorkflow({ steps: newSteps })}
                                 className="space-y-3"
                             >
                                 {activeWorkflow.steps.map((step, index) => {
@@ -309,8 +309,8 @@ export default function WorkflowDesigner({
                                             <div className="flex-1 min-w-0 space-y-2">
                                                 <div className="flex items-center gap-2">
                                                     <span className={cn(
-                                                        "text-[8px] font-black uppercase px-1.5 py-0.5 rounded",
-                                                        info.type === 'tool' ? "bg-purple-500/20 text-purple-400" : "bg-blue-500/20 text-blue-400"
+                                                        "text-[7px] font-bold uppercase px-1 py-0.5 rounded-sm",
+                                                        info.type === 'tool' ? "bg-purple-500/10 text-purple-400/60" : "bg-blue-500/10 text-blue-400/60"
                                                     )}>
                                                         {info.type}
                                                     </span>
@@ -336,6 +336,42 @@ export default function WorkflowDesigner({
                                                         >
                                                             {((step.params as any)?.useLastMarkdownFolder ?? true) ? 'Using last folder' : 'Select folder later'}
                                                         </button>
+                                                    </div>
+                                                )}
+
+                                                {step.action === 'create_folder' && (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                        <label className="text-[9px] uppercase tracking-widest text-white/40">
+                                                            If folder exists
+                                                            <select
+                                                                value={(step.params as any)?.onExistingFolder || 'reuse'}
+                                                                onChange={(e) => updateStepParams(step.id, { onExistingFolder: e.target.value })}
+                                                                className="mt-1 w-full h-8 rounded-md bg-white/5 border border-white/10 text-white/70 text-[10px]"
+                                                            >
+                                                                <option value="ask">Ask me each time</option>
+                                                                <option value="reuse">Use existing folder</option>
+                                                                <option value="create_unique">Create new (timestamp)</option>
+                                                            </select>
+                                                        </label>
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-[9px] uppercase tracking-widest text-white/40">
+                                                                Name conflicts
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => updateStepParams(step.id, { nameConflictStrategy: (step.params as any)?.nameConflictStrategy === 'timestamp' ? undefined : 'timestamp' })}
+                                                                className={cn(
+                                                                    "px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all",
+                                                                    (step.params as any)?.nameConflictStrategy === 'timestamp'
+                                                                        ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
+                                                                        : "bg-white/5 border-white/10 text-white/40 hover:text-white"
+                                                                )}
+                                                            >
+                                                                {(step.params as any)?.nameConflictStrategy === 'timestamp'
+                                                                    ? 'Timestamp duplicates'
+                                                                    : 'Keep original names'}
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 )}
 
@@ -443,15 +479,15 @@ export default function WorkflowDesigner({
                                     >
                                         <div className="flex items-center justify-between w-full mb-1">
                                             <span className={cn(
-                                                "text-[8px] font-black uppercase px-1.5 py-0.5 rounded",
-                                                action.type === 'tool' ? "bg-purple-500/20 text-purple-400" : "bg-blue-500/20 text-blue-400"
+                                                "text-[7px] font-bold uppercase px-1 py-0.5 rounded-sm",
+                                                action.type === 'tool' ? "bg-purple-500/10 text-purple-400/60" : "bg-blue-500/10 text-blue-400/60"
                                             )}>
                                                 {action.type}
                                             </span>
-                                            <ChevronRight size={14} className="text-white/0 group-hover:text-yellow-500 transition-all outline-none" />
+                                            <ChevronRight size={12} className="text-white/0 group-hover:text-blue-500 transition-all outline-none" />
                                         </div>
-                                        <div className="text-xs font-bold text-white mb-1">{action.name}</div>
-                                        <div className="text-[10px] text-white/30 truncate w-full">{action.description}</div>
+                                        <div className="text-[11px] font-bold text-white mb-0.5">{action.name}</div>
+                                        <div className="text-[9px] text-white/30 truncate w-full">{action.description}</div>
                                     </button>
                                 ))}
                             </div>

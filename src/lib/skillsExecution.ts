@@ -14,7 +14,8 @@ import {
     moveFilesToFolder,
     copyFilesToFolder,
     highlightWorkspaceFile,
-    verifyRNC
+    verifyRNC,
+    extractReceiptInfo
 } from '@/app/actions';
 
 export interface SkillContext {
@@ -43,22 +44,21 @@ export async function handleReceiptIntelligence(args: any, context: SkillContext
     let extractedData: any = {};
     let createdFolderId: string | undefined;
     let createdFileId: string | undefined;
+    let folderName: string = 'Receipts';
 
     try {
-        // Step 1: Vision Analysis (would use Gemini vision capabilities)
+        // Step 1: Vision Analysis
         if (imageAnalysis && context.fileIds.length > 0) {
-            console.log('👁️ Analyzing receipt images...');
-            // This would normally use Gemini's vision capabilities
-            // For now, we'll simulate extraction
-            extractedData = {
-                provider: 'Simulated Provider',
-                rnc: '123456789',
-                date: new Date().toISOString().split('T')[0],
-                total: 1000.00,
-                ncf: 'B0100000001',
-                itbis: 150.00
-            };
-            results.push({ step: 'vision_analysis', success: true, data: extractedData });
+            console.log('👁️ Analyzing receipt images with real vision...');
+            const extraction = await extractReceiptInfo({ fileIds: context.fileIds });
+            if (extraction.success) {
+                extractedData = extraction.extractedData;
+                results.push({ step: 'vision_analysis', success: true, data: extractedData });
+            } else {
+                console.warn('Vision extraction failed, using fallback');
+                extractedData = { provider: 'Unknown', total: 0 };
+                results.push({ step: 'vision_analysis', success: false, error: extraction.message });
+            }
         }
 
         // Step 2: Business Verification
@@ -74,16 +74,16 @@ export async function handleReceiptIntelligence(args: any, context: SkillContext
             console.log('📝 Creating markdown report...');
 
             // Determine folder strategy
-            let folderName: string;
             switch (folderStrategy) {
                 case 'year':
-                    folderName = `${new Date().getFullYear()}`;
+                    folderName = `Receipts/${new Date().getFullYear()}`;
                     break;
                 case 'month':
-                    folderName = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+                    folderName = `Receipts/${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
                     break;
                 case 'provider':
-                    folderName = extractedData.provider?.replace(/[^a-zA-Z0-9]/g, '') || 'Receipts';
+                    const providerClean = extractedData.provider?.replace(/[^a-zA-Z0-9]/g, '') || 'Unknown';
+                    folderName = `Receipts/${providerClean}`;
                     break;
                 default:
                     folderName = 'Receipts';
@@ -129,7 +129,7 @@ export async function handleReceiptIntelligence(args: any, context: SkillContext
             success: true,
             skill: 'receipt_intelligence',
             results,
-            summary: `Processed receipt: ${extractedData.provider} - ${extractedData.total} DOP`
+            summary: `Processed receipt from ${extractedData.provider || 'Provider'}. Total: ${extractedData.total || 0} DOP. Files organized into folder: ${folderName}.`
         };
 
     } catch (error) {

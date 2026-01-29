@@ -45,7 +45,18 @@ export const DEFAULT_INTENT_RULES: IntentRuleDefinition[] = [
     }
 ];
 
+const normalizeKeyword = (value: string) => value.toLowerCase().trim();
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const matchesIntentRule = (input: string, keywords: string[]) => {
-    const text = input.toLowerCase();
-    return keywords.some(keyword => text.includes(keyword.toLowerCase()));
+    const text = normalizeKeyword(input);
+    return keywords.some(keyword => {
+        const normalized = normalizeKeyword(keyword);
+        if (!normalized) return false;
+        if (text === normalized) return true;
+        if (text.startsWith(`${normalized} `)) return true;
+        const regex = new RegExp(`\\b${escapeRegex(normalized)}\\b`, 'i');
+        return regex.test(text);
+    });
 };

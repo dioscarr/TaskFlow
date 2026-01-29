@@ -17,6 +17,25 @@ export interface ToolDefinition {
  * Available tools in the library
  */
 export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
+    search_web: {
+        id: 'search_web',
+        name: 'Search Web',
+        description: 'Search the internet for information or images. Use "type" parameter to switch between web search and image search.',
+        category: 'task',
+        icon: 'Globe',
+        schema: {
+            name: 'search_web',
+            description: 'Search the internet for information or images',
+            parameters: {
+                type: 'object',
+                properties: {
+                    query: { type: 'string', description: 'Search query' },
+                    type: { type: 'string', enum: ['web', 'image'], description: 'Type of search: "web" for text results, "image" for image URLs' }
+                },
+                required: ['query']
+            }
+        }
+    },
     verify_dgii_rnc: {
         id: 'verify_dgii_rnc',
         name: 'Verify Business (DGII)',
@@ -93,20 +112,20 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
             }
         }
     },
-    create_markdown_file: {
-        id: 'create_markdown_file',
-        name: 'Save Markdown File',
-        description: 'Create a markdown file with content. CRITICAL: You MUST call this tool to actually save files. Saying "I have saved the file" without calling this tool is a CRITICAL FAILURE.',
+    create_file: {
+        id: 'create_file',
+        name: 'Create File',
+        description: 'Create a new file (Markdown, JSON, TXT, etc). Use this for any non-HTML file creation. CRITICAL: You MUST call this to save files.',
         category: 'workspace',
         icon: 'Save',
         schema: {
-            name: 'create_markdown_file',
-            description: 'Create a markdown file with content',
+            name: 'create_file',
+            description: 'Create a new file with content',
             parameters: {
                 type: 'object',
                 properties: {
-                    filename: { type: 'string', description: 'File name (without .md extension)' },
-                    content: { type: 'string', description: 'Markdown content' },
+                    filename: { type: 'string', description: 'File name including extension (e.g. app.json, notes.md)' },
+                    content: { type: 'string', description: 'File content' },
                     folderName: { type: 'string', description: 'Optional folder name to create/use' }
                 },
                 required: ['filename', 'content']
@@ -178,20 +197,84 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
     create_folder: {
         id: 'create_folder',
         name: 'Create Folder',
-        description: 'Creates a new folder with optional auto-generated name.',
+        description: 'Creates a new folder. RETURNS THE FOLDER ID. IMPORTANT: If you are building an app, you MUST use the returned folderId to immediately create the files inside it in the SAME response loop.',
         category: 'workspace',
         icon: 'FolderPlus',
         schema: {
             name: 'create_folder',
-            description: 'Creates a new folder with optional auto-naming',
+            description: 'Creates a new folder. Returns folderId which must be used for subsequent file creation.',
             parameters: {
                 type: 'object',
                 properties: {
-                    name: { type: 'string', description: 'Folder name (optional - will auto-generate if not provided)' },
-                    parentId: { type: 'string', description: 'Parent folder ID (optional)' },
+                    name: { type: 'string', description: 'Folder name' },
+                    parentId: { type: 'string', description: 'Parent folder ID' },
                     autoName: { type: 'boolean', description: 'Whether to auto-generate a name' },
-                    prefix: { type: 'string', description: 'Prefix for auto-generated names (default: "Folder")' }
+                    prefix: { type: 'string', description: 'Prefix for auto-generated names' },
+                    onExistingFolder: {
+                        type: 'string',
+                        enum: ['reuse', 'ask', 'create_unique'],
+                        description: 'Strategy if folder exists: reuse existing, ask user, or create unique with timestamp',
+                        default: 'reuse'
+                    }
                 }
+            }
+        }
+    },
+    extract_receipt_info: {
+        id: 'extract_receipt_info',
+        name: 'Extract Receipt Data',
+        description: 'Analyze receipt images and extract structured data (vendor, RNC, items, total, etc.).',
+        category: 'fiscal',
+        icon: 'ScanLine',
+        schema: {
+            name: 'extract_receipt_info',
+            description: 'Extract raw data from receipt images',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileIds: { type: 'array', items: { type: 'string' }, description: 'List of image file IDs' }
+                },
+                required: ['fileIds']
+            }
+        }
+    },
+    generate_markdown_report: {
+        id: 'generate_markdown_report',
+        name: 'Generate Markdown Report',
+        description: 'Converts structured data (like receipt info) into a beautifully formatted markdown table and report.',
+        category: 'workspace',
+        icon: 'Layout',
+        schema: {
+            name: 'generate_markdown_report',
+            description: 'Generate formatted markdown from structured data',
+            parameters: {
+                type: 'object',
+                properties: {
+                    data: { type: 'object', description: 'The JSON data to report on' },
+                    title: { type: 'string', description: 'Report title' },
+                    includeBusinessInfo: { type: 'boolean', description: 'Whether to include a dedicated business/DGII section', default: true }
+                },
+                required: ['data']
+            }
+        }
+    },
+    organize_files: {
+        id: 'organize_files',
+        name: 'Smart Organize Files',
+        description: 'Automatically organizes files into a folder (e.g., by vendor or project). Reuses existing folders whenever possible to avoid clutter.',
+        category: 'workspace',
+        icon: 'Workflow',
+        schema: {
+            name: 'organize_files',
+            description: 'Intelligently organize files into folders',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileIds: { type: 'array', items: { type: 'string' }, description: 'Files to organize' },
+                    suggestedName: { type: 'string', description: 'Optional folder name hint' },
+                    strategy: { type: 'string', enum: ['merge', 'new_folder'], default: 'merge' }
+                },
+                required: ['fileIds']
             }
         }
     },
@@ -211,6 +294,419 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
                     folderId: { type: 'string', description: 'Target folder ID' }
                 },
                 required: ['fileIds', 'folderId']
+            }
+        }
+    },
+    edit_file: {
+        id: 'edit_file',
+        name: 'Edit File',
+        description: 'Edit the content of an existing file in the workspace.',
+        category: 'workspace',
+        icon: 'Edit',
+        schema: {
+            name: 'edit_file',
+            description: 'Edit the content of an existing file by overwriting it.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileId: { type: 'string', description: 'The ID or exact name of the file to edit' },
+                    content: { type: 'string', description: 'The new full content of the file' }
+                },
+                required: ['fileId', 'content']
+            }
+        }
+    },
+    agent_delegate: {
+        id: 'agent_delegate',
+        name: 'Delegate to Agent',
+        description: 'Delegate a specific task or sub-problem to another specialized agent.',
+        category: 'task',
+        icon: 'Bot',
+        schema: {
+            name: 'agent_delegate',
+            description: 'Delegate a task to another agent',
+            parameters: {
+                type: 'object',
+                properties: {
+                    agentType: { type: 'string', description: 'Type of agent (e.g., "designer", "researcher", "analyst")' },
+                    task: { type: 'string', description: 'The specific task to delegate' }
+                },
+                required: ['agentType', 'task']
+            }
+        }
+    },
+    ask_questions: {
+        id: 'ask_questions',
+        name: 'Clarify Requirements',
+        description: 'Ask questions to clarify requirements before proceeding with a task.',
+        category: 'task',
+        icon: 'MessageSquare',
+        schema: {
+            name: 'ask_questions',
+            description: 'Ask clarity questions to the user',
+            parameters: {
+                type: 'object',
+                properties: {
+                    questions: { type: 'array', items: { type: 'string' }, description: 'List of questions to ask' }
+                },
+                required: ['questions']
+            }
+        }
+    },
+    read_file: {
+        id: 'read_file',
+        name: 'Read File',
+        description: 'Read the contents of one or more files in your workspace.',
+        category: 'workspace',
+        icon: 'FileText',
+        schema: {
+            name: 'read_file',
+            description: 'Read the contents of files from the workspace',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileIds: { type: 'array', items: { type: 'string' }, description: 'List of file IDs or names to read' }
+                },
+                required: ['fileIds']
+            }
+        }
+    },
+    search_files: {
+        id: 'search_files',
+        name: 'Search Files',
+        description: 'Search for files in your workspace by name or content.',
+        category: 'workspace',
+        icon: 'Search',
+        schema: {
+            name: 'search_files',
+            description: 'Search files by query string',
+            parameters: {
+                type: 'object',
+                properties: {
+                    query: { type: 'string', description: 'The search query' },
+                    searchContent: { type: 'boolean', description: 'Whether to search file content (true) or just names (false)', default: true }
+                },
+                required: ['query']
+            }
+        }
+    },
+    execute_command: {
+        id: 'execute_command',
+        name: 'Execute Command',
+        description: 'Execute code or shell commands on the machine.',
+        category: 'task',
+        icon: 'Terminal',
+        schema: {
+            name: 'execute_command',
+            description: 'Execute a system command',
+            parameters: {
+                type: 'object',
+                properties: {
+                    command: { type: 'string', description: 'The command to execute' },
+                    reason: { type: 'string', description: 'Why this command needs to be run' }
+                },
+                required: ['command', 'reason']
+            }
+        }
+    },
+    create_workflow: {
+        id: 'create_workflow',
+        name: 'Create Workflow',
+        description: 'Create a new automated workflow sequence based on natural language requirements.',
+        category: 'task',
+        icon: 'Bot',
+        schema: {
+            name: 'create_workflow',
+            description: 'Define a new automation workflow with multiple steps',
+            parameters: {
+                type: 'object',
+                properties: {
+                    name: { type: 'string', description: 'Name of the workflow' },
+                    triggerKeywords: { type: 'array', items: { type: 'string' }, description: 'Keywords that should trigger this workflow automatically' },
+                    steps: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                action: { type: 'string', description: 'The tool ID or action name' },
+                                params: { type: 'object', description: 'Parameters for the action' }
+                            },
+                            required: ['action']
+                        },
+                        description: 'Ordered list of steps to execute'
+                    }
+                },
+                required: ['name', 'steps']
+            }
+        }
+    },
+    create_agent: {
+        id: 'create_agent',
+        name: 'Create Specialized Agent',
+        description: 'Create a new specialized AI agent with custom instructions and toolsets.',
+        category: 'task',
+        icon: 'Sparkles',
+        schema: {
+            name: 'create_agent',
+            description: 'Create a new AI agent/persona',
+            parameters: {
+                type: 'object',
+                properties: {
+                    name: { type: 'string', description: 'Name of the agent (e.g., "Fiscal Researcher", "Code Reviewer")' },
+                    description: { type: 'string', description: 'What this agent specializes in' },
+                    systemPrompt: { type: 'string', description: 'The base instructions/identity for the agent' },
+                    tools: { type: 'array', items: { type: 'string' }, description: 'List of tool IDs to enable for this agent' }
+                },
+                required: ['name', 'systemPrompt']
+            }
+        }
+    },
+    configure_agent: {
+        id: 'configure_agent',
+        name: 'Configure Agent',
+        description: 'Update an existing agent\'s prompt, toolset, or active status.',
+        category: 'task',
+        icon: 'Settings',
+        schema: {
+            name: 'configure_agent',
+            description: 'Update an existing AI agent configuration',
+            parameters: {
+                type: 'object',
+                properties: {
+                    agentId: { type: 'string', description: 'The ID or exact name of the agent to update' },
+                    systemPrompt: { type: 'string', description: 'New instructions for the agent' },
+                    tools: { type: 'array', items: { type: 'string' }, description: 'Updated list of tool IDs' },
+                    isActive: { type: 'boolean', description: 'Set as the primary active agent' }
+                },
+                required: ['agentId']
+            }
+        }
+    },
+    manage_data_table: {
+        id: 'manage_data_table',
+        name: 'Manage Data Table',
+        description: 'Create, append to, or edit structured markdown tables within workspace files. Ideal for trackers, ledgers, and logs.',
+        category: 'workspace',
+        icon: 'Table',
+        schema: {
+            name: 'manage_data_table',
+            description: 'Manipulate markdown tables in the workspace',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileId: { type: 'string', description: 'The file containing the table' },
+                    action: { type: 'string', enum: ['create', 'add_row', 'update_row'], description: 'Creation or modification action' },
+                    headers: { type: 'array', items: { type: 'string' }, description: 'Column headers (for create)' },
+                    row: { type: 'object', description: 'Data row to add or updated values' },
+                    searchKey: { type: 'string', description: 'Field to search for when updating (e.g., "ID" or "Date")' },
+                    searchValue: { type: 'string', description: 'Value to match for the update' }
+                },
+                required: ['fileId', 'action']
+            }
+        }
+    },
+    remove_highlights: {
+        id: 'remove_highlights',
+        name: 'Remove Highlights',
+        description: 'Removes highlighting from specific files or ALL files in the workspace.',
+        category: 'workspace',
+        icon: 'Eraser',
+        schema: {
+            name: 'remove_highlights',
+            description: 'Clear highlight styling from files',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileIds: { type: 'array', items: { type: 'string' }, description: 'List of file IDs to clear. Leave empty to clear ALL highlights.' }
+                }
+            }
+        }
+    },
+    batch_rename: {
+        id: 'batch_rename',
+        name: 'Batch Rename',
+        description: 'Rename multiple files at once using patterns, prefixes, suffixes, or find/replace.',
+        category: 'workspace',
+        icon: 'Type',
+        schema: {
+            name: 'batch_rename',
+            description: 'Rename multiple files at once',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileIds: { type: 'array', items: { type: 'string' }, description: 'Files to rename' },
+                    prefix: { type: 'string', description: 'String to add at the beginning' },
+                    suffix: { type: 'string', description: 'String to add before the extension' },
+                    find: { type: 'string', description: 'Pattern to find in names' },
+                    replace: { type: 'string', description: 'String to replace the found pattern with' }
+                },
+                required: ['fileIds']
+            }
+        }
+    },
+    summarize_file: {
+        id: 'summarize_file',
+        name: 'Summarize File',
+        description: 'Generate a concise summary of a file\'s content using AI.',
+        category: 'workspace',
+        icon: 'AlignLeft',
+        schema: {
+            name: 'summarize_file',
+            description: 'Summarize the content of a file',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileId: { type: 'string', description: 'The file to summarize' },
+                    detailLevel: { type: 'string', enum: ['brief', 'detailed'], default: 'brief' }
+                },
+                required: ['fileId']
+            }
+        }
+    },
+    extract_text_from_image: {
+        id: 'extract_text_from_image',
+        name: 'OCR / Extract Text',
+        description: 'Extract text from images or scanned documents using Vision AI.',
+        category: 'workspace',
+        icon: 'ScanText',
+        schema: {
+            name: 'extract_text_from_image',
+            description: 'Extract text from an image file',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileId: { type: 'string', description: 'The image file ID' }
+                },
+                required: ['fileId']
+            }
+        }
+    },
+    find_duplicate_files: {
+        id: 'find_duplicate_files',
+        name: 'Find Duplicates',
+        description: 'Identify files with identical content or very similar names to help clean the workspace.',
+        category: 'workspace',
+        icon: 'CopyCheck',
+        schema: {
+            name: 'find_duplicate_files',
+            description: 'Look for duplicate or highly similar files',
+            parameters: {
+                type: 'object',
+                properties: {
+                    similarityThreshold: { type: 'number', description: 'Sensitivity (0.1 to 1.0)', default: 0.9 }
+                }
+            }
+        }
+    },
+    focus_workspace_item: {
+        id: 'focus_workspace_item',
+        name: 'Focus / Highlight Item',
+        description: 'Auto-scrolled and highlights a file or folder in the UI so the user can see it immediately. Use this after creating, moving, or renaming something important.',
+        category: 'workspace',
+        icon: 'Focus',
+        schema: {
+            name: 'focus_workspace_item',
+            description: 'Focus the UI on a specific file or folder',
+            parameters: {
+                type: 'object',
+                properties: {
+                    itemId: { type: 'string', description: 'The ID or name of the file/folder to focus' }
+                },
+                required: ['itemId']
+            }
+        }
+    },
+    configure_magic_folder: {
+        id: 'configure_magic_folder',
+        name: 'Configure Magic Folder',
+        description: 'Designate a folder with a "Magic Rule" for automatic processing (e.g., auto-organize, auto-OCR).',
+        category: 'workspace',
+        icon: 'Sparkles',
+        schema: {
+            name: 'configure_magic_folder',
+            description: 'Set a magic automation rule for a folder',
+            parameters: {
+                type: 'object',
+                properties: {
+                    folderId: { type: 'string', description: 'The ID of the folder' },
+                    rule: { type: 'string', enum: ['invoices', 'cleanup', 'reports', 'none'], description: 'The automation rule to apply' }
+                },
+                required: ['folderId', 'rule']
+            }
+        }
+    },
+    create_html_file: {
+        id: 'create_html_file',
+        name: 'Create HTML Page',
+        description: 'Create a fully functional HTML web page. The agent will render this immediately for the user.',
+        category: 'workspace',
+        icon: 'Layout',
+        schema: {
+            name: 'create_html_file',
+            description: 'Create a new HTML file',
+            parameters: {
+                type: 'object',
+                properties: {
+                    filename: { type: 'string', description: 'Name of the file (e.g., landing-page)' },
+                    content: { type: 'string', description: 'Full HTML content including styles' },
+                    folderId: { type: 'string', description: 'Optional folder to save in' }
+                },
+                required: ['filename', 'content']
+            }
+        }
+    },
+    set_file_tags: {
+        id: 'set_file_tags',
+        name: 'Set File Tags',
+        description: 'Attach semantic tags to a file for better filtering and discovery.',
+        category: 'workspace',
+        icon: 'Tag',
+        schema: {
+            name: 'set_file_tags',
+            description: 'Add or update tags on a workspace file',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileId: { type: 'string', description: 'The file ID' },
+                    tags: { type: 'array', items: { type: 'string' }, description: 'List of tags' }
+                },
+                required: ['fileId', 'tags']
+            }
+        }
+    },
+    synthesize_documents: {
+        id: 'synthesize_documents',
+        name: 'Synthesize documents',
+        description: 'Analyze and combine multiple documents into a single, cohesive master report.',
+        category: 'workspace',
+        icon: 'Combine',
+        schema: {
+            name: 'synthesize_documents',
+            description: 'Combine multiple files into a synthesized report',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileIds: { type: 'array', items: { type: 'string' }, description: 'Files to synthesize' },
+                    outputFilename: { type: 'string', description: 'Name for the resulting synthesized file' }
+                },
+                required: ['fileIds', 'outputFilename']
+            }
+        }
+    },
+    get_agent_activity: {
+        id: 'get_agent_activity',
+        name: 'Get Activity Feed',
+        description: 'Retrieve the recent activity feed of the AI agent\'s background actions.',
+        category: 'workspace',
+        icon: 'Activity',
+        schema: {
+            name: 'get_agent_activity',
+            description: 'Get recent agent actions and reasoning',
+            parameters: {
+                type: 'object',
+                properties: {
+                    limit: { type: 'number', description: 'Number of items to fetch', default: 10 }
+                }
             }
         }
     }
@@ -255,10 +751,30 @@ export function getToolsByCategory() {
  * Default tool set for new agents
  */
 export const DEFAULT_TOOLS = [
+    'search_web',
     'verify_dgii_rnc',
-    'create_markdown_file',
+    'create_file',
+    'edit_file',
+    'manage_data_table',
+    'read_file',
+    'search_files',
     'create_folder',
-    'highlight_file',
+    'organize_files',
     'move_attachments_to_folder',
-    'copy_attachments_to_folder'
+    'highlight_file',
+    'create_task',
+    'ask_questions',
+    'agent_delegate',
+    'create_workflow',
+    'batch_rename',
+    'remove_highlights',
+    'summarize_file',
+    'extract_text_from_image',
+    'find_duplicate_files',
+    'focus_workspace_item',
+    'configure_magic_folder',
+    'create_html_file',
+    'set_file_tags',
+    'synthesize_documents',
+    'get_agent_activity'
 ];

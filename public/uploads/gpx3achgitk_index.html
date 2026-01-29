@@ -1,0 +1,191 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Capture App</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            background-color: rgba(30, 30, 30, 0.8);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        h1 {
+            text-align: center;
+            color: #bb86fc;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"], input[type="email"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border: none;
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="text"]:focus, input[type="email"]:focus {
+            outline: none;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background-color: #bb86fc;
+            color: #121212;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #8a56ac;
+        }
+
+        #leadList {
+            margin-top: 30px;
+        }
+
+        .lead-item {
+            background-color: rgba(40, 40, 40, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .lead-item span {
+            color: #ddd;
+        }
+
+        .lead-item button {
+            background-color: #e91e63;
+            color: #fff;
+            border-radius: 5px;
+            padding: 8px 12px;
+            font-size: 0.9em;
+            font-weight: normal;
+        }
+
+        /* Search, Sorting, Paging & Filtering Styles (Just a basic example) */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .controls input {
+            width: 48%;
+        }
+
+        /* Basic Pagination */
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            display: inline-block;
+            width: auto;
+            padding: 8px 15px;
+            margin: 0 5px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lead Capture</h1>
+        <input type="text" id="name" placeholder="Name">
+        <input type="email" id="email" placeholder="Email">
+        <button onclick="addLead()">Add Lead</button>
+
+        <div class="controls">
+            <input type="text" id="search" placeholder="Search Leads">
+        </div>
+
+        <div id="leadList">
+            <!-- Leads will be displayed here -->
+        </div>
+
+        <div class="pagination">
+            <button>Previous</button>
+            <button>Next</button>
+        </div>
+    </div>
+
+    <script>
+        const APP_ID = "cmkxnyj11001n8zukrmu7x9g5"; // The ID you got from create_folder
+        const API_BASE = `/api/storage/${APP_ID}`;
+
+        const API = {
+            get: async (col) => (await fetch(`${API_BASE}/${col}`)).json(),
+            add: async (col, data) => (await fetch(`${API_BASE}/${col}`, { method: 'POST', body: JSON.stringify(data) })).json(),
+            del: async (col, id) => fetch(`${API_BASE}/${col}?id=${id}`, { method: 'DELETE' })
+        };
+
+        async function addLead() {
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+
+            if (name && email) {
+                const newLead = await API.add('leads', { name: name, email: email });
+                document.getElementById('name').value = '';
+                document.getElementById('email').value = '';
+                displayLeads();
+            } else {
+                alert('Please enter name and email.');
+            }
+        }
+
+        async function deleteLead(id) {
+            await API.del('leads', id);
+            displayLeads();
+        }
+
+        async function displayLeads() {
+            const leads = await API.get('leads');
+            const leadListDiv = document.getElementById('leadList');
+            leadListDiv.innerHTML = ''; // Clear existing list
+
+            leads.forEach(lead => {
+                const leadDiv = document.createElement('div');
+                leadDiv.classList.add('lead-item');
+                leadDiv.innerHTML = `
+                    <span>${lead.name}</span>
+                    <span>${lead.email}</span>
+                    <button onclick="deleteLead('${lead._id}')">Delete</button>
+                `;
+                leadListDiv.appendChild(leadDiv);
+            });
+        }
+
+        // Initial display of leads
+        displayLeads();
+    </script>
+</body>
+</html>

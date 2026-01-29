@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to right, #4A00E0, #8E2DE2);
+            color: #fff;
+            overflow: hidden; /* Hide scrollbars */
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 60px;
+            text-align: center;
+            max-width: 800px;
+            z-index: 1;
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .glass:hover {
+            transform: scale(1.05);
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        p {
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            animation: slideUp 1s ease-in-out;
+        }
+
+        .cta-button {
+            background-color: #fff;
+            color: #8E2DE2;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            transition: background-color 0.3s, color 0.3s;
+            animation: pulse 2s infinite alternate;
+        }
+
+        .cta-button:hover {
+            background-color: #8E2DE2;
+            color: #fff;
+        }
+
+        /* Animated Background Bubbles */
+        .bubbles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bubbles li {
+            position: absolute;
+            list-style: none;
+            display: block;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.15);
+            animation: animateBubbles 25s linear infinite;
+            bottom: -160px;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+
+        .bubbles li:hover {
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .bubbles li:nth-child(1) {
+            left: 10%;
+        }
+
+        .bubbles li:nth-child(2) {
+            left: 20%;
+            width: 40px;
+            height: 40px;
+            animation-delay: 2s;
+            animation-duration: 17s;
+        }
+
+        .bubbles li:nth-child(3) {
+            left: 25%;
+            animation-delay: 4s;
+        }
+
+        .bubbles li:nth-child(4) {
+            left: 40%;
+            width: 60px;
+            height: 60px;
+            animation-duration: 22s;
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .bubbles li:nth-child(5) {
+            left: 70%;
+        }
+
+        .bubbles li:nth-child(6) {
+            left: 80%;
+            width: 120px;
+            height: 120px;
+            animation-delay: 3s;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .bubbles li:nth-child(7) {
+            left: 32%;
+            width: 160px;
+            height: 160px;
+            animation-delay: 7s;
+        }
+
+        .bubbles li:nth-child(8) {
+            left: 55%;
+            width: 20px;
+            height: 20px;
+            animation-delay: 15s;
+            animation-duration: 40s;
+        }
+
+        .bubbles li:nth-child(9) {
+            left: 25%;
+            width: 10px;
+            height: 10px;
+            animation-delay: 2s;
+            animation-duration: 40s;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .bubbles li:nth-child(10) {
+            left: 90%;
+            width: 160px;
+            height: 160px;
+            animation-delay: 11s;
+        }
+
+        @keyframes animateBubbles {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(-1000px) rotate(720deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            100% {
+                transform: scale(1.1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="bubbles">
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+        </div>
+        <div class="glass">
+            <h1>About Our Amazing Site</h1>
+            <p>Welcome to our modern and beautifully animated site! We are dedicated to providing you with the best experience possible. Explore our features and discover what makes us unique.</p>
+            <a href="#" class="cta-button">Learn More</a>
+        </div>
+    </div>
+</body>
+</html>

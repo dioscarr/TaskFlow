@@ -1,0 +1,8 @@
+{
+    "name": "CRM Module",
+    "description": "Manages customer leads and deals",
+    "collections": ["contacts"],
+    "events": ["contact_created"],
+    "inputs": [],
+    "outputs": ["contactId"]
+}

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: rgba(20, 20, 20, 0.8);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            text-align: center;
+            width: 80%;
+            max-width: 600px;
+        }
+
+        h1 {
+            color: #f0f0f0;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            color: #ddd;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 7px;
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        select:focus {
+            background-color: rgba(255, 255, 255, 0.15);
+            outline: none;
+        }
+
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23fff"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 12px top 50%;
+            background-size: 16px;
+            padding-right: 30px;
+        }
+
+        button {
+            background-color: #5865F2;
+            color: #fff;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #424bad;
+        }
+
+        #leads-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        #leads-table th,
+        #leads-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #leads-table th {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #fff;
+        }
+
+        #leads-table tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CRM - Sales Lead Tracker</h1>
+        <div class="form-group">
+            <label for="leadName">Lead Name:</label>
+            <input type="text" id="leadName" name="leadName">
+        </div>
+        <div class="form-group">
+            <label for="leadEmail">Lead Email:</label>
+            <input type="email" id="leadEmail" name="leadEmail">
+        </div>
+        <div class="form-group">
+            <label for="leadStatus">Lead Status:</label>
+            <select id="leadStatus" name="leadStatus">
+                <option value="New">New</option>
+                <option value="Contacted">Contacted</option>
+                <option value="Qualified">Qualified</option>
+                <option value="Lost">Lost</option>
+                <option value="Won">Won</option>
+            </select>
+        </div>
+        <button onclick="addLead()">Add Lead</button>
+
+        <table id="leads-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const APP_ID = "cmkxlwl4q00278z8knkzkb7ud"; // The ID you got from create_folder
+        const API_BASE = `/api/storage/${APP_ID}`;
+
+        const API = {
+            get: async (col) => (await fetch(`${API_BASE}/${col}`)).json(),
+            add: async (col, data) => (await fetch(`${API_BASE}/${col}`, { method: 'POST', body: JSON.stringify(data) })).json(),
+            del: async (col, id) => fetch(`${API_BASE}/${col}?id=${id}`, { method: 'DELETE' })
+        };
+
+        async function addLead() {
+            const name = document.getElementById('leadName').value;
+            const email = document.getElementById('leadEmail').value;
+            const status = document.getElementById('leadStatus').value;
+
+            const newLead = {
+                name: name,
+                email: email,
+                status: status
+            };
+
+            await API.add('leads', newLead);
+            loadLeads();
+
+            document.getElementById('leadName').value = '';
+            document.getElementById('leadEmail').value = '';
+            document.getElementById('leadStatus').value = 'New';
+
+        }
+
+        async function loadLeads() {
+            const leads = await API.get('leads');
+            const tableBody = document.querySelector('#leads-table tbody');
+            tableBody.innerHTML = '';
+
+            leads.forEach(lead => {
+                const row = tableBody.insertRow();
+                const nameCell = row.insertCell();
+                const emailCell = row.insertCell();
+                const statusCell = row.insertCell();
+
+                nameCell.innerText = lead.name;
+                emailCell.innerText = lead.email;
+                statusCell.innerText = lead.status;
+            });
+        }
+
+        // Load leads on page load
+        loadLeads();
+    </script>
+</body>
+</html>

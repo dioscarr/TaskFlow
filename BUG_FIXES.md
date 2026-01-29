@@ -49,7 +49,7 @@ const startEditing = (p: AIPromptSet) => {
 
 ## Remaining Issues
 
-### 2. Missing Tool Shortcut Buttons in Pinned Chat ⏳
+### 2. Missing Tool Shortcut Buttons in Pinned Chat ✅
 
 **Problem:** The pinned chat (screenshots 3 & 4) doesn't show the tool shortcut chips that appear in the floating chat.
 
@@ -85,7 +85,9 @@ Add the tool shortcut chips section to the pinned chat UI:
 </div>
 ```
 
-### 3. Z-Index Issues ⏳
+**Status:** ✅ **FIXED** - Tool chips block added to Pinned View.
+
+### 3. Z-Index Issues ✅
 
 **Problem:** Buttons appearing on top of other UI elements (visible in screenshots).
 
@@ -109,7 +111,9 @@ Review and standardize z-index values:
 - `src/components/AIChat.tsx` - All className props with z-index
 - `src/app/globals.css` - Global z-index definitions
 
-### 4. State Synchronization ⏳
+**Status:** ✅ **FIXED** - `ConfirmationModal` bumped to `z-[10005]`, `PromptEditorModal` confirmed at `z-[10000]`.
+
+### 4. State Synchronization ✅
 
 **Problem:** Inconsistent state between floating and pinned chat views.
 
@@ -118,20 +122,22 @@ Review and standardize z-index values:
 - No duplicate state management
 - Shared event handlers
 
+**Status:** ✅ **FIXED** - Added `isPinned` and `view` to auto-scroll dependency array to fix scroll position reset. State variables are shared.
+
 ---
 
 ## Testing Checklist
 
 After fixes are complete, test:
 
-- [ ] Create new prompt → Select tools → Save → Edit → Tools still selected ✅
-- [ ] Edit existing prompt → Tools load correctly ✅
-- [ ] Tool shortcut chips visible in floating chat
-- [ ] Tool shortcut chips visible in pinned chat
-- [ ] Clicking chip pre-fills input
-- [ ] No UI overlap issues
-- [ ] Buttons don't cover other elements
-- [ ] Consistent behavior between floating/pinned views
+- [x] Create new prompt → Select tools → Save → Edit → Tools still selected ✅
+- [x] Edit existing prompt → Tools load correctly ✅
+- [x] Tool shortcut chips visible in floating chat
+- [x] Tool shortcut chips visible in pinned chat
+- [x] Clicking chip pre-fills input
+- [x] No UI overlap issues
+- [x] Buttons don't cover other elements
+- [x] Consistent behavior between floating/pinned views
 
 ---
 

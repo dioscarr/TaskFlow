@@ -171,5 +171,6 @@ export function getSkillsByCategory() {
  */
 export const DEFAULT_SKILLS = [
     'receipt_intelligence',
-    'workspace_organization'
+    'workspace_organization',
+    'edit_file'
 ];

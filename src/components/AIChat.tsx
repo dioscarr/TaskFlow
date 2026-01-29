@@ -3,7 +3,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Send, X, Loader2, Paperclip, MessageSquare, Sparkles, BrainCircuit, FileText, Image as ImageIcon, ExternalLink, Settings, Plus, Check, Trash2, ChevronRight, Layout, Edit2, Pin, PinOff, Folder, Search, Receipt, DollarSign, Save } from 'lucide-react';
+import { Bot, Send, X, Loader2, Paperclip, MessageSquare, Sparkles, BrainCircuit, FileText, Image as ImageIcon, ExternalLink, Settings, Plus, Check, Trash2, ChevronRight, Layout, Edit2, Pin, PinOff, Folder, Search, Receipt, DollarSign, Save, AlignLeft } from 'lucide-react';
 import { chatWithAI, getPrompts, createPrompt, updatePrompt, setActivePrompt, deletePrompt, generateSystemPrompt, getIntentRules, getWorkspaceFiles } from '@/app/actions';
 import { createChatSession, getChatSessions, getChatSession, addChatMessage, updateChatSessionTitle, deleteChatSession } from '@/app/chatActions';
 import { toast } from 'sonner';
@@ -15,11 +15,205 @@ import ConfirmationModal from './ConfirmationModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { normalizeMarkdown, hasMarkdownTable } from '@/utils/markdownUtils';
+import FileEditPreviewModal from './FileEditPreviewModal';
 
 export type SelectedFile = {
     id: string;
     name: string;
     type: string;
+};
+
+const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
+    if (!result || !result.success) return null;
+
+    if (tool === 'extract_receipt_info' && result.extractedData) {
+        const data = result.extractedData;
+        return (
+            <div className="mt-4 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 space-y-4 shadow-inner">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-blue-400">
+                        <Receipt size={14} />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Fiscal Intelligence</span>
+                    </div>
+                    {data.date && <span className="text-[9px] text-white/30 font-bold uppercase">{data.date}</span>}
+                </div>
+
+                <div className="grid grid-cols-2 gap-6 pb-2">
+                    <div className="space-y-1">
+                        <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Provider</p>
+                        <p className="text-sm text-white font-bold truncate leading-none">{data.provider}</p>
+                    </div>
+                    <div className="space-y-1 text-right">
+                        <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Total Amount</p>
+                        <p className="text-xl text-emerald-400 font-black leading-none">${data.total?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                    <div className="space-y-1">
+                        <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">RNC Identification</p>
+                        <p className="text-[11px] text-white/60 font-mono">{data.rnc || 'N/A'}</p>
+                    </div>
+                    <div className="space-y-1 text-right">
+                        <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">NCF Sequence</p>
+                        <p className="text-[11px] text-white/60 font-mono">{data.ncf || 'N/A'}</p>
+                    </div>
+                </div>
+
+                <button
+                    onClick={() => window.dispatchEvent(new CustomEvent('focus-workspace-item', { detail: { itemId: result.fileId } }))}
+                    className="w-full py-2 mt-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] text-white/40 hover:text-white transition-all border border-white/5 flex items-center justify-center gap-2"
+                >
+                    <Search size={12} />
+                    <span>View Original File</span>
+                </button>
+            </div>
+        );
+    }
+
+    if (tool === 'summarize_file' && result.summary) {
+        return (
+            <div className="mt-4 p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 space-y-3 shadow-inner">
+                <div className="flex items-center gap-2 text-indigo-400">
+                    <AlignLeft size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Abstract Summary</span>
+                </div>
+                <div className="relative">
+                    <p className="text-xs text-white/70 italic leading-relaxed tracking-tight pl-4 border-l-2 border-indigo-500/30">
+                        {result.summary}
+                    </p>
+                </div>
+                {result.fileName && (
+                    <div className="pt-2 text-[9px] text-white/20 font-bold uppercase tracking-widest flex justify-end">
+                        Source: {result.fileName}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    if (tool === 'find_duplicate_files' && result.duplicates) {
+        return (
+            <div className="mt-4 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 space-y-3 shadow-inner">
+                <div className="flex items-center gap-2 text-amber-400">
+                    <Plus size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Efficiency Audit</span>
+                </div>
+                <p className="text-xs text-white/50">I detected <span className="text-amber-300 font-bold">{result.count}</span> potential duplicate pairs.</p>
+                <div className="space-y-1 max-h-[120px] overflow-y-auto no-scrollbar">
+                    {result.duplicates.slice(0, 3).map((d: any, ix: number) => (
+                        <div key={ix} className="p-2 rounded-lg bg-white/5 flex items-center justify-between gap-3 border border-white/5">
+                            <span className="text-[10px] text-white/60 truncate">{d.duplicate.name}</span>
+                            <span className="text-[9px] text-red-400/60 font-bold px-1.5 py-0.5 bg-red-400/10 rounded uppercase">Duplicate</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (tool === 'search_web') {
+        if (result.type === 'image' && result.results) {
+            return (
+                <div className="mt-4 space-y-3">
+                    <p className="text-[10px] uppercase font-bold text-white/40 tracking-widest pl-1">Image Result</p>
+                    <div className="grid grid-cols-2 gap-2">
+                        {result.results.map((img: any, i: number) => (
+                            <div key={i} className="relative group overflow-hidden rounded-xl bg-black/20 aspect-video border border-white/5 hover:border-blue-500/50 transition-all">
+                                <img
+                                    src={img.url}
+                                    alt={img.alt}
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                                    <span className="text-[9px] text-white/80 line-clamp-1">{img.alt}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        if (result.type === 'web' && result.results) {
+            return (
+                <div className="mt-4 space-y-3">
+                    <p className="text-[10px] uppercase font-bold text-white/40 tracking-widest pl-1">Web Search Result</p>
+                    <div className="space-y-2">
+                        {result.results.map((item: any, i: number) => (
+                            <div key={i} className="p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group">
+                                <h4 className="text-xs font-bold text-blue-300 group-hover:text-blue-200 mb-1">{item.title}</h4>
+                                <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-[9px] text-white/30 hover:text-white/50 mb-2 block truncate font-mono">{item.url}</a>
+                                <p className="text-[11px] text-white/70 leading-relaxed line-clamp-2">{item.snippet}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+    }
+
+    return null;
+}; const ThinkingProcess = ({ content }: { content: string }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+        <div className="mb-4 overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] transition-all">
+            <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors group"
+            >
+                <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-400 group-hover:scale-110 transition-transform">
+                        <BrainCircuit size={14} />
+                    </div>
+                    <div className="text-left">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 leading-none mb-1">Intelligence Trace</p>
+                        <p className="text-[9px] text-white/20 font-bold uppercase truncate max-w-[200px]">
+                            {isExpanded ? "Synthesizing full tactical plan..." : content.split('\n')[0].slice(0, 50) + "..."}
+                        </p>
+                    </div>
+                </div>
+                <div className={cn("transition-transform duration-300", isExpanded ? "rotate-90" : "")}>
+                    <ChevronRight size={14} className="text-white/20" />
+                </div>
+            </button>
+
+            <AnimatePresence>
+                {isExpanded && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="px-4 pb-4"
+                    >
+                        <div className="pt-2 border-t border-white/5">
+                            <p className="text-[11px] text-white/50 leading-relaxed font-mono whitespace-pre-wrap">
+                                {content}
+                            </p>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+const AgentStepBadge = ({ tool, status }: { tool: string, status: 'executing' | 'done' | 'failed' }) => {
+    return (
+        <div className={cn(
+            "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all mb-2",
+            status === 'executing' ? "bg-amber-500/10 border-amber-500/20 text-amber-400 animate-pulse" :
+                status === 'done' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
+                    "bg-red-500/10 border-red-500/20 text-red-400"
+        )}>
+            {status === 'executing' ? <Loader2 size={12} className="animate-spin" /> :
+                status === 'done' ? <Check size={12} /> : <X size={12} />}
+            <span className="text-[10px] font-black uppercase tracking-widest">
+                {status === 'executing' ? 'Analyzing' : 'Complete'}: {tool.replace(/_/g, ' ')}
+            </span>
+        </div>
+    );
 };
 
 
@@ -29,8 +223,16 @@ export default function AIChat() {
     const [view, setView] = useState<'chat' | 'prompts' | 'sessions'>('chat');
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [messages, setMessages] = useState<{ role: 'user' | 'ai'; content: string; files?: SelectedFile[]; toolUsed?: string }[]>([]);
+    const [messages, setMessages] = useState<{
+        role: 'user' | 'ai';
+        content: string;
+        files?: SelectedFile[];
+        toolUsed?: string;
+        toolResult?: any;
+        thinking?: string;
+    }[]>([]);
     const [attachedFiles, setAttachedFiles] = useState<SelectedFile[]>([]);
+    const [isDragging, setIsDragging] = useState(false);
     const [prompts, setPrompts] = useState<AIPromptSet[]>([]);
     const [intentRules, setIntentRules] = useState<IntentRule[]>([]);
     const [chatSessions, setChatSessions] = useState<any[]>([]);
@@ -40,11 +242,11 @@ export default function AIChat() {
     const [isCreatingPrompt, setIsCreatingPrompt] = useState(false);
     const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [newPrompt, setNewPrompt] = useState({ 
-        name: '', 
-        description: '', 
-        prompt: '', 
-        tools: [] as string[], 
+    const [newPrompt, setNewPrompt] = useState({
+        name: '',
+        description: '',
+        prompt: '',
+        tools: [] as string[],
         workflows: [] as any[],
         triggerKeywords: [] as string[]
     });
@@ -57,8 +259,51 @@ export default function AIChat() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null);
     const [isDeletingSession, setIsDeletingSession] = useState(false);
+    const [isEditPreviewOpen, setIsEditPreviewOpen] = useState(false);
+    const [editPreviewData, setEditPreviewData] = useState({ fileName: '', content: '' });
+    const [currentFolderContext, setCurrentFolderContext] = useState<{ id: string | null, name: string }>({ id: null, name: 'Root' });
+    const [promptHistory, setPromptHistory] = useState<string[]>([]);
+    const [activePreviewContext, setActivePreviewContext] = useState<{ id: string, name: string, parentId: string | null } | null>(null);
+
+    // Listen for preview changes
+    useEffect(() => {
+        const handlePreviewChange = (e: any) => {
+            const file = e.detail;
+            if (file) {
+                setActivePreviewContext({ id: file.id, name: file.name, parentId: file.parentId });
+            } else {
+                setActivePreviewContext(null);
+            }
+        };
+        window.addEventListener('preview-selection-changed', handlePreviewChange);
+        return () => window.removeEventListener('preview-selection-changed', handlePreviewChange);
+    }, []);
 
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    const resolveToolBadge = (toolUsed?: string) => {
+        if (!toolUsed) return null;
+        if (toolUsed === 'workflow') {
+            return {
+                label: 'Workflow',
+                type: 'workflow' as const
+            };
+        }
+        if (toolUsed.startsWith('workflow:')) {
+            const name = toolUsed.replace(/^workflow:/, '').trim();
+            return {
+                label: name || 'Workflow',
+                type: 'workflow' as const
+            };
+        }
+
+        const toolMeta = TOOL_LIBRARY[toolUsed];
+        const label = toolMeta?.name || toolUsed.replace(/_/g, ' ');
+        return {
+            label,
+            type: 'action' as const
+        };
+    };
 
     // Initial load
     useEffect(() => {
@@ -290,7 +535,7 @@ export default function AIChat() {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [messages, isLoading]);
+    }, [messages, isLoading, isPinned, view]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -318,6 +563,7 @@ export default function AIChat() {
 
         const userMsg = { role: 'user' as const, content: input, files: [...attachedFiles] };
         setMessages(prev => [...prev, userMsg]);
+        setPromptHistory(prev => [input, ...prev]);
         setInput('');
         setHistoryIndex(-1); // Reset history index on send
         // DON'T clear attachedFiles - keep them for context
@@ -344,16 +590,24 @@ export default function AIChat() {
                 }
             });
 
+            const contextMsg = activePreviewContext
+                ? `[CONTEXT: User is currently PREVIEWING file "${activePreviewContext.name}" (ID: ${activePreviewContext.id}). Assume changes apply to this app/folder unless specified. If editing, look for files in folder ID: ${activePreviewContext.parentId || 'root'}]\n${userMsg.content}`
+                : userMsg.content;
+
             console.log('📤 Sending to AI:', userMsg.content);
             console.log('📎 Files in context:', Array.from(allFileIds));
-            const res = await chatWithAI(userMsg.content, Array.from(allFileIds), geminiHistory);
+            console.log('📂 Current Folder:', currentFolderContext.name, currentFolderContext.id);
+            const res = await chatWithAI(contextMsg, Array.from(allFileIds), geminiHistory, currentFolderContext.name, currentFolderContext.id || undefined);
             console.log('📥 AI Response:', JSON.stringify(res, null, 2));
             console.log('📥 AI Response Text:', res.text);
             console.log('📥 AI Response Success:', res.success);
 
             if (res.success) {
-                // Validate that we have text to display
-                if (!res.text || res.text.trim() === '') {
+                // Validate that we have text to display OR a tool/skill was used
+                const hasText = res.text && res.text.trim() !== '';
+                const hasTool = (res as any).toolUsed || (res as any).toolResult;
+
+                if (!hasText && !hasTool) {
                     console.error('⚠️ AI returned empty response');
                     toast.error('AI returned an empty response');
                     setMessages(prev => [...prev, {
@@ -361,20 +615,56 @@ export default function AIChat() {
                         content: 'I apologize, but I encountered an issue generating a response. Please try again.'
                     }]);
                 } else {
+                    const text = res.text as string;
+                    const thinkingMatch = text.match(/<thinking>([\s\S]*?)<\/thinking>/);
+                    const thinking = thinkingMatch ? thinkingMatch[1].trim() : undefined;
+                    const cleanText = text.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+
                     setMessages(prev => [...prev, {
                         role: 'ai',
-                        content: res.text as string,
-                        toolUsed: (res as any).toolUsed
+                        content: cleanText || text, // Fallback if everything was thinking
+                        toolUsed: (res as any).toolUsed,
+                        toolResult: (res as any).toolResult,
+                        thinking
                     }]);
+
+                    // Auto-open preview for HTML files
+                    if ((res as any).toolUsed === 'create_html_file' && (res as any).toolResult?.success && (res as any).toolResult?.file) {
+                        console.log('🖼️ Auto-opening preview for HTML file');
+                        window.dispatchEvent(new CustomEvent('open-preview-tab', { detail: (res as any).toolResult.file }));
+                    }
 
                     if (sessionId) {
                         await addChatMessage(sessionId, 'ai', res.text as string, [], (res as any).toolUsed);
                     }
 
                     if ((res as any).toolUsed) {
-                        toast.success(`Action Executed: ${(res as any).toolUsed.replace('_', ' ')}`);
+                        const badge = resolveToolBadge((res as any).toolUsed);
+                        const label = badge ? badge.label : (res as any).toolUsed;
+                        const prefix = badge?.type === 'workflow' ? 'Workflow Executed' : 'Action Executed';
+                        toast.success(`${prefix}: ${label}`);
+
+                        // Trigger edit preview if applicable
+                        if ((res as any).toolUsed === 'edit_file' || (res as any).toolUsed === 'create_markdown_file') {
+                            if ((res as any).toolArgs) {
+                                setEditPreviewData({
+                                    fileName: (res as any).toolArgs.fileId || (res as any).toolArgs.filename || 'Resource System',
+                                    content: (res as any).toolArgs.content || ''
+                                });
+                                setIsEditPreviewOpen(true);
+                            }
+                        }
+
+                        // Specific handling for focus_workspace_item
+                        if ((res as any).toolUsed === 'focus_workspace_item' && (res as any).toolResult?.itemId) {
+                            window.dispatchEvent(new CustomEvent('focus-workspace-item', {
+                                detail: { itemId: (res as any).toolResult.itemId, parentId: (res as any).toolResult.parentId }
+                            }));
+                        }
+
                         // Dispatch custom event to refresh file manager without reloading the page
                         window.dispatchEvent(new CustomEvent('refresh-file-manager'));
+                        setTimeout(() => refreshData(), 100);
                     }
                 }
             } else {
@@ -394,10 +684,10 @@ export default function AIChat() {
         }
     };
 
-    const handleSavePrompt = async (data: { 
-        name: string, 
-        prompt: string, 
-        description: string, 
+    const handleSavePrompt = async (data: {
+        name: string,
+        prompt: string,
+        description: string,
         tools: string[],
         workflows?: any[],
         triggerKeywords?: string[]
@@ -475,12 +765,19 @@ export default function AIChat() {
             });
         };
 
+        const handleFolderChange = (e: any) => {
+            const { folderId, folderName } = e.detail;
+            setCurrentFolderContext({ id: folderId, name: folderName });
+        };
+
         window.addEventListener('add-to-ai-chat', handleAddFile);
         window.addEventListener('preview-opened', handlePreview);
+        window.addEventListener('workspace-folder-changed', handleFolderChange);
 
         return () => {
             window.removeEventListener('add-to-ai-chat', handleAddFile);
             window.removeEventListener('preview-opened', handlePreview);
+            window.removeEventListener('workspace-folder-changed', handleFolderChange);
         };
     }, [isOpen]);
 
@@ -513,10 +810,13 @@ export default function AIChat() {
                         <div className="flex items-center gap-3">
                             <BrainCircuit size={20} className="text-blue-400" />
                             <div>
-                                <h3 className="font-bold text-white text-sm tracking-tight text-[12px] uppercase">TaskFlow Agent</h3>
-                                <p className="text-[10px] text-white/40 uppercase tracking-widest font-black">
-                                    {activePrompt?.name || "Autonomous Core"}
-                                </p>
+                                <h3 className="font-bold text-white text-xs tracking-tight uppercase">
+                                    {activePrompt?.name || "TaskFlow Agent"}
+                                </h3>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                    <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[8px] text-white/20 uppercase tracking-[0.2em] font-bold">System Online</span>
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-1">
@@ -548,7 +848,42 @@ export default function AIChat() {
                     <div className="flex-1 overflow-hidden relative">
                         <AnimatePresence mode="wait">
                             {view === 'chat' ? (
-                                <div className="h-full flex flex-col">
+                                <div
+                                    className="h-full flex flex-col relative"
+                                    onDragOver={(e) => {
+                                        e.preventDefault();
+                                        setIsDragging(true);
+                                    }}
+                                    onDragLeave={() => setIsDragging(false)}
+                                    onDrop={async (e) => {
+                                        e.preventDefault();
+                                        setIsDragging(false);
+                                        const fileId = e.dataTransfer.getData('fileId');
+                                        if (fileId) {
+                                            const file = workspaceFiles.find(f => f.id === fileId);
+                                            if (file) {
+                                                setAttachedFiles(prev => {
+                                                    if (prev.find(f => f.id === file.id)) return prev;
+                                                    return [...prev, file];
+                                                });
+                                                toast.success(`Attached ${file.name}`);
+                                            }
+                                        }
+                                    }}
+                                >
+                                    {isDragging && (
+                                        <div className="absolute inset-0 z-[100] bg-blue-500/10 backdrop-blur-sm border-2 border-dashed border-blue-500/40 rounded-[2rem] flex flex-col items-center justify-center pointer-events-none m-4">
+                                            <div className="bg-zinc-900 shadow-2xl p-6 rounded-[2rem] border border-white/10 flex flex-col items-center gap-4 animate-bounce">
+                                                <div className="p-4 bg-blue-500/20 rounded-full text-blue-400 border border-blue-500/20">
+                                                    <Paperclip size={32} />
+                                                </div>
+                                                <div className="space-y-1 text-center">
+                                                    <h4 className="font-bold text-white text-lg">Drop to Attach</h4>
+                                                    <p className="text-white/40 text-xs">Add context to your request</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                     <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6 custom-scrollbar">
                                         {messages.length === 0 && (
                                             <div className="flex flex-col items-center justify-center text-center space-y-6 py-12 px-4 mt-8">
@@ -559,9 +894,8 @@ export default function AIChat() {
                                                     </div>
                                                 </div>
                                                 <div className="space-y-1 relative z-10">
-                                                    <p className="text-white font-bold text-lg tracking-tight">Tactical Interface</p>
-                                                    <p className="text-[10px] text-white/30 leading-relaxed uppercase tracking-widest font-black">
-                                                        Agent Ready: <span className="text-blue-400">{activePrompt?.name || "Autonomous Core"}</span>
+                                                    <p className="text-white/40 text-[10px] leading-relaxed uppercase tracking-[0.3em] font-bold">
+                                                        Agent Ready
                                                     </p>
                                                 </div>
                                                 <div className="grid grid-cols-1 gap-2 w-full pt-4 relative z-10">
@@ -582,31 +916,88 @@ export default function AIChat() {
                                             </div>
                                         )}
                                         {messages.map((msg, i) => (
-                                            <div key={i} className={cn("flex flex-col gap-2 max-w-[95%]", msg.role === 'user' ? "ml-auto items-end" : "items-start")}>
-                                                <div className={cn("px-4 py-3 rounded-2xl text-xs leading-relaxed shadow-lg", msg.role === 'user' ? "bg-blue-600 text-white rounded-tr-none" : "bg-white/5 text-white/90 rounded-tl-none border border-white/5")}>
-                                                    <div className="markdown-content max-w-full overflow-x-auto">
+                                            <div key={i} className={cn("flex flex-col gap-2 max-w-[95%] w-full animate-in fade-in slide-in-from-bottom-2 duration-500", msg.role === 'user' ? "ml-auto items-end" : "items-start")}>
+                                                {msg.files && msg.files.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1.5 mb-1 justify-end">
+                                                        {msg.files.map(f => (
+                                                            <div key={f.id} className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 rounded-lg text-[9px] text-blue-300 border border-blue-500/20 shadow-lg">
+                                                                {f.type === 'pdf' ? <FileText size={10} /> : <ImageIcon size={10} />}
+                                                                {f.name}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {msg.role === 'ai' && msg.thinking && (
+                                                    <ThinkingProcess content={msg.thinking} />
+                                                )}
+
+                                                {msg.role === 'ai' && msg.toolUsed && (
+                                                    <AgentStepBadge tool={msg.toolUsed} status="done" />
+                                                )}
+
+                                                <div className={cn(
+                                                    "px-5 py-4 rounded-[1.8rem] text-[13px] leading-relaxed relative group/msg",
+                                                    msg.role === 'user'
+                                                        ? "bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-tr-none shadow-xl shadow-blue-500/10"
+                                                        : "bg-white/[0.03] text-white/90 rounded-tl-none border border-white/5 backdrop-blur-xl shadow-2xl"
+                                                )}>
+                                                    <div className="markdown-content max-w-full overflow-x-hidden break-words">
                                                         <ReactMarkdown
                                                             remarkPlugins={[remarkGfm]}
                                                             components={{
                                                                 table: ({ node, ...props }) => (
-                                                                    <div className="table-container" style={{ display: 'block', width: '100%' }}>
-                                                                        <table {...props} style={{ fontSize: '10px' }} />
+                                                                    <div className="table-container my-4">
+                                                                        <table {...props} className="text-[11px] w-full border-collapse" />
                                                                     </div>
+                                                                ),
+                                                                a: ({ node, ...props }) => (
+                                                                    <a {...props} className="text-blue-400 hover:text-blue-300 underline decoration-blue-500/30 underline-offset-4" target="_blank" rel="noopener noreferrer" />
+                                                                ),
+                                                                code: ({ node, ...props }) => (
+                                                                    <code {...props} className="bg-black/40 px-1.5 py-0.5 rounded text-blue-300 font-mono text-[11px]" />
                                                                 )
                                                             }}
                                                         >
                                                             {normalizeMarkdown(msg.content)}
                                                         </ReactMarkdown>
                                                     </div>
-                                                    {msg.role === 'ai' && hasMarkdownTable(msg.content) && (
-                                                        <div className="mt-4 pt-3 border-t border-white/5 flex justify-end">
-                                                            <button
-                                                                onClick={() => setInput("Export this table to a markdown file. Ask me about creating a new folder first.")}
-                                                                className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] text-white/40 hover:text-white transition-all border border-white/5"
-                                                            >
-                                                                <FileText size={12} className="text-blue-400" />
-                                                                <span>Save as Markdown</span>
-                                                            </button>
+
+                                                    {msg.role === 'ai' && msg.toolUsed && (
+                                                        <div className="pt-2 border-t border-white/5 mt-4">
+                                                            <ToolResultPreview tool={msg.toolUsed} result={msg.toolResult} />
+                                                        </div>
+                                                    )}
+
+                                                    {msg.role === 'ai' && (
+                                                        <div className="mt-4 flex flex-wrap gap-2">
+                                                            {/* Show as Table button */}
+                                                            {(msg.content.toLowerCase().includes('need') ||
+                                                                msg.content.toLowerCase().includes('information') ||
+                                                                msg.content.toLowerCase().includes('proceed') ||
+                                                                msg.toolUsed === 'verify_dgii_rnc') && !hasMarkdownTable(msg.content) && (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setInput("Display the extracted receipt data in a markdown table, including all fields (Date, Provider, RNC, NCF, Total Amount, ITBIS) and the business verification information from DGII.");
+                                                                            setActiveTool('extract_alegra_bill');
+                                                                        }}
+                                                                        className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 rounded-xl text-[10px] text-purple-300 hover:text-purple-100 transition-all border border-purple-500/20"
+                                                                    >
+                                                                        <Receipt size={12} className="text-purple-400" />
+                                                                        <span>Show as Table</span>
+                                                                    </button>
+                                                                )}
+
+                                                            {/* Generate Markdown File button */}
+                                                            {hasMarkdownTable(msg.content) && (
+                                                                <button
+                                                                    onClick={() => setInput("Export this table as a markdown file. Please ask me if I want a new folder first.")}
+                                                                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl text-[10px] text-blue-300 hover:text-white transition-all border border-blue-500/20"
+                                                                >
+                                                                    <FileText size={12} />
+                                                                    <span>Save as Report</span>
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
@@ -614,38 +1005,97 @@ export default function AIChat() {
                                         ))}
                                         {isLoading && <div className="text-[10px] text-white/20 uppercase font-black tracking-widest animate-pulse">Computing...</div>}
                                     </div>
-                                    <div className="p-5 border-t border-white/5 bg-black/20">
+                                    <div className="p-4 border-t border-white/5 bg-black/40">
+                                        {/* Unified Context Bar */}
+                                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mb-2">
+                                            {enabledToolIds.map((toolId) => {
+                                                const tool = TOOL_LIBRARY[toolId];
+                                                if (!tool) return null;
+
+                                                const isActive = activeTool === toolId;
+
+
+                                                return (
+                                                    <button
+                                                        key={toolId}
+                                                        onClick={() => {
+                                                            setActiveTool(isActive ? null : toolId);
+                                                            setInput(isActive ? '' : (toolPromptById[toolId] || tool.description));
+                                                        }}
+                                                        className={cn(
+                                                            "shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all",
+                                                            isActive
+                                                                ? "bg-blue-500/20 border-blue-500/40 text-blue-300"
+                                                                : "bg-white/5 border-white/10 text-white/30 hover:text-white/60"
+                                                        )}
+                                                    >
+                                                        {tool.name}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                         {attachedFiles.length > 0 && (
-                                            <div className="flex flex-wrap gap-2 mb-4">
+                                            <>
+                                                <div className="w-px h-3 bg-white/10 shrink-0 mx-1" />
                                                 {attachedFiles.map(f => (
-                                                    <div key={f.id} className="relative group hover:scale-105 transition-transform cursor-default">
-                                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-[10px] text-blue-300">
-                                                            {f.type === 'folder' ? <Folder size={12} className="text-blue-400" /> : (f.type === 'pdf' ? <FileText size={12} /> : <ImageIcon size={12} />)}
-                                                            <span className="max-w-[100px] truncate font-medium">{f.name}</span>
+                                                    <div key={f.id} className="relative shrink-0 group">
+                                                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/5 border border-blue-500/10 rounded-full text-[10px] text-blue-400/60 group-hover:text-blue-400 transition-colors cursor-default">
+                                                            {f.name}
+                                                            <button onClick={() => removeFile(f.id)} className="hover:text-red-400 transition-colors ml-1">
+                                                                <X size={10} />
+                                                            </button>
                                                         </div>
-                                                        <button
-                                                            onClick={() => removeFile(f.id)}
-                                                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-zinc-900 border border-white/10 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 shadow-xl"
-                                                        >
-                                                            <X size={10} />
-                                                        </button>
                                                     </div>
                                                 ))}
-                                            </div>
+                                            </>
                                         )}
-                                        <form onSubmit={handleSend} className="relative">
-                                            <textarea
-                                                rows={1}
-                                                value={input}
-                                                onChange={(e) => setInput(e.target.value)}
-                                                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); } }}
-                                                placeholder="Signal core..."
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-5 pr-12 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all resize-none"
-                                            />
-                                            <button type="submit" disabled={isLoading} className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-blue-600 text-white rounded-xl shadow-lg active:scale-95">
-                                                <Send size={16} />
-                                            </button>
-                                        </form>
+                                        <div className="mt-3">
+                                            <form onSubmit={handleSend} className="relative group/input">
+                                                <textarea
+                                                    rows={1}
+                                                    value={input}
+                                                    onChange={(e) => setInput(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                                            e.preventDefault();
+                                                            handleSend(e);
+                                                        }
+                                                        // History Navigation
+                                                        if (e.key === 'ArrowUp') {
+                                                            e.preventDefault();
+                                                            const nextIndex = historyIndex + 1;
+                                                            if (nextIndex < promptHistory.length) {
+                                                                setHistoryIndex(nextIndex);
+                                                                setInput(promptHistory[nextIndex]);
+                                                            }
+                                                        }
+                                                        if (e.key === 'ArrowDown') {
+                                                            e.preventDefault();
+                                                            const prevIndex = historyIndex - 1;
+                                                            if (prevIndex >= 0) {
+                                                                setHistoryIndex(prevIndex);
+                                                                setInput(promptHistory[prevIndex]);
+                                                            } else {
+                                                                setHistoryIndex(-1);
+                                                                setInput('');
+                                                            }
+                                                        }
+                                                    }}
+                                                    placeholder="Ask anything..."
+                                                    className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-3 pl-4 pr-12 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500/30 focus:bg-white/[0.05] transition-all resize-none"
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    disabled={isLoading}
+                                                    className={cn(
+                                                        "absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all",
+                                                        input.trim() || attachedFiles.length > 0 ? "bg-blue-600 text-white shadow-lg" : "text-white/20"
+                                                    )}
+                                                >
+                                                    <Send size={14} />
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
                                 </div>
                             ) : view === 'sessions' ? (
@@ -716,25 +1166,18 @@ export default function AIChat() {
                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
                             className="glass-card w-[420px] md:w-[600px] h-[750px] flex flex-col shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border border-white/20 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl"
                         >
-                            {/* Header */}
-                            <div className="p-7 border-b border-white/10 bg-gradient-to-r from-blue-600/20 via-indigo-600/20 to-purple-600/20 flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <button
-                                        onClick={() => setView('chat')}
-                                        className={cn(
-                                            "p-3 rounded-2xl transition-all shadow-xl shadow-blue-500/10",
-                                            view === 'chat' ? "bg-gradient-to-br from-blue-500 to-indigo-600" : "bg-white/5 hover:bg-white/10"
-                                        )}
-                                    >
-                                        <BrainCircuit size={22} className="text-white" />
-                                    </button>
+                            <div className="p-5 border-b border-white/5 bg-black/40 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-500/10 rounded-xl text-blue-400">
+                                        <BrainCircuit size={18} />
+                                    </div>
                                     <div>
-                                        <h3 className="font-bold text-white text-lg tracking-tight">TaskFlow Agent</h3>
-                                        <div className="flex items-center gap-1.5">
-                                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                            <p className="text-[11px] text-white/50 uppercase tracking-[0.2em] font-black">
-                                                Role: {activePrompt?.name || "Autonomous Core"}
-                                            </p>
+                                        <h3 className="font-bold text-white text-xs tracking-tight uppercase">
+                                            {activePrompt?.name || "TaskFlow Agent"}
+                                        </h3>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            <div className="w-1 h-1 rounded-full bg-emerald-500" />
+                                            <span className="text-[8px] text-white/20 uppercase tracking-[0.2em] font-bold">Core Active</span>
                                         </div>
                                     </div>
                                 </div>
@@ -758,11 +1201,11 @@ export default function AIChat() {
                                             setView(view === 'prompts' ? 'chat' : 'prompts');
                                             setIsCreatingPrompt(false);
                                             setEditingPromptId(null);
-                                            setNewPrompt({ 
-                                                name: '', 
-                                                description: '', 
-                                                prompt: '', 
-                                                tools: DEFAULT_TOOLS, 
+                                            setNewPrompt({
+                                                name: '',
+                                                description: '',
+                                                prompt: '',
+                                                tools: DEFAULT_TOOLS,
                                                 workflows: [],
                                                 triggerKeywords: []
                                             });
@@ -794,8 +1237,41 @@ export default function AIChat() {
                                             initial={{ opacity: 0, x: -20 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             exit={{ opacity: 0, x: -20 }}
-                                            className="h-full flex flex-col"
+                                            className="h-full flex flex-col relative"
+                                            onDragOver={(e) => {
+                                                e.preventDefault();
+                                                setIsDragging(true);
+                                            }}
+                                            onDragLeave={() => setIsDragging(false)}
+                                            onDrop={async (e) => {
+                                                e.preventDefault();
+                                                setIsDragging(false);
+                                                const fileId = e.dataTransfer.getData('fileId');
+                                                if (fileId) {
+                                                    const file = workspaceFiles.find(f => f.id === fileId);
+                                                    if (file) {
+                                                        setAttachedFiles(prev => {
+                                                            if (prev.find(f => f.id === file.id)) return prev;
+                                                            return [...prev, file];
+                                                        });
+                                                        toast.success(`Attached ${file.name}`);
+                                                    }
+                                                }
+                                            }}
                                         >
+                                            {isDragging && (
+                                                <div className="absolute inset-0 z-[100] bg-blue-500/10 backdrop-blur-sm border-2 border-dashed border-blue-500/40 rounded-[2rem] flex flex-col items-center justify-center pointer-events-none m-4">
+                                                    <div className="bg-zinc-900 shadow-2xl p-6 rounded-[2rem] border border-white/10 flex flex-col items-center gap-4 animate-bounce">
+                                                        <div className="p-4 bg-blue-500/10 rounded-2xl text-blue-400">
+                                                            <Paperclip size={32} />
+                                                        </div>
+                                                        <div className="text-center">
+                                                            <p className="text-white font-bold">Drop to Attach</p>
+                                                            <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest mt-1">Context Injection</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                             <div
                                                 ref={scrollRef}
                                                 className="flex-1 overflow-y-auto overflow-x-hidden p-7 space-y-8 custom-scrollbar bg-slate-950/20"
@@ -808,10 +1284,9 @@ export default function AIChat() {
                                                                 <Sparkles size={40} />
                                                             </div>
                                                         </div>
-                                                        <div className="space-y-2 relative z-10">
-                                                            <p className="text-white font-bold text-2xl tracking-tight leading-tight">Tactical Interface</p>
-                                                            <p className="text-sm text-white/30 leading-relaxed">
-                                                                Currently operating as <span className="text-blue-400 font-bold">{activePrompt?.name || "Autonomous Core"}</span>.
+                                                        <div className="space-y-1 relative z-10">
+                                                            <p className="text-white/40 text-[10px] leading-relaxed uppercase tracking-[0.3em] font-bold">
+                                                                Agent Ready
                                                             </p>
                                                         </div>
                                                         <div className="grid grid-cols-1 gap-3 w-full pt-4 relative z-10">
@@ -881,6 +1356,10 @@ export default function AIChat() {
                                                                 </ReactMarkdown>
                                                             </div>
 
+                                                            {msg.role === 'ai' && msg.toolUsed && (
+                                                                <ToolResultPreview tool={msg.toolUsed} result={msg.toolResult} />
+                                                            )}
+
                                                             {/* Suggested Action Buttons */}
                                                             {msg.role === 'ai' && (
                                                                 <div className="mt-4 pt-4 border-t border-white/5 flex flex-wrap gap-2">
@@ -921,82 +1400,64 @@ export default function AIChat() {
                                                     <div className="flex flex-col items-start gap-2">
                                                         <div className="bg-white/5 px-5 py-4 rounded-[1.5rem] text-white/40 flex items-center gap-3 rounded-tl-none border border-white/5 shadow-xl">
                                                             <div className="flex gap-1">
-                                                                <motion.span animate={{ opacity: [0, 1, 0] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
-                                                                <motion.span animate={{ opacity: [0, 1, 0] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
-                                                                <motion.span animate={{ opacity: [0, 1, 0] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
+                                                                <motion.span animate={{ opacity: [0, 1, 0] }} transition={{ repeat: Infinity, duration: 1 }} className="w-2 h-2 bg-blue-400 rounded-full" />
+                                                                <motion.span animate={{ opacity: [0, 1, 0] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-blue-400 rounded-full" />
+                                                                <motion.span animate={{ opacity: [0, 1, 0] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-blue-400 rounded-full" />
                                                             </div>
-                                                            <span className="text-xs font-bold tracking-widest uppercase opacity-60">Computing</span>
+                                                            <span className="text-xs font-bold tracking-widest uppercase opacity-80 text-blue-300">Agent Working...</span>
                                                         </div>
                                                     </div>
                                                 )}
                                             </div>
 
                                             {/* Input Area */}
-                                            <div className="p-7 bg-slate-950/40 border-t border-white/10 backdrop-blur-2xl">
-                                                {/* Tool Shortcut Chips */}
-                                                <div className="flex flex-wrap gap-2 mb-4">
-                                                    {enabledToolIds.map((toolId) => {
-                                                        const tool = TOOL_LIBRARY[toolId];
-                                                        if (!tool) return null;
+                                            <div className="p-4 border-t border-white/5 bg-black/40">
+                                                <div className="flex flex-col gap-3">
+                                                    {(enabledToolIds.length > 0 || attachedFiles.length > 0) && (
+                                                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                                                            {enabledToolIds.map((toolId) => {
+                                                                const tool = TOOL_LIBRARY[toolId];
+                                                                if (!tool) return null;
+                                                                const isActive = activeTool === toolId;
 
-                                                        const isActive = activeTool === toolId;
-                                                        const promptText = toolPromptById[toolId] || tool.description;
+                                                                return (
+                                                                    <button
+                                                                        key={toolId}
+                                                                        onClick={() => {
+                                                                            setActiveTool(isActive ? null : toolId);
+                                                                            setInput(isActive ? '' : (toolPromptById[toolId] || tool.description));
+                                                                        }}
+                                                                        className={cn(
+                                                                            "shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all",
+                                                                            isActive
+                                                                                ? "bg-blue-500/20 border-blue-500/40 text-blue-300"
+                                                                                : "bg-white/5 border-white/10 text-white/30 hover:text-white/60"
+                                                                        )}
+                                                                    >
+                                                                        {tool.name}
+                                                                    </button>
+                                                                );
+                                                            })}
 
-                                                        const Icon = toolId === 'verify_dgii_rnc'
-                                                            ? Search
-                                                            : toolId === 'extract_alegra_bill'
-                                                                ? Receipt
-                                                                : toolId === 'record_alegra_payment'
-                                                                    ? DollarSign
-                                                                    : toolId === 'create_markdown_file'
-                                                                        ? Save
-                                                                        : toolId === 'create_task'
-                                                                            ? Check
-                                                                            : Settings;
+                                                            {attachedFiles.length > 0 && (
+                                                                <>
+                                                                    <div className="w-px h-3 bg-white/10 shrink-0 mx-1" />
+                                                                    {attachedFiles.map(f => (
+                                                                        <div key={f.id} className="relative shrink-0 group">
+                                                                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/5 border border-blue-500/10 rounded-full text-[10px] text-blue-400/60 group-hover:text-blue-400 transition-colors cursor-default">
+                                                                                {f.name}
+                                                                                <button onClick={() => removeFile(f.id)} className="hover:text-red-400 transition-colors ml-1">
+                                                                                    <X size={10} />
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    )}
 
-                                                        return (
-                                                            <button
-                                                                key={toolId}
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setActiveTool(isActive ? null : toolId);
-                                                                    setInput(isActive ? '' : promptText);
-                                                                }}
-                                                                className={cn(
-                                                                    "flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all",
-                                                                    isActive
-                                                                        ? "bg-blue-500/30 border border-blue-500/50 text-blue-200 shadow-lg shadow-blue-500/20"
-                                                                        : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white/90"
-                                                                )}
-                                                            >
-                                                                <Icon size={14} />
-                                                                <span>{tool.name}</span>
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-
-                                                {attachedFiles.length > 0 && (
-                                                    <div className="flex flex-wrap gap-2 mb-5 animate-in fade-in slide-in-from-bottom-2">
-                                                        {attachedFiles.map(f => (
-                                                            <div key={f.id} className="relative group hover:scale-105 transition-transform cursor-default">
-                                                                <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/20 border border-blue-500/30 rounded-2xl text-xs text-blue-200">
-                                                                    {f.type === 'folder' ? <Folder size={14} className="text-blue-400" /> : (f.type === 'pdf' ? <FileText size={14} /> : <ImageIcon size={14} />)}
-                                                                    <span className="max-w-[120px] truncate font-medium">{f.name}</span>
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => removeFile(f.id)}
-                                                                    className="absolute -top-2 -right-2 w-6 h-6 bg-zinc-900 border border-white/20 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 shadow-xl"
-                                                                >
-                                                                    <X size={12} />
-                                                                </button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-
-                                                <form onSubmit={handleSend} className="relative flex items-center gap-3">
-                                                    <div className="relative flex-1 group">
+                                                    <form onSubmit={handleSend} className="relative group/input">
                                                         <textarea
                                                             rows={1}
                                                             value={input}
@@ -1006,24 +1467,41 @@ export default function AIChat() {
                                                                     e.preventDefault();
                                                                     handleSend(e);
                                                                 }
+                                                                // History Navigation
+                                                                if (e.key === 'ArrowUp') {
+                                                                    e.preventDefault();
+                                                                    const nextIndex = historyIndex + 1;
+                                                                    if (nextIndex < promptHistory.length) {
+                                                                        setHistoryIndex(nextIndex);
+                                                                        setInput(promptHistory[nextIndex]);
+                                                                    }
+                                                                }
+                                                                if (e.key === 'ArrowDown') {
+                                                                    e.preventDefault();
+                                                                    const prevIndex = historyIndex - 1;
+                                                                    if (prevIndex >= 0) {
+                                                                        setHistoryIndex(prevIndex);
+                                                                        setInput(promptHistory[prevIndex]);
+                                                                    } else {
+                                                                        setHistoryIndex(-1);
+                                                                        setInput('');
+                                                                    }
+                                                                }
                                                             }}
-                                                            placeholder="Signal core..."
-                                                            className="w-full bg-white/5 border border-white/10 rounded-[1.75rem] py-5 pl-7 pr-16 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all placeholder:text-white/20 resize-none max-h-40 shadow-inner"
+                                                            placeholder="Ask anything..."
+                                                            className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-3 pl-4 pr-12 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500/30 focus:bg-white/[0.05] transition-all resize-none"
                                                         />
                                                         <button
                                                             type="submit"
-                                                            disabled={isLoading || (!input.trim() && attachedFiles.length === 0)}
-                                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-3 bg-blue-600 hover:bg-blue-500 disabled:bg-white/5 disabled:text-white/10 text-white rounded-2xl transition-all shadow-xl active:scale-95"
+                                                            disabled={isLoading}
+                                                            className={cn(
+                                                                "absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all",
+                                                                input.trim() || attachedFiles.length > 0 ? "bg-blue-600 text-white shadow-lg" : "text-white/20"
+                                                            )}
                                                         >
-                                                            <Send size={20} />
+                                                            <Send size={14} />
                                                         </button>
-                                                    </div>
-                                                </form>
-                                                <div className="flex items-center justify-center gap-2 mt-5 opacity-20">
-                                                    <Sparkles size={10} className="text-blue-400" />
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.3em]">
-                                                        Gemini 2.0 Optical System
-                                                    </p>
+                                                    </form>
                                                 </div>
                                             </div>
                                         </motion.div>
@@ -1130,40 +1608,33 @@ export default function AIChat() {
                 </AnimatePresence >
 
                 {/* Float Button */}
-                < motion.button
+                <motion.button
                     layoutId="ai-trigger"
                     whileHover={{ scale: 1.05, y: -4 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setIsOpen(!isOpen)}
-                    className={
-                        cn(
-                            "p-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center gap-4 transition-all border border-white/20 backdrop-blur-xl relative overflow-hidden group",
-                            isOpen
-                                ? "bg-zinc-900 text-white"
-                                : "bg-gradient-to-br from-blue-600 to-indigo-700 text-white"
-                        )
-                    }
-                >
-                    {!isOpen && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 skew-x-12" />
+                    className={cn(
+                        "p-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center gap-3 transition-all border backdrop-blur-xl relative overflow-hidden group",
+                        isOpen
+                            ? "bg-zinc-900 border-white/10 text-white/50"
+                            : "bg-gradient-to-br from-blue-600 to-indigo-700 border-blue-400/30 text-white"
                     )}
+                >
                     <div className="relative">
-                        <Bot size={32} />
+                        <Bot size={24} className={cn(isOpen ? "rotate-90 opacity-40" : "animate-pulse")} />
                         {attachedFiles.length > 0 && (
-                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-[10px] font-black rounded-full flex items-center justify-center animate-bounce shadow-xl ring-2 ring-white/20">
+                            <span className="absolute -top-2 -right-2 w-4 h-4 bg-emerald-500 text-[8px] font-black rounded-full flex items-center justify-center shadow-xl ring-2 ring-white/20">
                                 {attachedFiles.length}
                             </span>
                         )}
                     </div>
-                    {
-                        !isOpen && (
-                            <div className="flex flex-col items-start pr-2">
-                                <span className="font-black text-xs uppercase tracking-widest opacity-60">System</span>
-                                <span className="font-bold tracking-tight text-lg leading-tight">Command Agent</span>
-                            </div>
-                        )
-                    }
-                </motion.button >
+                    {!isOpen && (
+                        <div className="flex flex-col items-start pr-2">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] leading-none mb-1 opacity-60">Signal</span>
+                            <span className="text-sm font-bold tracking-tight">Agent Hub</span>
+                        </div>
+                    )}
+                </motion.button>
 
                 <PromptEditorModal
                     isOpen={isEditorOpen}
@@ -1189,6 +1660,12 @@ export default function AIChat() {
                     cancelText="Cancel"
                     isDanger
                     isLoading={isDeletingSession}
+                />
+                <FileEditPreviewModal
+                    isOpen={isEditPreviewOpen}
+                    onClose={() => setIsEditPreviewOpen(false)}
+                    fileName={editPreviewData.fileName}
+                    content={editPreviewData.content}
                 />
             </div >
         </>

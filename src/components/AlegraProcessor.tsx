@@ -63,11 +63,11 @@ export default function AlegraProcessor({ bills }: Props) {
         <div className="space-y-6">
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h2 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
-                        <DollarSign className="text-blue-500" size={32} />
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <DollarSign className="text-blue-500" size={20} />
                         Alegra Fiscal Hub
                     </h2>
-                    <p className="text-white/40 text-sm mt-1 uppercase tracking-widest font-black">Gastos RD & DGII Compliance</p>
+                    <p className="text-white/20 text-[9px] mt-0.5 uppercase tracking-widest font-bold">Gastos RD & DGII Compliance</p>
                 </div>
                 <div className="flex gap-3">
                     <div className="px-4 py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg shadow-emerald-500/5">
@@ -94,13 +94,13 @@ export default function AlegraProcessor({ bills }: Props) {
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ delay: ix * 0.05 }}
                                 className={cn(
-                                    "glass-card p-1 rounded-[3rem] border transition-all duration-500 overflow-hidden relative group",
+                                    "glass-card p-1 rounded-[2rem] border transition-all duration-500 overflow-hidden relative group",
                                     isExported
                                         ? "bg-black/40 border-white/5 opacity-80"
                                         : "bg-white/5 border-white/10 hover:border-blue-500/30"
                                 )}
                             >
-                                <div className="p-8 space-y-6">
+                                <div className="p-6 space-y-4">
                                     {/* Status Badge */}
                                     <div className="absolute top-8 right-12 z-20">
                                         <div className={cn(
@@ -120,7 +120,7 @@ export default function AlegraProcessor({ bills }: Props) {
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2">
-                                                <h4 className="font-black text-2xl text-white tracking-tight leading-loose uppercase">
+                                                <h4 className="font-bold text-lg text-white tracking-tight uppercase">
                                                     {bill.isVerified ? bill.verifiedName : bill.providerName}
                                                 </h4>
                                                 {bill.isVerified && (
@@ -169,7 +169,7 @@ export default function AlegraProcessor({ bills }: Props) {
                                                 <DollarSign size={14} />
                                                 <span className="text-[10px] uppercase font-black tracking-[0.1em]">Total Gross</span>
                                             </div>
-                                            <div className="text-blue-400 font-extrabold text-2xl tracking-tighter">RD$ {bill.totalAmount.toLocaleString()}</div>
+                                            <div className="text-blue-400 font-bold text-xl tracking-tight">RD$ {bill.totalAmount.toLocaleString()}</div>
                                         </div>
                                     </div>
 

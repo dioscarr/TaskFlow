@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Application</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 40px;
+            width: 80%;
+            max-width: 800px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #eee;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ddd;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        textarea:focus {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+
+        button {
+            background-color: #5865F2;
+            color: #fff;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #42459b;
+        }
+
+        /* Basic Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #eee;
+        }
+
+        tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Data display area */
+        #data-display {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #data-display h2 {
+            color: #eee;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* Notification Styling */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #4CAF50; /* Success color */
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+        }
+
+        .notification.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CRM Contact Form</h1>
+        <form id="contactForm">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required>
+
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+
+            <label for="message">Message:</label>
+            <textarea id="message" name="message" required></textarea>
+
+            <button type="submit">Submit</button>
+        </form>
+
+        <div id="data-display">
+            <h2>Contact Data</h2>
+            <table id="contact-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="notification" class="notification"></div>
+    </div>
+
+    <script>
+        const APP_ID = "cmkyy3izw000q8zzsn9cqxu7a"; // The ID you got from create_folder
+        const API_BASE = `/api/storage/${APP_ID}`;
+
+        const API = {
+            get: async (col) => (await fetch(`${API_BASE}/${col}`)).json(),
+            add: async (col, data) => (await fetch(`${API_BASE}/${col}`, { method: 'POST', body: JSON.stringify(data) })).json(),
+            del: async (col, id) => fetch(`${API_BASE}/${col}?id=${id}`, { method: 'DELETE' })
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('contactForm');
+            const tableBody = document.querySelector('#contact-table tbody');
+            const notification = document.getElementById('notification');
+
+            // Function to display notification
+            function showNotification(message) {
+                notification.textContent = message;
+                notification.classList.add('show');
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000); // Remove after 3 seconds
+            }
+
+            // Function to load data from the API and populate the table
+            async function loadData() {
+                tableBody.innerHTML = ''; // Clear existing data
+                const contacts = await API.get('contacts');
+                contacts.forEach(contact => {
+                    const row = tableBody.insertRow();
+                    row.insertCell().textContent = contact.name;
+                    row.insertCell().textContent = contact.email;
+                    row.insertCell().textContent = contact.message;
+                });
+            }
+
+            // Form submission handler
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const name = document.getElementById('name').value;
+                const email = document.getElementById('email').value;
+                const message = document.getElementById('message').value;
+
+                const contactData = {
+                    name: name,
+                    email: email,
+                    message: message
+                };
+
+                // Add the new contact to the database
+                await API.add('contacts', contactData);
+
+                // Reload the data to display the new contact
+                await loadData();
+
+                // Show notification
+                showNotification('Contact added successfully!');
+
+                // Clear the form
+                form.reset();
+            });
+
+            // Initial data load
+            loadData();
+        });
+    </script>
+</body>
+</html>
