@@ -22,6 +22,7 @@ import { getSkillSchemas } from '@/lib/skillsLibrary';
 import { executeSkill } from '@/lib/skillsExecution';
 import { DEFAULT_INTENT_RULES, DEFAULT_WORKFLOWS, WorkflowStep } from '@/lib/intentLibrary';
 import { TOOL_LIBRARY } from '@/lib/toolLibrary';
+import { addChatMessage } from '@/app/chatActions';
 
 // import { CognitiveAgent } from '@/lib/agents/CognitiveAgent';
 // import { DesignAgent } from '@/lib/agents/DesignAgent';
