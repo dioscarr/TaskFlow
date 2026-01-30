@@ -49,7 +49,7 @@ export class CognitiveAgent {
         availableTools: string[]
     }): Promise<ExecutionPlan | null> {
         const model = this.genAI.getGenerativeModel({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash-exp',
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: {

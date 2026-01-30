@@ -44,8 +44,8 @@ async function claimNextJob() {
     console.log(`🔍 Checking for approved jobs...`);
     try {
         return await prisma.$transaction(async (tx) => {
-            const totalRemaining = await (tx as any).agentJob.count({ where: { status: 'queued', approved: true } });
-            const job = await (tx as any).agentJob.findFirst({
+            const totalRemaining = await tx.agentJob.count({ where: { status: 'queued', approved: true } });
+            const job = await tx.agentJob.findFirst({
                 where: { status: 'queued', approved: true },
                 orderBy: { createdAt: 'asc' }
             });
@@ -56,7 +56,7 @@ async function claimNextJob() {
             }
 
             console.log(`🚩 Found job ${job.id}. Claiming...`);
-            return await (tx as any).agentJob.update({
+            return await tx.agentJob.update({
                 where: { id: job.id },
                 data: {
                     status: 'running',
@@ -89,11 +89,11 @@ async function logActivity(userId: string, title: string, message: string, toolU
 }
 
 async function finalizeJob(jobId: string, status: 'succeeded' | 'failed', result: unknown, error?: string) {
-    await (prisma as any).agentJob.update({
+    await prisma.agentJob.update({
         where: { id: jobId },
         data: {
             status,
-            completedAt: new Date(),
+            finishedAt: new Date(),
             result: result as any,
             error: error || null
         }
