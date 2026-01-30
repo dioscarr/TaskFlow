@@ -1288,6 +1288,25 @@ export async function createMarkdownFile(data: {
     }
 }
 
+/**
+ * Sanitize a folder name for use as a directory name
+ * Removes or replaces characters that are not safe for file systems
+ * Returns empty string if the name cannot be sanitized (caller should use fallback)
+ */
+function sanitizeFolderName(name: string): string {
+    const sanitized = name
+        .replace(/\.\./g, '-') // Prevent path traversal
+        .replace(/^\./g, '') // Remove leading dots
+        .replace(/[<>:"/\\|?*]/g, '-') // Replace unsafe characters with dash
+        .replace(/\s+/g, '-') // Replace spaces with dash
+        .replace(/-+/g, '-') // Replace multiple dashes with single dash
+        .replace(/^-|-$/g, '') // Remove leading/trailing dashes
+        .toLowerCase(); // Normalize to lowercase
+    
+    // Return empty string if sanitization resulted in empty name
+    return sanitized || '';
+}
+
 export async function createHtmlFile(data: {
     content: string;
     filename: string;
@@ -1298,7 +1317,9 @@ export async function createHtmlFile(data: {
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
         if (!user) throw new Error('User not found');
 
-        // Validate that the folder exists if folderId is provided
+        let directoryName = '_root_';
+        
+        // Validate that the folder exists if folderId is provided and get its name
         if (data.folderId) {
             const folder = await prisma.workspaceFile.findUnique({
                 where: { id: data.folderId, type: 'folder' }
@@ -1306,11 +1327,20 @@ export async function createHtmlFile(data: {
             if (!folder) {
                 return { success: false, message: 'Parent folder not found. Please create the folder first.' };
             }
+            
+            // Try to use the human-readable folder name for better user experience
+            const sanitizedName = sanitizeFolderName(folder.name);
+            
+            if (sanitizedName) {
+                // Use the clean, sanitized folder name
+                // This makes folders easy to find: "ProductLaunchMicrosite" -> "productlaunchmicrosite"
+                directoryName = sanitizedName;
+            } else {
+                // Fallback to folder ID if name cannot be sanitized (e.g., all special characters)
+                directoryName = folder.id;
+            }
         }
 
-        // Create a dedicated directory for the app/folder to ensure isolation
-        // If no folderId, use '_root_' as a namespace
-        const directoryName = data.folderId ? data.folderId : '_root_';
         const uploadsDir = join(process.cwd(), 'public', 'uploads', directoryName);
 
         // Ensure directory exists
@@ -1318,18 +1348,13 @@ export async function createHtmlFile(data: {
 
         const displayName = data.filename.endsWith('.html') ? data.filename : `${data.filename}.html`;
 
-        // We can just use the filename directly now because of folder isolation
-        // But to be extra safe against overwriting same-name files within the same folder (if users want versions),
-        // we could keep a prefix. However, for "web app" behavior, overwriting index.html IS usually desired.
-        // Let's stick to simple filenames for clean URLs unless strictly necessary.
-        // Actually, let's keep it simple: strict isolation means folder is the boundary.
         const diskFileName = displayName;
 
         const filePath = join(uploadsDir, diskFileName);
         await writeFile(filePath, data.content);
 
         // storagePath needs to be the relative path from 'uploads/' so the frontend can construct the URL
-        // e.g., 'folderId/index.html'
+        // e.g., 'productlaunchmicrosite/index.html' (clean, human-readable path)
         const relativeStoragePath = `${directoryName}/${diskFileName}`;
 
         const file = await prisma.workspaceFile.create({
