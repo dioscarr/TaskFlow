@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio - [Your Name]</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0a0a;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* General Styles */
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 60px 0;
+        }
+
+        h1, h2 {
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #434343, #262626);
+            padding: 120px 0;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .hero h1 {
+            font-size: 3.5em;
+            margin-bottom: 30px;
+        }
+
+        .hero p {
+            font-size: 1.2em;
+            color: #ddd;
+            line-height: 1.6;
+            width: 70%;
+            margin: 0 auto;
+        }
+
+        /* About Section */
+        .about {
+            display: flex;
+            gap: 40px;
+        }
+
+        .about img {
+            width: 40%;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        .about-content {
+            width: 60%;
+        }
+
+        .about-content p {
+            font-size: 1.1em;
+            line-height: 1.7;
+            color: #ddd;
+        }
+
+        /* Projects Section */
+        .projects {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .project-card {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .project-card img {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            object-fit: cover;
+            height: 200px;
+        }
+
+        .project-card h3 {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        .project-card p {
+            color: #ddd;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 30px 0;
+            color: #888;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+            }
+
+            .hero {
+                padding: 80px 0;
+            }
+
+            .hero h1 {
+                font-size: 2.8em;
+            }
+
+            .hero p {
+                width: 90%;
+                font-size: 1.1em;
+            }
+
+            .about {
+                flex-direction: column;
+            }
+
+            .about img {
+                width: 100%;
+                margin-bottom: 20px;
+            }
+
+            .about-content {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <!-- Navigation Placeholder -->
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h1>[Your Name]</h1>
+            <p>Creative Director & UI Engineer crafting stunning web interfaces with a focus on dark mode and glassmorphism.</p>
+        </div>
+    </section>
+
+    <section class="about">
+        <div class="container">
+            <img src="https://source.unsplash.com/random/800x600?tech,dark" alt="Your Image">
+            <div class="about-content">
+                <h2>About Me</h2>
+                <p>A highly skilled and creative UI engineer passionate about building visually appealing and user-friendly web experiences. Specializing in modern dark mode design and the innovative use of glassmorphism to create immersive interfaces.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="projects">
+        <div class="container">
+            <h2>Projects</h2>
+            <div class="projects">
+                <div class="project-card">
+                    <img src="https://source.unsplash.com/random/800x600?web,design" alt="Project 1">
+                    <h3>Project Title 1</h3>
+                    <p>A brief description of the project, highlighting the technologies used and the design principles applied.</p>
+                </div>
+                <div class="project-card">
+                    <img src="https://source.unsplash.com/random/800x600?ui,design" alt="Project 2">
+                    <h3>Project Title 2</h3>
+                    <p>A brief description of the project, highlighting the technologies used and the design principles applied.</p>
+                </div>
+                <div class="project-card">
+                    <img src="https://source.unsplash.com/random/800x600?ux,design" alt="Project 3">
+                    <h3>Project Title 3</h3>
+                    <p>A brief description of the project, highlighting the technologies used and the design principles applied.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2024 [Your Name]. All rights reserved.</p>
+    </footer>
+</body>
+</html>

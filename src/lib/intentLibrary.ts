@@ -45,6 +45,46 @@ export const DEFAULT_INTENT_RULES: IntentRuleDefinition[] = [
     }
 ];
 
+/**
+ * Predefined workflows for common tasks
+ */
+export const DEFAULT_WORKFLOWS: WorkflowDefinition[] = [
+    {
+        id: 'create_web_app',
+        name: 'Create Web App',
+        triggerKeywords: [
+            'create a website',
+            'build a website',
+            'make a website',
+            'create a web app',
+            'build a web app',
+            'create a landing page',
+            'build a landing page',
+            'create an app',
+            'build an app'
+        ],
+        steps: [
+            {
+                id: 'step-1-create-folder',
+                action: 'create_folder',
+                params: {
+                    autoName: true,
+                    prefix: 'WebApp',
+                    onExistingFolder: 'create_unique'
+                }
+            },
+            {
+                id: 'step-2-create-html',
+                action: 'create_html_file',
+                params: {
+                    filename: 'index.html',
+                    useLastFolder: true // Use the folder created in step 1
+                }
+            }
+        ]
+    }
+];
+
 const normalizeKeyword = (value: string) => value.toLowerCase().trim();
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

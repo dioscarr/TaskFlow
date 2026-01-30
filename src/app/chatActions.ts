@@ -61,7 +61,8 @@ export async function addChatMessage(
     role: 'user' | 'ai',
     content: string,
     fileIds?: string[],
-    toolUsed?: string
+    toolUsed?: string,
+    thinking?: string
 ) {
     const message = await prisma.chatMessage.create({
         data: {
@@ -69,7 +70,8 @@ export async function addChatMessage(
             role,
             content,
             fileIds: fileIds || [],
-            toolUsed
+            toolUsed,
+            thinking
         }
     });
 

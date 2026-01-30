@@ -1,8 +1,19 @@
-
 'use server';
 
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+
+/**
+ * Safe wrapper for revalidatePath that doesn't crash in background/CLI contexts
+ */
+function safeRevalidatePath(path: string) {
+    try {
+        revalidatePath(path);
+    } catch (e) {
+        // Ignore "Invariant: static generation store missing" in background scripts
+        // console.log(`⏩ Skipping revalidation for ${path} (background context)`);
+    }
+}
 import { writeFile, readFile as readFileFS, rename, copyFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
@@ -10,7 +21,7 @@ import { DEFAULT_TOOLS, getToolSchemas } from '@/lib/toolLibrary';
 import { DEFAULT_SKILLS } from '@/lib/skillsLibrary';
 import { getSkillSchemas } from '@/lib/skillsLibrary';
 import { executeSkill } from '@/lib/skillsExecution';
-import { DEFAULT_INTENT_RULES, WorkflowStep } from '@/lib/intentLibrary';
+import { DEFAULT_INTENT_RULES, DEFAULT_WORKFLOWS, WorkflowStep } from '@/lib/intentLibrary';
 import { TOOL_LIBRARY } from '@/lib/toolLibrary';
 
 // import { CognitiveAgent } from '@/lib/agents/CognitiveAgent';
@@ -45,6 +56,7 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
     if (actionId === 'find_duplicate_files') return await findDuplicateFiles(args);
     if (actionId === 'search_web') return await searchWeb(args);
     if (actionId === 'focus_workspace_item') return await focusWorkspaceItem(args.itemId);
+    if (actionId === 'enqueue_agent_job') return await enqueueAgentJob(args);
 
     // Tools from library
     const tool = TOOL_LIBRARY[actionId];
@@ -83,6 +95,7 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
         if (schemaName === 'synthesize_documents') return await synthesizeDocuments(args);
         if (schemaName === 'get_agent_activity') return await getAgentActivity(args);
         if (schemaName === 'create_html_file') return await createHtmlFile(args);
+        if (schemaName === 'enqueue_agent_job') return await enqueueAgentJob(args);
     }
 
     // Manual catch-all and fallbacks
@@ -270,6 +283,67 @@ export async function executeWorkflow(steps: WorkflowStep[], initialContext: any
             }
             lastMarkdownParams = step.params || {};
         }
+
+        // Handle HTML file creation with folder context
+        if (step.action === 'create_html_file') {
+            // If useLastFolder is true and we have a folder from a previous step, use it
+            if ((step.params as any)?.useLastFolder && context.folderId) {
+                args.folderId = context.folderId;
+                console.log('📂 Using last created folder for HTML file:', context.folderId);
+            }
+            // Ensure filename from workflow params is used
+            if ((step.params as any)?.filename && !args.filename) {
+                args.filename = (step.params as any).filename;
+                console.log('📝 Using workflow filename:', args.filename);
+            }
+            // Merge content from context if available, or use default HTML template
+            if (!args.content) {
+                if (context.content) {
+                    args.content = context.content;
+                } else {
+                    // Default HTML template for web apps
+                    args.content = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            font-weight: 800;
+        }
+        p {
+            font-size: 1.25rem;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Welcome to Your Web App</h1>
+        <p>Start building something amazing!</p>
+    </div>
+</body>
+</html>`;
+                }
+            }
+        }
         const result = await executeAction(step.action, args);
 
         results.push({ step: step.action, success: result.success, result });
@@ -337,6 +411,17 @@ export async function executeWorkflow(steps: WorkflowStep[], initialContext: any
         if (step.action === 'create_markdown_file' && result.success) {
             if (result.folderId) {
                 lastMarkdownFolderId = result.folderId;
+            } else if (context.folderId) {
+                lastMarkdownFolderId = context.folderId;
+            }
+        }
+
+        // Handle HTML file creation with folder context
+        if (step.action === 'create_html_file' && result.success) {
+            console.log('✅ HTML file created:', result.file?.name);
+            // Track the folder for potential additional files
+            if (result.file?.parentId) {
+                lastMarkdownFolderId = result.file.parentId;
             } else if (context.folderId) {
                 lastMarkdownFolderId = context.folderId;
             }
@@ -684,6 +769,21 @@ export async function getPrompts() {
             orderBy: { createdAt: 'desc' }
         });
 
+        const ensurePrompt = async (name: string, description: string, prompt: string) => {
+            const existing = await prisma.aIPromptSet.findFirst({ where: { name, userId: user.id } });
+            if (existing) return;
+            await prisma.aIPromptSet.create({
+                data: {
+                    name,
+                    description,
+                    prompt,
+                    userId: user.id,
+                    isActive: false,
+                    tools: DEFAULT_TOOLS
+                }
+            });
+        };
+
         if (prompts.length === 0) {
             const defaults = [
                 {
@@ -709,6 +809,11 @@ export async function getPrompts() {
 * Data Privacy: Paramount importance.`
                 },
                 {
+                    name: "Review Agent",
+                    description: "Reviews plans, tool usage, and outputs for correctness, safety, and completeness before execution.",
+                    prompt: "You are TaskFlow AI, a rigorous Review Agent. Your job is to review plans and intended tool use, identify risks or missing steps, and request clarification when needed. You do not execute tools. You only approve, reject, or request changes with concise reasoning."
+                },
+                {
                     name: "Code Reviewer",
                     description: "Analyzes code files for bugs, security, and optimization.",
                     prompt: "You are TaskFlow AI, a Senior Staff Engineer. Analyze technical files for architecture, security, and performance."
@@ -729,11 +834,40 @@ export async function getPrompts() {
             }
             return await prisma.aIPromptSet.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
         }
+
+        await ensurePrompt(
+            "Review Agent",
+            "Reviews plans, tool usage, and outputs for correctness, safety, and completeness before execution.",
+            "You are TaskFlow AI, a rigorous Review Agent. Your job is to review plans and intended tool use, identify risks or missing steps, and request clarification when needed. You do not execute tools. You only approve, reject, or request changes with concise reasoning."
+        );
+        await ensurePrompt(
+            "Tool Agent",
+            "Executes pre-approved tools reliably and reports results back to the main agent.",
+            "You are TaskFlow AI's Tool Agent. Your sole job is to execute pre-approved tools and return concise results. Do not ask for approval. Do not re-plan. If a tool fails, report the failure and stop."
+        );
         return prompts;
     } catch (error) {
         console.error('Failed to get prompts:', error);
         return [];
     }
+}
+
+async function ensureToolAgentPrompt(userId: string) {
+    const existing = await prisma.aIPromptSet.findFirst({
+        where: { name: 'Tool Agent', userId }
+    });
+    if (existing) return existing;
+
+    return prisma.aIPromptSet.create({
+        data: {
+            name: 'Tool Agent',
+            description: 'Executes pre-approved tools reliably and reports results back to the main agent.',
+            prompt: "You are TaskFlow AI's Tool Agent. Your sole job is to execute pre-approved tools and return concise results. Do not ask for approval. Do not re-plan. If a tool fails, report the failure and stop.",
+            userId,
+            isActive: false,
+            tools: DEFAULT_TOOLS
+        }
+    });
 }
 
 export async function getIntentRules() {
@@ -984,7 +1118,7 @@ export async function recordAlegraPayment(data: any) {
             where: { id: data.billId },
             data: { status: 'exported' }
         });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         return { success: false };
@@ -1035,7 +1169,7 @@ export async function createFolder(data: {
             }
 
             if (onExisting === 'reuse') {
-                revalidatePath('/');
+                safeRevalidatePath('/');
                 return { success: true, folder: existingFolder, reused: true };
             }
 
@@ -1051,7 +1185,7 @@ export async function createFolder(data: {
                         parentId
                     }
                 });
-                revalidatePath('/');
+                safeRevalidatePath('/');
                 return { success: true, folder, createdFromExisting: true };
             }
         }
@@ -1065,7 +1199,7 @@ export async function createFolder(data: {
             }
         });
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return {
             success: true,
             folder,
@@ -1146,7 +1280,7 @@ export async function createMarkdownFile(data: {
             }
         });
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, file, createdFolder: !!data.folderName, folderId: createdFolderId };
     } catch (error) {
         console.error(error);
@@ -1199,7 +1333,7 @@ export async function createHtmlFile(data: {
             }
         });
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, file };
     } catch (error) {
         console.error(error);
@@ -1689,8 +1823,9 @@ export async function agentDelegate(data: { agentType: string, task: string }) {
     console.log(`🤖 Delegating to ${data.agentType}: ${data.task}`);
 
     const demoUser = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+    const agentKey = data.agentType.toLowerCase();
 
-    if (data.agentType.toLowerCase() === 'designer' || data.agentType.toLowerCase() === 'design') {
+    if (agentKey === 'designer' || agentKey === 'design') {
         const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
         if (!apiKey) return { success: false, message: 'API Key missing for delegation' };
 
@@ -1721,6 +1856,42 @@ export async function agentDelegate(data: { agentType: string, task: string }) {
             success: true,
             message: "Design Expert has provided their analysis.",
             analysis: result
+        };
+    }
+
+    if (agentKey === 'review' || agentKey === 'reviewer') {
+        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+        if (!apiKey) return { success: false, message: 'API Key missing for delegation' };
+
+        if (demoUser) {
+            await logAgentActivity({
+                type: 'delegation',
+                title: 'Review Agent Activated',
+                message: `Task: ${data.task}`,
+                toolUsed: 'agent_delegate',
+                userId: demoUser.id
+            });
+        }
+
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const prompt = `You are a strict Review Agent. Review the following plan or intended tool use.\n\nReturn:\n- Verdict: approve | revise | reject\n- Risks\n- Missing steps\n- Suggested changes\n\nCONTENT:\n${data.task}`;
+        const result = await model.generateContent(prompt);
+        const review = result.response.text();
+
+        if (demoUser) {
+            await logAgentActivity({
+                type: 'specialist_result',
+                title: 'Review Agent Completed',
+                message: 'Review delivered for approval.',
+                userId: demoUser.id
+            });
+        }
+
+        return {
+            success: true,
+            message: 'Review Agent has provided feedback.',
+            analysis: review
         };
     }
 
@@ -2059,6 +2230,116 @@ export async function getAgentActivity(data: { limit?: number }) {
     }
 }
 
+export async function enqueueAgentJob(data: {
+    sessionId?: string;
+    type: string;
+    payload: any;
+    approved?: boolean;
+    autonomyLevel?: 'manual' | 'semi' | 'full';
+    maxIterations?: number;
+    parentJobId?: string;
+}) {
+    try {
+        const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+        if (!user) return { success: false, message: 'User not found' };
+
+        const approved = !!data.approved || data.autonomyLevel === 'full';
+
+        const job = await prisma.agentJob.create({
+            data: {
+                type: data.type,
+                payload: data.payload || {},
+                status: 'queued',
+                sessionId: data.sessionId || null,
+                userId: user.id,
+                approved,
+                approvedAt: approved ? new Date() : null,
+                autonomyLevel: data.autonomyLevel || 'manual',
+                maxIterations: data.maxIterations ?? 5,
+                parentJobId: data.parentJobId || null,
+                iteration: 0
+            }
+        });
+
+        if (data.sessionId) {
+            await prisma.chatSession.update({
+                where: { id: data.sessionId },
+                data: { updatedAt: new Date() }
+            });
+        }
+
+        return { success: true, job };
+    } catch (error) {
+        console.error('Failed to enqueue agent job:', error);
+        return { success: false, message: 'Failed to enqueue agent job' };
+    }
+}
+
+export async function approveLatestAgentJob(sessionId: string) {
+    try {
+        if (!sessionId) return { success: false, message: 'Missing sessionId' };
+        const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+        if (!user) return { success: false, message: 'User not found' };
+
+        const job = await prisma.agentJob.findFirst({
+            where: { sessionId, userId: user.id, status: 'queued', approved: false },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        if (!job) return { success: false, message: 'No pending job to approve' };
+
+        const updated = await prisma.agentJob.update({
+            where: { id: job.id },
+            data: { approved: true, approvedAt: new Date() }
+        });
+
+        return { success: true, job: updated };
+    } catch (error) {
+        return { success: false, message: 'Failed to approve job' };
+    }
+}
+
+export async function getChatSessionAgentStatus(sessionId: string) {
+    try {
+        if (!sessionId) return { success: false, busy: false, runningCount: 0, queuedCount: 0 };
+        const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+        if (!user) return { success: false, busy: false, runningCount: 0, queuedCount: 0 };
+
+        const [runningCount, queuedCount, approvedQueuedCount, latestJob, latestActivity] = await Promise.all([
+            prisma.agentJob.count({ where: { sessionId, userId: user.id, status: 'running' } }),
+            prisma.agentJob.count({ where: { sessionId, userId: user.id, status: 'queued' } }),
+            prisma.agentJob.count({ where: { sessionId, userId: user.id, status: 'queued', approved: true } }),
+            prisma.agentJob.findFirst({
+                where: { sessionId, userId: user.id },
+                orderBy: { updatedAt: 'desc' },
+                select: { id: true, type: true, status: true, updatedAt: true, startedAt: true }
+            }),
+            prisma.agentActivity.findFirst({
+                where: { userId: user.id },
+                orderBy: { createdAt: 'desc' },
+                select: { message: true, title: true, createdAt: true }
+            })
+        ]);
+
+        const busy = runningCount + approvedQueuedCount > 0;
+
+        // Only return activity if it's recent (last 30 seconds) to avoid showing stale info
+        const isActivityRecent = latestActivity && (Date.now() - new Date(latestActivity.createdAt).getTime() < 30000);
+
+        return {
+            success: true,
+            busy,
+            runningCount,
+            queuedCount,
+            approvedQueuedCount,
+            latestJob,
+            latestActivity: isActivityRecent ? latestActivity : null
+        };
+    } catch (error) {
+        return { success: false, busy: false, runningCount: 0, queuedCount: 0 };
+    }
+}
+
 export async function extractTextFromImage(data: { fileId: string }) {
     try {
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
@@ -2297,8 +2578,19 @@ export async function manageDataTable(data: {
 
 
 
-export async function chatWithAI(query: string, fileIds: string[] = [], history: { role: 'user' | 'model'; parts: { text: string }[] }[] = [], currentFolder?: string, currentFolderId?: string) {
+export async function chatWithAI(
+    query: string,
+    fileIds: string[] = [],
+    history: { role: 'user' | 'model'; parts: { text: string }[] }[] = [],
+    currentFolder?: string,
+    currentFolderId?: string,
+    options?: { sessionId?: string; allowToolExecution?: boolean; agentMode?: 'chat' | 'tool-agent' }
+) {
     try {
+        const allowToolExecution = options?.allowToolExecution !== false;
+        const agentMode = options?.agentMode || 'chat';
+        const isToolAgent = agentMode === 'tool-agent';
+        const sessionId = options?.sessionId;
         const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
         if (!apiKey) return { success: false, message: 'API Key missing' };
 
@@ -2312,6 +2604,16 @@ export async function chatWithAI(query: string, fileIds: string[] = [], history:
             prisma.aIPromptSet.findFirst({ where: { isActive: true } }),
             prisma.user.findUnique({ where: { email: 'demo@example.com' } })
         ]);
+
+        const toolAgentPrompt = isToolAgent && demoUser
+            ? await ensureToolAgentPrompt(demoUser.id)
+            : null;
+        const selectedPromptSet = (isToolAgent && toolAgentPrompt) ? toolAgentPrompt : activePromptSet;
+
+        const isApprovalMessage = (text: string) => {
+            const normalized = text.trim().toLowerCase();
+            return /^(approve|approved|ok|okay|yes|yep|go ahead|proceed|run it|do it|execute|start)(\b|\!|\.|,|$)/.test(normalized);
+        };
 
         const normalizeKeyword = (value: string) => value.toLowerCase().trim();
         const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -2335,10 +2637,181 @@ export async function chatWithAI(query: string, fileIds: string[] = [], history:
             return (lastAssistant.parts || []).map(p => p.text || '').join('').trim();
         };
 
+        const getLastUserText = () => {
+            const lastUser = [...history].reverse().find(m => m.role === 'user');
+            if (!lastUser) return '';
+            return (lastUser.parts || []).map(p => p.text || '').join('').trim();
+        };
+
+        const getLastNonApprovalUserText = () => {
+            const lastUser = [...history].reverse().find(m => {
+                if (m.role !== 'user') return false;
+                const text = (m.parts || []).map(p => p.text || '').join('').trim();
+                return !!text && !isApprovalMessage(text);
+            });
+            if (!lastUser) return '';
+            return (lastUser.parts || []).map(p => p.text || '').join('').trim();
+        };
+
+        const isApprovalRequest = (text: string) => {
+            const normalized = text.toLowerCase();
+            return /are you (ok|okay) with/i.test(normalized) ||
+                /are you (okay|ok) with/i.test(normalized) ||
+                /can i (proceed|go ahead|start)/i.test(normalized) ||
+                /would you like me to/i.test(normalized) ||
+                /do you want me to/i.test(normalized) ||
+                /before i start/i.test(normalized) ||
+                /need your approval/i.test(normalized) ||
+                /ready to proceed/i.test(normalized);
+        };
+
+        const buildPlanSummary = (tools: string[], query: string) => {
+            // If no tools, provide generic but clear plan
+            if (!tools.length) {
+                return `Plan:\n1. Analyze your request\n2. Execute the work\n3. Provide results\n\nI can run this in the background.`;
+            }
+
+            // Build detailed steps based on tools
+            const steps: string[] = [];
+            const details: string[] = [];
+
+            // Analyze what we're doing based on tools
+            const hasFileCreation = tools.some(t => t.includes('create') || t.includes('write'));
+            const hasFileSearch = tools.some(t => t.includes('search') || t.includes('find'));
+            const hasFileRead = tools.some(t => t.includes('read') || t.includes('view'));
+
+            // Add context-aware steps
+            if (hasFileCreation) {
+                const queryLower = query.toLowerCase();
+
+                // Detect what's being created
+                if (queryLower.includes('microsite') || queryLower.includes('landing') || queryLower.includes('website')) {
+                    steps.push('1. Create project folder structure');
+                    steps.push('2. Generate HTML with semantic structure');
+                    steps.push('3. Add premium CSS styling (glassmorphism, gradients)');
+                    steps.push('4. Implement JavaScript for interactions');
+                    steps.push('5. Provide file locations and preview instructions');
+
+                    details.push('📁 Will create: HTML, CSS, and JS files');
+                    details.push('🎨 Design: Modern, premium, responsive');
+                    details.push('✨ Features: Animations, glassmorphism, dark mode');
+                } else if (queryLower.includes('dashboard') || queryLower.includes('crm')) {
+                    steps.push('1. Create project folder');
+                    steps.push('2. Build dashboard HTML structure');
+                    steps.push('3. Add data visualization components');
+                    steps.push('4. Style with glassmorphic design');
+                    steps.push('5. Add interactivity and charts');
+
+                    details.push('📁 Will create: Dashboard application');
+                    details.push('📊 Features: Charts, metrics, data tables');
+                    details.push('🎨 Design: Glassmorphic, professional');
+                } else if (queryLower.includes('app') || queryLower.includes('application')) {
+                    steps.push('1. Set up project structure');
+                    steps.push('2. Create main application files');
+                    steps.push('3. Implement core functionality');
+                    steps.push('4. Add styling and UX polish');
+                    steps.push('5. Test and provide access instructions');
+
+                    details.push('📁 Will create: Full application');
+                    details.push('⚡ Features: Based on your requirements');
+                    details.push('🎨 Design: Modern and intuitive');
+                } else {
+                    // Generic file creation
+                    steps.push('1. Create necessary files');
+                    steps.push('2. Add content and structure');
+                    steps.push('3. Apply styling and formatting');
+                    steps.push('4. Provide file locations');
+                }
+            } else if (hasFileSearch) {
+                steps.push('1. Search workspace for relevant files');
+                steps.push('2. Analyze search results');
+                steps.push('3. Provide findings');
+            } else if (hasFileRead) {
+                steps.push('1. Read requested files');
+                steps.push('2. Analyze content');
+                steps.push('3. Provide insights');
+            } else {
+                // Fallback to tool-based steps
+                tools.forEach((tool, idx) => {
+                    const toolName = tool.replace(/_/g, ' ');
+                    steps.push(`${idx + 1}. ${toolName.charAt(0).toUpperCase() + toolName.slice(1)}`);
+                });
+            }
+
+            const planText = steps.join('\n');
+            const detailsText = details.length > 0 ? '\n\n' + details.join('\n') : '';
+
+            return `Plan:\n${planText}${detailsText}\n\nI can run this in the background.`;
+        };
+
+        const getRecentApproval = async () => {
+            if (!sessionId || !demoUser) return null;
+            return prisma.agentJob.findFirst({
+                where: {
+                    sessionId,
+                    userId: demoUser.id,
+                    approved: true,
+                    approvedAt: { gte: new Date(Date.now() - 1000 * 60 * 2) }
+                },
+                orderBy: { approvedAt: 'desc' },
+                select: { id: true, approvedAt: true }
+            });
+        };
+
+        const isLowRiskTools = (tools: string[]) => {
+            const lowRisk = new Set(['focus_workspace_item', 'search_files', 'read_file']);
+            return tools.length > 0 && tools.every(tool => lowRisk.has(tool));
+        };
+
+        if (sessionId && isApprovalMessage(query)) {
+            const approval = await approveLatestAgentJob(sessionId);
+            if (approval.success) {
+                if (demoUser) {
+                    await logAgentActivity({
+                        type: 'success',
+                        title: 'Background Agent Approved',
+                        message: `Job ${approval.job?.id || ''} approved by user.`,
+                        toolUsed: 'enqueue_agent_job',
+                        userId: demoUser.id
+                    });
+                }
+                return {
+                    success: true,
+                    text: '✅ Approved. Background agent started.'
+                };
+            }
+
+            const lastAssistantText = getLastAssistantText();
+            const lastUserText = getLastNonApprovalUserText() || getLastUserText();
+            if (lastAssistantText && isApprovalRequest(lastAssistantText)) {
+                await enqueueAgentJob({
+                    sessionId,
+                    type: 'chat_task',
+                    payload: {
+                        query: lastUserText || query,
+                        fileIds,
+                        history,
+                        currentFolder,
+                        currentFolderId,
+                        allowToolExecution: true
+                    },
+                    approved: true
+                });
+
+                return { success: true, text: '✅ Approved. Background agent started.' };
+            }
+
+            return { success: true, text: 'No pending background job to approve.' };
+        }
+
         const extractLastMarkdownTable = (text: string) => {
             const tableRegex = /(^|\n)\|[^\n]*\|\n\|[-\s|:]+\|\n(?:\|[^\n]*\|\n?)+/m;
             const match = text.match(tableRegex);
             return match ? match[0].trim() : '';
+        };
+
+        const stripThinking = (text: string) => {
+            return text.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
         };
 
         const ensureIntentRules = async (userId: string) => {
@@ -2376,6 +2849,11 @@ export async function chatWithAI(query: string, fileIds: string[] = [], history:
             return `report-${Date.now()}`;
         };
 
+        const shouldResearch = (text: string) => {
+            const normalized = text.toLowerCase();
+            return /\bresearch|investigate|find sources|look up|search\b/.test(normalized);
+        };
+
         let workflowInstructions = '';
 
         if (demoUser) {
@@ -2383,7 +2861,7 @@ export async function chatWithAI(query: string, fileIds: string[] = [], history:
             const rules = await prisma.intentRule.findMany({ where: { userId: demoUser.id, enabled: true } });
 
             // Check if input matches any of the AGENT'S custom trigger keywords
-            const rawWorkflows = activePromptSet?.workflows as unknown;
+            const rawWorkflows = selectedPromptSet?.workflows as unknown;
             let workflows: any[] = [];
 
             if (Array.isArray(rawWorkflows)) {
@@ -2401,10 +2879,13 @@ export async function chatWithAI(query: string, fileIds: string[] = [], history:
                 workflows = [{
                     id: 'default',
                     name: 'Main Flow',
-                    triggerKeywords: (activePromptSet?.triggerKeywords as string[]) || [],
+                    triggerKeywords: (selectedPromptSet?.triggerKeywords as string[]) || [],
                     steps: workflows
                 }];
             }
+
+            // Merge with DEFAULT_WORKFLOWS (always available)
+            workflows = [...DEFAULT_WORKFLOWS, ...workflows];
 
             const matchedWorkflow = workflows
                 .flatMap(wf => {
@@ -2582,8 +3063,16 @@ export async function chatWithAI(query: string, fileIds: string[] = [], history:
     - CAPABLE: Vision analysis, business verification, automated organization
     - ALEGRA EXPORT: 'extract_alegra_bill' is temporarily disabled. Do NOT attempt it.`;
 
+        const toolExecutionRule = isToolAgent
+            ? '0. TOOL AGENT: Tools are pre-approved. Execute immediately; do NOT request approval or queue jobs.'
+            : '0. CONSULT FIRST: Never execute tools or skills without explicit user approval. You MUST ask for confirmation before any tool processing.';
+        const backgroundRule = isToolAgent
+            ? ''
+            : '13. BACKGROUND EXECUTION: After the user approves tool processing, queue the work using enqueue_agent_job for background execution. Do NOT execute tools directly in chat.';
+
         const toolInstructions = `
 OPERATIONAL RULES:
+    ${toolExecutionRule}
 1. SKILLS OVER TOOLS: Use SKILLS instead of individual tools. Skills are intelligent capabilities that handle complex tasks automatically.
 2. RECEIPT INTELLIGENCE: When processing receipts, use the 'receipt_intelligence' skill which handles vision analysis, business verification, report creation, and file organization in one call.
 3. WORKSPACE ORGANIZATION: Use 'workspace_organization' skill for organizing files - it intelligently creates folders, moves files, and applies highlighting.
@@ -2614,39 +3103,57 @@ OPERATIONAL RULES:
         1. All HTML files are in the same folder.
         2. Links use relative paths, not absolute or storage IDs.
         3. An 'index.html' entry point exists.
+    ${backgroundRule}
    `;
 
         // Load skills dynamically from skills library
-        const enabledSkills = (activePromptSet && Array.isArray(activePromptSet.tools) && activePromptSet.tools.length > 0)
-            ? activePromptSet.tools.filter(skillId => skillId !== 'extract_alegra_bill') // Temporarily disable Alegra export
+        const enabledSkills = (selectedPromptSet && Array.isArray(selectedPromptSet.tools) && selectedPromptSet.tools.length > 0)
+            ? selectedPromptSet.tools.filter(skillId => skillId !== 'extract_alegra_bill') // Temporarily disable Alegra export
             : DEFAULT_SKILLS;
 
-        const baseInstruction = activePromptSet ? activePromptSet.prompt : defaultInstruction;
+        const baseInstruction = selectedPromptSet ? selectedPromptSet.prompt : defaultInstruction;
 
         // --- COGNITIVE PLANNING (Multi-Agent Architecture) ---
-        const { CognitiveAgent } = await import('@/lib/agents/CognitiveAgent');
-        const cognitiveAgent = new CognitiveAgent(apiKey);
-        const plan = await cognitiveAgent.generateExecutionPlan(query, {
-            history,
-            currentFolder,
-            availableTools: enabledSkills
-        });
+        let planText = '';
+        if (!isToolAgent) {
+            const { CognitiveAgent } = await import('@/lib/agents/CognitiveAgent');
+            const cognitiveAgent = new CognitiveAgent(apiKey);
+            const plan = await cognitiveAgent.generateExecutionPlan(query, {
+                history,
+                currentFolder,
+                availableTools: enabledSkills
+            });
 
-        if (plan && demoUser) {
+            if (plan && demoUser) {
+                await logAgentActivity({
+                    type: 'planning',
+                    title: 'Cognitive Brain Formulated Plan',
+                    message: `Objective: ${plan.objective}`,
+                    userId: demoUser.id
+                });
+            }
+
+            planText = plan ? `\n\nCOGNITIVE EXECUTION PLAN (MUST FOLLOW):\nPlan Objective: ${plan.objective}\nPlan Rationale: ${plan.rationale}\nSteps:\n${plan.steps.map((s, i) => `${i + 1}. [${s.phase}] ${s.action}: ${s.description}`).join('\n')}\n${plan.suggestedSpecialist && plan.suggestedSpecialist !== 'none' ? `SPECIALIST ADVICE: This task can be delegated to the '${plan.suggestedSpecialist}' agent via agent_delegate for expert results.` : ''}` : '';
+        }
+
+        if (isToolAgent && demoUser) {
             await logAgentActivity({
-                type: 'planning',
-                title: 'Cognitive Brain Formulated Plan',
-                message: `Objective: ${plan.objective}`,
+                type: 'info',
+                title: 'Tool Agent Activated',
+                message: `Executing pre-approved tools for session ${sessionId || 'n/a'}.`,
+                toolUsed: 'tool_agent',
                 userId: demoUser.id
             });
         }
 
-        const planText = plan ? `\n\nCOGNITIVE EXECUTION PLAN (MUST FOLLOW):\nPlan Objective: ${plan.objective}\nPlan Rationale: ${plan.rationale}\nSteps:\n${plan.steps.map((s, i) => `${i + 1}. [${s.phase}] ${s.action}: ${s.description}`).join('\n')}\n${plan.suggestedSpecialist && plan.suggestedSpecialist !== 'none' ? `SPECIALIST ADVICE: This task can be delegated to the '${plan.suggestedSpecialist}' agent via agent_delegate for expert results.` : ''}` : '';
-
         const systemInstruction = baseInstruction + "\n" + toolInstructions + planText +
             "\n\nCOGNITIVE ARCHITECTURE: ENABLED." +
-            "\nVERBOSITY: ON. You are encouraged to be verbose. Share your internal roadmap and the specialist's advice with the user so they can follow your logic." +
-            "\nTHINKING PROTOCOL: Before taking any action or answering, you must PLAN your approach inside <thinking>...</thinking> tags. Briefly explain your reasoning, the tools you will use, and why." +
+            (isToolAgent
+                ? "\nVERBOSITY: LOW. Keep responses concise and focused on tool results."
+                : "\nVERBOSITY: ON. You are encouraged to be verbose. Share your internal roadmap and the specialist's advice with the user so they can follow your logic.") +
+            (isToolAgent
+                ? "\nTHINKING PROTOCOL: Do not include <thinking> tags in responses."
+                : "\nTHINKING PROTOCOL: Before taking any action or answering, you must PLAN your approach inside <thinking>...</thinking> tags. Briefly explain your reasoning, the tools you will use, and why.") +
             "\nWEB/PREVIEW CAPABILITY: You can create full HTML web pages using 'create_html_file'. When you do this, the system will AUTOMATICALLY open a live preview for the user side-by-side with the chat. Use this for landing pages, reports, or any visual data representation." +
             "\nPROACTIVE SEARCH RULE: Always use 'search_files' if you are unsure which files to use for a report or task. Never ask the user for file IDs if you can find them yourself.";
 
@@ -2704,7 +3211,7 @@ OPERATIONAL RULES:
             const file = await prisma.workspaceFile.findUnique({ where: { id: fileId } });
             if (!file) continue;
 
-            promptParts[0] += `\n(File: ${file.name}, ID: ${file.id})`;
+            promptParts[0] += `\n(File: ${file.name})`;
 
             // Strict extension check for Gemini Vision
             const ext = file.name.split('.').pop()?.toLowerCase() || '';
@@ -2779,6 +3286,131 @@ OPERATIONAL RULES:
 
         let specialToolResult: any = null;
         let specialToolName: string | null = null;
+
+        if ((!calls || calls.length === 0) && !allowToolExecution && shouldResearch(query)) {
+            if (sessionId) {
+                await enqueueAgentJob({
+                    sessionId,
+                    type: 'chat_task',
+                    payload: {
+                        query,
+                        fileIds,
+                        history,
+                        currentFolder,
+                        currentFolderId,
+                        allowToolExecution: true,
+                        proposedTools: ['search_web']
+                    },
+                    approved: false
+                });
+            }
+
+            if (demoUser) {
+                await logAgentActivity({
+                    type: 'info',
+                    title: 'Approval Required',
+                    message: 'Proposed tools: search_web',
+                    toolUsed: 'enqueue_agent_job',
+                    userId: demoUser.id
+                });
+            }
+
+            return {
+                success: true,
+                text: 'I can run background research with search_web. Reply “approve” to proceed.',
+                toolUsed: 'enqueue_agent_job'
+            };
+        }
+
+        if ((!calls || calls.length === 0) && !allowToolExecution) {
+            const finalCandidate = currentResponse.text ? currentResponse.text() : '';
+            if (finalCandidate && isApprovalRequest(finalCandidate)) {
+                if (sessionId) {
+                    await enqueueAgentJob({
+                        sessionId,
+                        type: 'chat_task',
+                        payload: {
+                            query,
+                            fileIds,
+                            history,
+                            currentFolder,
+                            currentFolderId,
+                            allowToolExecution: true
+                        },
+                        approved: false
+                    });
+                }
+
+                return {
+                    success: true,
+                    text: `${buildPlanSummary([], query)}\n\nReply "approve" to continue.`,
+                    toolUsed: 'enqueue_agent_job'
+                };
+            }
+        }
+
+        if (calls && calls.length > 0 && !allowToolExecution) {
+            const proposedTools = calls.map(call => call.name);
+
+            const recentApproval = await getRecentApproval();
+            if (recentApproval && isLowRiskTools(proposedTools)) {
+                if (sessionId) {
+                    await enqueueAgentJob({
+                        sessionId,
+                        type: 'chat_task',
+                        payload: {
+                            query,
+                            fileIds,
+                            history,
+                            currentFolder,
+                            currentFolderId,
+                            allowToolExecution: true,
+                            proposedTools
+                        },
+                        approved: true
+                    });
+                }
+
+                return {
+                    success: true,
+                    text: `Running a quick background action: ${proposedTools.join(', ')}.`,
+                    toolUsed: 'enqueue_agent_job'
+                };
+            }
+
+            if (sessionId) {
+                await enqueueAgentJob({
+                    sessionId,
+                    type: 'chat_task',
+                    payload: {
+                        query,
+                        fileIds,
+                        history,
+                        currentFolder,
+                        currentFolderId,
+                        allowToolExecution: true,
+                        proposedTools
+                    },
+                    approved: false
+                });
+            }
+
+            if (demoUser) {
+                await logAgentActivity({
+                    type: 'info',
+                    title: 'Approval Required',
+                    message: `Proposed tools: ${proposedTools.join(', ') || 'none'}`,
+                    toolUsed: 'enqueue_agent_job',
+                    userId: demoUser.id
+                });
+            }
+
+            return {
+                success: true,
+                text: `${buildPlanSummary(proposedTools, query)}\n\nReply "approve" to proceed.`,
+                toolUsed: 'enqueue_agent_job'
+            };
+        }
 
         while (calls && calls.length > 0 && maxTurns > 0) {
             console.log(`🔧 Tool calls detected (Turn ${6 - maxTurns}):`, calls.map(c => c.name));
@@ -2888,6 +3520,11 @@ OPERATIONAL RULES:
 
         // Remove thinking blocks from user-facing text
         finalText = finalText.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+        // Hide internal IDs from user-facing text
+        finalText = finalText
+            .replace(/\bID:\s*[a-zA-Z0-9_-]+\b/g, '')
+            .replace(/\bID\s*[#:]\s*[a-zA-Z0-9_-]+\b/g, '')
+            .replace(/\bfile id\s*[:#]?\s*[a-zA-Z0-9_-]+\b/gi, 'file');
 
         // If response is empty but we have a thought, use it as fallback
         if (!finalText && !toolUsed && !specialToolName) {
@@ -2905,9 +3542,11 @@ OPERATIONAL RULES:
             finalText = '✅ Processing complete. Task has been organized as requested.';
         }
 
+        // Send the thought block separately for UI rendering
         const responseObj: any = {
             success: true,
-            text: (finalText && finalText.trim() !== '') ? finalText : '', // Allow empty text if tool was used
+            text: (finalText && finalText.trim() !== '') ? finalText : '',
+            thinking: thoughtMatch && thoughtMatch[1] ? thoughtMatch[1].trim() : undefined,
             toolUsed: specialToolName || toolUsed || undefined,
             toolResult: specialToolResult || lastToolResult || undefined
         };

@@ -36,6 +36,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
+        if (typeof window === 'undefined') return;
         const handlePinChange = (e: any) => setIsChatPinned(e.detail);
         window.addEventListener('ai-chat-pin-changed', handlePinChange);
         return () => window.removeEventListener('ai-chat-pin-changed', handlePinChange);

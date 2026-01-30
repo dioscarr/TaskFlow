@@ -1,0 +1,308 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0a0a;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden; /* Prevent horizontal scrollbar */
+        }
+
+        /* ===== Scrollbar CSS ===== */
+        /* Firefox */
+        * {
+            scrollbar-width: auto;
+            scrollbar-color: #8f54a0 #ffffff;
+        }
+
+        /* Chrome, Edge, and Safari */
+        *::-webkit-scrollbar {
+            width: 16px;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background-color: #8f54a0;
+            border-radius: 10px;
+            border: 3px solid #0a0a0a;
+        }
+
+        
+        nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 15px;
+            transition: color 0.3s ease;
+        }
+
+        nav a:hover {
+            color: #a0a0a0;
+        }
+
+        .hero {
+            padding: 100px 20px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #30CFD0, #330867);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .metrics {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-top: 50px;
+        }
+
+        .metric-card {
+            background-color: rgba(10, 10, 10, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            padding: 30px;
+            margin: 20px;
+            border-radius: 10px;
+            width: 250px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(50, 50, 93, 0.2);
+        }
+
+        .metric-card h2 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .charts {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            padding: 50px 20px;
+        }
+
+        .chart-container {
+            width: 400px;
+            height: 300px;
+            background-color: rgba(10, 10, 10, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 10px;
+            margin: 20px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .data-table th {
+            background-color: rgba(10, 10, 10, 0.7);
+            font-weight: 600;
+        }
+
+        tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Pagination styles */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .pagination a {
+            color: #fff;
+            padding: 8px 16px;
+            text-decoration: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: rgba(10, 10, 10, 0.5);
+            margin: 0 4px;
+            border-radius: 5px;
+        }
+
+        .pagination a.active {
+            background-color: #663399; /* Highlight color */
+            border-color: #663399;
+        }
+
+        .pagination a:hover:not(.active) {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px;
+            font-size: 0.8em;
+            color: #777;
+        }
+
+        /* Utility classes for spacing */
+        .mt-5 { margin-top: 3rem; }
+        .mb-5 { margin-bottom: 3rem; }
+        .p-5 { padding: 3rem; }
+        .pt-5 { padding-top: 3rem; }
+        .pb-5 { padding-bottom: 3rem; }
+        .mx-auto { margin-left: auto; margin-right: auto; }
+
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div>
+            <a href="#"><strong>CRM Dashboard</strong></a>
+        </div>
+        <div>
+            <a href="#">Dashboard</a>
+            <a href="#">Customers</a>
+            <a href="#">Reports</a>
+            <a href="#">Settings</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <h1>Welcome to Your CRM</h1>
+        <p>Your data, visualized.</p>
+
+        <div class="metrics">
+            <div class="metric-card">
+                <h2>1,234</h2>
+                <p>New Customers</p>
+            </div>
+            <div class="metric-card">
+                <h2>$123,456</h2>
+                <p>Total Revenue</p>
+            </div>
+            <div class="metric-card">
+                <h2>4.5</h2>
+                <p>Average Rating</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="charts">
+        <div class="chart-container">
+            <h3>Sales Chart</h3>
+            <div>[Placeholder Chart]</div>
+        </div>
+        <div class="chart-container">
+            <h3>Customer Growth</h3>
+            <div>[Placeholder Chart]</div>
+        </div>
+    </section>
+
+    <section class="data-table-section p-5">
+        <h2 style="text-align:center;">Customer Data</h2>
+        <table class="data-table mx-auto" style="width:80%;">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>City</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>John Doe</td>
+                    <td>john.doe@example.com</td>
+                    <td>123-456-7890</td>
+                    <td>New York</td>
+                </tr>
+                <tr>
+                    <td>Jane Smith</td>
+                    <td>jane.smith@example.com</td>
+                    <td>987-654-3210</td>
+                    <td>Los Angeles</td>
+                </tr>
+                 <tr>
+                    <td>Alice Johnson</td>
+                    <td>alice.johnson@example.com</td>
+                    <td>555-123-4567</td>
+                    <td>Chicago</td>
+                </tr>
+                <tr>
+                    <td>Bob Williams</td>
+                    <td>bob.williams@example.com</td>
+                    <td>111-222-3333</td>
+                    <td>Houston</td>
+                </tr>
+                 <tr>
+                    <td>Eve Brown</td>
+                    <td>eve.brown@example.com</td>
+                    <td>444-555-6666</td>
+                    <td>Phoenix</td>
+                </tr>
+                 <tr>
+                    <td>Charlie Davis</td>
+                    <td>charlie.davis@example.com</td>
+                    <td>777-888-9999</td>
+                    <td>Philadelphia</td>
+                </tr>
+            </tbody>
+        </table>
+
+          <div class="pagination">
+            <a href="#">&laquo;</a>
+            <a href="#" class="active">1</a>
+            <a href="#">2</a>
+            <a href="#">3</a>
+            <a href="#">&raquo;</a>
+        </div>
+    </section>
+
+    <footer class="footer">
+        &copy; 2024 CRM Dashboard
+    </footer>
+
+</body>
+</html>

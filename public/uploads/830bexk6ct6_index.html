@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fintech Startup</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+
+        /* Glassmorphism Styles */
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(7.5px);
+            -webkit-backdrop-filter: blur(7.5px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 20px;
+        }
+
+        /* General Layout */
+        .container {
+            width: 80%;
+            margin: auto;
+            padding-top: 20px;
+            padding-bottom: 40px; /* Increased padding at the bottom */
+        }
+
+        /* Navigation */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 20px 0;
+            transition: background-color 0.3s ease;
+        }
+
+        nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: center;
+        }
+
+        nav ul li {
+            display: inline;
+            margin: 0 20px;
+        }
+
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+       nav a:hover {
+            color: #a0aec0;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 120px 0;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+        }
+
+        .hero h1 {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero p {
+            font-size: 1.2em;
+            color: #a0aec0;
+            margin-bottom: 30px;
+        }
+
+        .cta-button {
+            background-color: #64748b;
+            color: #fff;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            text-decoration: none;
+            display: inline-block; /* Make it a block-level element */
+        }
+
+        .cta-button:hover {
+            background-color: #4a5568;
+            transform: translateY(-2px);
+        }
+
+        /* Feature Cards */
+        .features {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-top: 50px;
+        }
+
+        .feature-card {
+            width: 300px;
+            margin: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-card h3 {
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .feature-card p {
+            color: #a0aec0;
+            font-size: 1em;
+        }
+
+        /* Footer Styles */
+        footer {
+            text-align: center;
+            padding: 30px 0;
+            background-color: #1a202c;
+            border-top: 1px solid #2d3748;
+        }
+
+        footer p {
+            font-size: 0.9em;
+            color: #a0aec0;
+        }
+    </style>
+</head>
+<body>
+    <nav class="glassmorphism">
+        <div class="container">
+            <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="#">Features</a></li>
+                <li><a href="#">About</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <h1>Revolutionizing Finance with Technology</h1>
+        <p>The future of financial services is here. Join us in shaping a new era of fintech innovation.</p>
+        <a href="#" class="cta-button">Get Started Today</a>
+    </section>
+
+    <section class="container features">
+        <div class="feature-card glassmorphism">
+            <h3>AI-Powered Insights</h3>
+            <p>Leverage artificial intelligence to gain deeper insights into your financial data and make smarter decisions.</p>
+        </div>
+
+        <div class="feature-card glassmorphism">
+            <h3>Seamless Integration</h3>
+            <p>Our platform seamlessly integrates with your existing financial tools and systems for a hassle-free experience.</p>
+        </div>
+
+        <div class="feature-card glassmorphism">
+            <h3>Secure and Compliant</h3>
+            <p>We prioritize the security of your data and adhere to the highest standards of compliance and regulatory requirements.</p>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Fintech Startup. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

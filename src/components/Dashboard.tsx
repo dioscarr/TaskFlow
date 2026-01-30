@@ -28,10 +28,13 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
 
     useEffect(() => {
         // Notify others (like AIChat) about the active preview
-        window.dispatchEvent(new CustomEvent('preview-selection-changed', { detail: previewContent }));
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('preview-selection-changed', { detail: previewContent }));
+        }
     }, [previewContent]);
 
     useEffect(() => {
+        if (typeof window === 'undefined') return;
         const handleOpenPreview = (e: any) => {
             console.log('👀 Opening preview tab for:', e.detail);
             setPreviewContent(e.detail);
@@ -43,6 +46,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
     }, []);
 
     useEffect(() => {
+        if (typeof window === 'undefined') return;
         if (focusId) {
             setActiveTab('files');
             // Provide a small buffer for the FileManager to mount and initialize its listeners

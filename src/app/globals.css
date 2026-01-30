@@ -268,3 +268,73 @@ body {
   color: #94a3b8;
   margin-bottom: 1rem;
 }
+
+/* Agentic UI Animations */
+@keyframes neural-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+    filter: blur(2px);
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+    filter: blur(4px);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+    filter: blur(2px);
+  }
+}
+
+@keyframes agentic-glow {
+  0% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.1);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+
+  100% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.1);
+  }
+}
+
+.neural-glow {
+  animation: neural-pulse 4s infinite ease-in-out;
+}
+
+.agent-bubble-glow {
+  animation: agentic-glow 6s infinite ease-in-out;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 20px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3));
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.5), rgba(139, 92, 246, 0.5));
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+}
+
+/* Premium scrollbar for Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.3) rgba(255, 255, 255, 0.02);
+}

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Dark Mode Landing Page</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #fff;
+            margin: 0;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+
+        /* Glassmorphism effect */
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(8.5px);
+            -webkit-backdrop-filter: blur(8.5px);
+            border: 1px solid rgba(255, 255, 255, 0.23);
+        }
+
+        /* Sticky Glass Nav */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 15px;
+            transition: color 0.3s ease;
+        }
+
+        nav a:hover {
+            color: #a0a0a0;
+        }
+
+        /* Hero Section */
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        .hero h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .hero p {
+            font-size: 1.2em;
+            color: #d0d0d0;
+            max-width: 800px;
+            line-height: 1.6;
+        }
+
+        /* Feature Cards */
+        .features {
+            display: flex;
+            justify-content: space-around;
+            padding: 50px 20px;
+            flex-wrap: wrap;
+        }
+
+        .feature-card {
+            width: 300px;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-card h3 {
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        .feature-card p {
+            color: #d0d0d0;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sticky Glass Nav -->
+    <nav class="glassmorphism">
+        <h1>Landing</h1>
+        <div>
+            <a href="#">Home</a>
+            <a href="#">Features</a>
+            <a href="#">About</a>
+            <a href="#">Contact</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Modern Dark Mode Landing Page</h1>
+        <p>This is a modern landing page with a dark theme, glassmorphism effects, and subtle hover animations to create an engaging user experience. Designed with attention to detail and performance.</p>
+    </section>
+
+    <!-- Feature Cards -->
+    <section class="features">
+        <div class="feature-card glassmorphism">
+            <h3>Feature 1</h3>
+            <p>Detailed description of feature 1. Explain the benefits and how it enhances user experience.</p>
+        </div>
+        <div class="feature-card glassmorphism">
+            <h3>Feature 2</h3>
+            <p>Detailed description of feature 2. Explain the benefits and how it enhances user experience.</p>
+        </div>
+        <div class="feature-card glassmorphism">
+            <h3>Feature 3</h3>
+            <p>Detailed description of feature 3. Explain the benefits and how it enhances user experience.</p>
+        </div>
+    </section>
+</body>
+</html>

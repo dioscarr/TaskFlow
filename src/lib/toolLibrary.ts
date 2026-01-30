@@ -335,6 +335,26 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
             }
         }
     },
+    enqueue_agent_job: {
+        id: 'enqueue_agent_job',
+        name: 'Enqueue Background Agent Job',
+        description: 'Queue a background agent task for asynchronous execution after user approval.',
+        category: 'task',
+        icon: 'Bot',
+        schema: {
+            name: 'enqueue_agent_job',
+            description: 'Create a background agent job (requires user approval before execution)',
+            parameters: {
+                type: 'object',
+                properties: {
+                    sessionId: { type: 'string', description: 'Chat session ID' },
+                    type: { type: 'string', description: 'Job type (e.g., "chat_task")' },
+                    payload: { type: 'object', description: 'Job payload for the background agent' }
+                },
+                required: ['type', 'payload']
+            }
+        }
+    },
     ask_questions: {
         id: 'ask_questions',
         name: 'Clarify Requirements',
@@ -765,6 +785,7 @@ export const DEFAULT_TOOLS = [
     'create_task',
     'ask_questions',
     'agent_delegate',
+    'enqueue_agent_job',
     'create_workflow',
     'batch_rename',
     'remove_highlights',

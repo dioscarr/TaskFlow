@@ -1,217 +1,197 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Portfolio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>Premium SaaS Landing Page</title>
     <style>
         body {
-            font-family: 'Outfit', sans-serif;
+            font-family: 'Arial', sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #0d1117;
-            background-image: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.5)), url("/uploads/pexels-patel-poojan-2147580558-29732593.jpg");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            height: 100vh;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
             overflow: hidden;
-            background-attachment: fixed;
         }
-
-        .glass-panel {
-            background: rgba(13, 17, 23, 0.4);
-            border-radius: 40px;
-            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 4rem;
-            text-align: center;
-            width: 85%;
-            max-width: 900px;
-            animation: fadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        header {
+            background: #5e64ff;
+            color: white;
+            padding-top: 30px;
+            min-height: 70px;
+            border-bottom: 3px solid #3d4099;
         }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(30px) scale(0.98);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        header h1 {
-            font-size: 4rem;
-            margin: 1.5rem 0;
-            font-weight: 700;
-            letter-spacing: -2px;
-            text-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-
-        .accent {
-            background: linear-gradient(135deg, #a78bfa, #f472b6);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 8px 20px;
-            background: rgba(167, 139, 250, 0.1);
-            border: 1px solid rgba(167, 139, 250, 0.2);
-            border-radius: 50px;
-            color: #a78bfa;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 2rem;
-        }
-
-        p {
-            font-size: 1.3rem;
-            line-height: 1.6;
-            margin-bottom: 3rem;
-            color: rgba(255, 255, 255, 0.7);
-            font-weight: 300;
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .stats {
-            display: flex;
-            justify-content: center;
-            gap: 60px;
-            margin-bottom: 3rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding-top: 2rem;
-        }
-
-        .stat-item {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .stat-val {
-            font-size: 1.8rem;
-            font-weight: 700;
+        header a {
             color: #fff;
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.4);
-            letter-spacing: 1px;
-            margin-top: 4px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-        }
-
-        .cta-button {
-            padding: 1.2rem 3rem;
-            font-size: 1.1rem;
-            border-radius: 100px;
             text-decoration: none;
-            font-weight: 600;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            border: 1px solid transparent;
+            text-transform: uppercase;
+            font-size: 16px;
         }
-
-        .primary {
-            background: #fff;
-            color: #000;
+        header ul {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+            overflow: hidden;
         }
-
-        .primary:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(255, 255, 255, 0.2);
-            background: #f0f0f0;
+        header li {
+            float: left;
+            display: inline;
+            padding: 0 20px 0 20px;
         }
-
-        .secondary {
-            background: rgba(255, 255, 255, 0.05);
+        header #branding {
+            float: left;
+        }
+        header #branding h1 {
+            margin: 0;
+        }
+        header nav {
+            float: right;
+            margin-top: 10px;
+        }
+        header .highlight, header .current a {
+            color: #3d4099;
+            font-weight: bold;
+        }
+        #showcase {
+            min-height: 400px;
+            background: url('https://via.placeholder.com/1200x500') no-repeat 0 -100px;
+            text-align: center;
             color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-
-        .secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-5px);
+        #showcase h1 {
+            margin-top: 100px;
+            font-size: 55px;
+            margin-bottom: 10px;
         }
-
-        @media (max-width: 768px) {
-            .glass-panel {
-                padding: 2rem;
-                width: 95%;
+        #showcase p {
+            font-size: 20px;
+        }
+        #newsletter {
+            padding: 15px;
+            color: #fff;
+            background: #3d4099;
+        }
+        #newsletter h1 {
+            float: left;
+        }
+        #newsletter form {
+            float: right;
+            margin-top: 15px;
+        }
+        #newsletter input[type="email"] {
+            padding: 4px;
+            height: 25px;
+            width: 250px;
+        }
+        .button_1 {
+            height: 38px;
+            background: #5e64ff;
+            border: 0;
+            padding-left: 20px;
+            padding-right: 20px;
+            color: #fff;
+        }
+        #boxes {
+            margin-top: 20px;
+        }
+        #boxes .box {
+            float: left;
+            width: 30%;
+            padding: 10px;
+            text-align: center;
+        }
+        #boxes .box img {
+            width: 90px;
+        }
+        footer {
+            padding: 20px;
+            margin-top: 20px;
+            color: #fff;
+            background-color: #5e64ff;
+            text-align: center;
+        }
+        /* Media Queries */
+        @media(max-width: 768px) {
+            header #branding,
+            header nav,
+            header nav li,
+            #newsletter h1,
+            #newsletter form,
+            #boxes .box {
+                float: none;
+                text-align: center;
+                width: 100%;
             }
-
-            header h1 {
-                font-size: 2.5rem;
+            header {
+                padding-bottom: 20px;
             }
-
-            .stats {
-                gap: 30px;
+            #showcase h1 {
+                margin-top: 40px;
             }
-
-            .stat-val {
-                font-size: 1.4rem;
-            }
-
-            .actions {
-                flex-direction: column;
+            #newsletter form {
+                margin-top: 0;
             }
         }
     </style>
 </head>
-
 <body>
-    <div class="glass-panel">
-        <header>
-            <div class="status-badge">Available for Work</div>
-            <h1>The Portfolio <span class="accent">Design</span></h1>
-        </header>
-
-        <p>Expert in Cognitive AI, Premium UI/UX, and Scalable Architectures. Transforming complex data into beautiful,
-            actionable insights.</p>
-
-        <div class="stats">
-            <div class="stat-item">
-                <span class="stat-val">2026</span>
-                <span class="stat-label">Project Era</span>
+    <header>
+        <div class="container">
+            <div id="branding">
+                <h1><span class="highlight">Your</span> SaaS</h1>
             </div>
-            <div class="stat-item">
-                <span class="stat-val">100%</span>
-                <span class="stat-label">Precision</span>
+            <nav>
+                <ul>
+                    <li class="current"><a href="index.html">Home</a></li>
+                    <li><a href="about.html">About</a></li>
+                    <li><a href="services.html">Services</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <section id="showcase">
+        <div class="container">
+            <h1>Premium SaaS Solution</h1>
+            <p>Unlock the power of our software to transform your business.</p>
+        </div>
+    </section>
+
+    <section id="newsletter">
+        <div class="container">
+            <h1>Subscribe To Our Newsletter</h1>
+            <form>
+                <input type="email" placeholder="Enter Email...">
+                <button type="submit" class="button_1">Subscribe</button>
+            </form>
+        </div>
+    </section>
+
+    <section id="boxes">
+        <div class="container">
+            <div class="box">
+                <img src="https://via.placeholder.com/90">
+                <h3>Feature 1</h3>
+                <p>Detailed description of feature 1.</p>
+            </div>
+            <div class="box">
+                <img src="https://via.placeholder.com/90">
+                <h3>Feature 2</h3>
+                <p>Detailed description of feature 2.</p>
+            </div>
+            <div class="box">
+                <img src="https://via.placeholder.com/90">
+                <h3>Feature 3</h3>
+                <p>Detailed description of feature 3.</p>
             </div>
         </div>
+    </section>
 
-        <div class="actions">
-            <a href="#" class="cta-button primary">Explore Work</a>
-            <a href="#" class="cta-button secondary">Contact Me</a>
-        </div>
-    </div>
-
+    <footer>
+        <p>Your SaaS, Copyright &copy; 2024</p>
+    </footer>
 </body>
-
 </html>

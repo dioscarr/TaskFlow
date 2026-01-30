@@ -1,10 +1,10 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Send, X, Loader2, Paperclip, MessageSquare, Sparkles, BrainCircuit, FileText, Image as ImageIcon, ExternalLink, Settings, Plus, Check, Trash2, ChevronRight, Layout, Edit2, Pin, PinOff, Folder, Search, Receipt, DollarSign, Save, AlignLeft } from 'lucide-react';
-import { chatWithAI, getPrompts, createPrompt, updatePrompt, setActivePrompt, deletePrompt, generateSystemPrompt, getIntentRules, getWorkspaceFiles } from '@/app/actions';
+import { Bot, Send, X, Loader2, Paperclip, MessageSquare, Sparkles, BrainCircuit, FileText, Image as ImageIcon, ExternalLink, Settings, Plus, Check, Trash2, ChevronRight, Layout, Edit2, Pin, PinOff, Folder, Search, Receipt, DollarSign, Save, AlignLeft, Copy, ArrowDown } from 'lucide-react';
+import { chatWithAI, getPrompts, createPrompt, updatePrompt, setActivePrompt, deletePrompt, generateSystemPrompt, getIntentRules, getWorkspaceFiles, getChatSessionAgentStatus, approveLatestAgentJob } from '@/app/actions';
 import { createChatSession, getChatSessions, getChatSession, addChatMessage, updateChatSessionTitle, deleteChatSession } from '@/app/chatActions';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { normalizeMarkdown, hasMarkdownTable } from '@/utils/markdownUtils';
 import FileEditPreviewModal from './FileEditPreviewModal';
+import EmojiCelebration from './EmojiCelebration';
 
 export type SelectedFile = {
     id: string;
@@ -202,7 +203,7 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
 const AgentStepBadge = ({ tool, status }: { tool: string, status: 'executing' | 'done' | 'failed' }) => {
     return (
         <div className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all mb-2",
+            "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all mb-2 w-fit",
             status === 'executing' ? "bg-amber-500/10 border-amber-500/20 text-amber-400 animate-pulse" :
                 status === 'done' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
                     "bg-red-500/10 border-red-500/20 text-red-400"
@@ -216,6 +217,210 @@ const AgentStepBadge = ({ tool, status }: { tool: string, status: 'executing' | 
     );
 };
 
+const MessageBubble = ({
+    msg,
+    attachedFiles,
+    setInput,
+    setActiveTool,
+    isBackgroundBusy,
+    onApprove,
+    hasMarkdownTable,
+    normalizeMarkdown,
+    remarkGfm,
+    ToolResultPreview
+}: {
+    msg: any,
+    attachedFiles: SelectedFile[],
+    setInput: (s: string) => void,
+    setActiveTool: (s: string | null) => void,
+    isBackgroundBusy: boolean,
+    onApprove: () => void,
+    hasMarkdownTable: (s: string) => boolean,
+    normalizeMarkdown: (s: string) => string,
+    remarkGfm: any,
+    ToolResultPreview: any
+}) => {
+    const fileMeta = (() => {
+        const file = msg?.toolResult?.file;
+        if (file?.name) return { name: file.name as string, type: file.type as string | undefined };
+        if (msg?.toolResult?.fileName) {
+            const name = msg.toolResult.fileName as string;
+            return { name, type: name.split('.').pop()?.toLowerCase() };
+        }
+        if (msg?.toolArgs?.filename) {
+            const name = msg.toolArgs.filename as string;
+            return { name, type: name.split('.').pop()?.toLowerCase() };
+        }
+        if (msg?.toolArgs?.fileId && typeof msg.toolArgs.fileId === 'string' && msg.toolArgs.fileId.includes('.')) {
+            const name = msg.toolArgs.fileId as string;
+            return { name, type: name.split('.').pop()?.toLowerCase() };
+        }
+        return null;
+    })();
+
+    const FileIcon = fileMeta?.type?.includes('pdf') ? FileText
+        : (fileMeta?.type?.includes('png') || fileMeta?.type?.includes('jpg') || fileMeta?.type?.includes('jpeg') || fileMeta?.type?.includes('image')) ? ImageIcon
+            : (fileMeta?.type?.includes('html') ? Layout : FileText);
+
+    return (
+        <div className={cn(
+            "flex flex-col gap-2 max-w-[95%] w-full animate-in fade-in slide-in-from-bottom-2 duration-500",
+            msg.role === 'user' ? "ml-auto items-end" : "items-start"
+        )}>
+            {msg.files && msg.files.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-1 justify-end">
+                    {msg.files.map((f: any) => (
+                        <div key={f.id} className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 rounded-lg text-[9px] text-blue-300 border border-blue-500/20 shadow-lg">
+                            {f.type === 'pdf' ? <FileText size={10} /> : <ImageIcon size={10} />}
+                            {f.name}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {msg.role === 'ai' && msg.thinking && (
+                <ThinkingProcess content={msg.thinking} />
+            )}
+
+            {msg.role === 'ai' && msg.toolUsed && (
+                <AgentStepBadge tool={msg.toolUsed} status="done" />
+            )}
+
+            <div className={cn(
+                "px-6 py-5 rounded-[1.8rem] text-[13px] leading-relaxed relative group/msg transition-all duration-300",
+                msg.role === 'user'
+                    ? "bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white rounded-tr-none shadow-2xl shadow-blue-500/20 hover:shadow-blue-500/30 border border-blue-400/20"
+                    : "bg-gradient-to-br from-white/[0.05] to-white/[0.02] text-white/90 rounded-tl-none border border-white/10 backdrop-blur-xl shadow-2xl hover:bg-white/[0.08] hover:border-white/20 agent-bubble-glow"
+            )}>
+                {msg.role === 'ai' && (
+                    <div className="absolute top-0 right-0 p-4 opacity-[0.03] pointer-events-none overflow-hidden">
+                        <BrainCircuit size={80} className="neural-glow" />
+                    </div>
+                )}
+                <div className="markdown-content max-w-full overflow-x-hidden break-words relative z-10">
+                    <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                            table: ({ node, ...props }: any) => (
+                                <div className="table-container my-4 overflow-x-auto rounded-xl border border-white/5 bg-black/20">
+                                    <table {...props} className="text-[11px] w-full border-collapse" />
+                                </div>
+                            ),
+                            a: ({ node, ...props }: any) => (
+                                <a {...props} className="text-blue-400 hover:text-blue-300 underline decoration-blue-500/30 underline-offset-4" target="_blank" rel="noopener noreferrer" />
+                            ),
+                            code: ({ node, ...props }: any) => (
+                                <code {...props} className="bg-black/40 px-1.5 py-0.5 rounded text-blue-300 font-mono text-[11px]" />
+                            ),
+                            p: ({ node, ...props }: any) => (
+                                <p {...props} className="mb-3 last:mb-0" />
+                            )
+                        }}
+                    >
+                        {normalizeMarkdown(msg.content)}
+                    </ReactMarkdown>
+                </div>
+
+                {msg.role === 'ai' && msg.toolUsed && (
+                    <div className="pt-2 border-t border-white/5 mt-4">
+                        <ToolResultPreview tool={msg.toolUsed} result={msg.toolResult} />
+                    </div>
+                )}
+
+                {msg.role === 'ai' && fileMeta && (
+                    <div className="mt-3 flex items-center gap-2 text-[10px] text-white/40">
+                        <FileIcon size={12} className="text-blue-300/70" />
+                        <span className="truncate">{fileMeta.name}</span>
+                    </div>
+                )}
+
+                {/* Premium Copy Button & Timestamp for AI messages */}
+                {msg.role === 'ai' && (
+                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/5">
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(msg.content);
+                                    toast.success('Copied to clipboard!');
+                                }}
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/40 hover:text-white/80 transition-all duration-300 group"
+                                title="Copy message"
+                            >
+                                <Copy size={11} className="group-hover:scale-110 transition-transform" />
+                                <span className="text-[9px] font-medium uppercase tracking-wider">Copy</span>
+                            </button>
+
+                            {/* Quick Reactions */}
+                            <div className="flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+                                {['👍', '❤️', '🎉', '🤔'].map((emoji) => (
+                                    <button
+                                        key={emoji}
+                                        onClick={() => {
+                                            toast.success(`Reacted with ${emoji}`);
+                                            if (typeof window !== 'undefined') {
+                                                window.dispatchEvent(new CustomEvent('emoji-celebration', { detail: { emoji } }));
+                                            }
+                                        }}
+                                        className="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 flex items-center justify-center text-xs hover:scale-125 active:scale-95 transition-all duration-200"
+                                        title={`React with ${emoji}`}
+                                    >
+                                        {emoji}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="text-[9px] text-white/20 font-mono">
+                            {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                    </div>
+                )}
+
+                {msg.role === 'ai' && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        {msg.toolUsed === 'enqueue_agent_job' && !isBackgroundBusy && (
+                            <button
+                                onClick={onApprove}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-xl text-[10px] text-emerald-300 hover:text-white transition-all border border-emerald-500/20"
+                                title="Approve and run the background job"
+                            >
+                                <Check size={12} />
+                                <span>Approve</span>
+                            </button>
+                        )}
+                        {(() => {
+                            const planCue = /\b(plan|steps|strategy|approach|outline|proposed)\b/i.test(msg.content);
+                            const queuedWork = msg.toolUsed === 'enqueue_agent_job';
+                            return (planCue || queuedWork) && !isBackgroundBusy;
+                        })() && (
+                                <button
+                                    onClick={() => {
+                                        setInput('Please delegate to a UI/UX designer to review the frontend and visual design.');
+                                        setActiveTool('agent_delegate');
+                                    }}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-xl text-[10px] text-emerald-300 hover:text-white transition-all border border-emerald-500/20"
+                                    title="Request a UI/UX design review"
+                                >
+                                    <Sparkles size={12} />
+                                    <span>Request Design Review</span>
+                                </button>
+                            )}
+                        {hasMarkdownTable(msg.content) && (
+                            <button
+                                onClick={() => setInput("Export this table as a markdown file. Please ask me if I want a new folder first.")}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl text-[10px] text-blue-300 hover:text-white transition-all border border-blue-500/20"
+                            >
+                                <FileText size={12} />
+                                <span>Save as Report</span>
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 
 
 export default function AIChat() {
@@ -223,14 +428,19 @@ export default function AIChat() {
     const [view, setView] = useState<'chat' | 'prompts' | 'sessions'>('chat');
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isBackgroundBusy, setIsBackgroundBusy] = useState(false);
+    const [backgroundJobLabel, setBackgroundJobLabel] = useState<string | null>(null);
     const [messages, setMessages] = useState<{
+        id?: string;
         role: 'user' | 'ai';
         content: string;
         files?: SelectedFile[];
         toolUsed?: string;
         toolResult?: any;
         thinking?: string;
+        toolArgs?: any;
     }[]>([]);
+    const streamSpeedRef = useRef(14);
     const [attachedFiles, setAttachedFiles] = useState<SelectedFile[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [prompts, setPrompts] = useState<AIPromptSet[]>([]);
@@ -264,6 +474,8 @@ export default function AIChat() {
     const [currentFolderContext, setCurrentFolderContext] = useState<{ id: string | null, name: string }>({ id: null, name: 'Root' });
     const [promptHistory, setPromptHistory] = useState<string[]>([]);
     const [activePreviewContext, setActivePreviewContext] = useState<{ id: string, name: string, parentId: string | null } | null>(null);
+    const [showScrollButton, setShowScrollButton] = useState(false);
+    const [celebration, setCelebration] = useState<{ emoji: string; timestamp: number } | null>(null);
 
     // Listen for preview changes
     useEffect(() => {
@@ -280,6 +492,8 @@ export default function AIChat() {
     }, []);
 
     const scrollRef = useRef<HTMLDivElement>(null);
+    const lastBackgroundBusyRef = useRef(false);
+    const lastJobStatusRef = useRef<{ id?: string; updatedAt?: number; status?: string }>({});
 
     const resolveToolBadge = (toolUsed?: string) => {
         if (!toolUsed) return null;
@@ -325,10 +539,89 @@ export default function AIChat() {
         setWorkspaceFiles((files || []) as SelectedFile[]);
     };
 
+    const refreshAgentStatus = async (sessionId: string) => {
+        const res = await getChatSessionAgentStatus(sessionId);
+        if (res.success) {
+            setIsBackgroundBusy(!!res.busy);
+            // Use latest activity title if available, otherwise fall back to job type
+            const label = res.latestActivity?.title || res.latestJob?.type || null;
+            setBackgroundJobLabel(label);
+            return { busy: !!res.busy, latestJob: res.latestJob };
+        }
+        setIsBackgroundBusy(false);
+        setBackgroundJobLabel(null);
+        return { busy: false, latestJob: null };
+    };
+
+    const syncSessionMessages = async (sessionId: string) => {
+        const session = await getChatSession(sessionId);
+        if (!session) return;
+
+        const fileIds = Array.from(new Set(session.messages.flatMap(m => m.fileIds || [])));
+        const resolvedFiles = await resolveFilesByIds(fileIds);
+
+        setMessages(session.messages.map(m => ({
+            id: m.id,
+            role: m.role === 'user' ? 'user' as const : 'ai' as const,
+            content: m.content,
+            files: (m.fileIds?.length ? resolvedFiles.filter(f => m.fileIds.includes(f.id)) : undefined),
+            toolUsed: m.toolUsed || undefined
+        })));
+    };
+
     const refreshPrompts = async () => {
         const p = await getPrompts();
         setPrompts(p);
     };
+
+    useEffect(() => {
+        if (!activeSessionId || !isOpen) {
+            setIsBackgroundBusy(false);
+            setBackgroundJobLabel(null);
+            return;
+        }
+
+        let cancelled = false;
+
+        const tick = async () => {
+            if (cancelled) return;
+            const status = await refreshAgentStatus(activeSessionId);
+            const wasBusy = lastBackgroundBusyRef.current;
+            const isBusy = !!status?.busy;
+            const latestJob = status?.latestJob as { id?: string; status?: string; updatedAt?: string } | null;
+            const latestUpdatedAt = latestJob?.updatedAt ? new Date(latestJob.updatedAt).getTime() : undefined;
+            const hasNewJobState = !!latestJob?.id && (
+                lastJobStatusRef.current.id !== latestJob.id ||
+                (latestUpdatedAt && lastJobStatusRef.current.updatedAt !== latestUpdatedAt)
+            );
+
+            if (hasNewJobState && (latestJob?.status === 'succeeded' || latestJob?.status === 'failed')) {
+                await syncSessionMessages(activeSessionId);
+                toast.success('Background agent finished. You can continue.');
+            }
+
+            if (wasBusy && !isBusy) {
+                await syncSessionMessages(activeSessionId);
+                toast.success('Background agent finished. You can continue.');
+            }
+            lastBackgroundBusyRef.current = isBusy;
+            if (latestJob?.id) {
+                lastJobStatusRef.current = {
+                    id: latestJob.id,
+                    status: latestJob.status,
+                    updatedAt: latestUpdatedAt
+                };
+            }
+        };
+
+        tick();
+        const interval = setInterval(tick, 3000);
+
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
+    }, [activeSessionId, isOpen]);
 
     const buildSessionTitle = (text: string) => {
         const trimmed = text.trim().replace(/\s+/g, ' ');
@@ -354,6 +647,7 @@ export default function AIChat() {
 
         setAttachedFiles(resolvedFiles);
         setMessages(session.messages.map(m => ({
+            id: m.id,
             role: m.role === 'user' ? 'user' as const : 'ai' as const,
             content: m.content,
             files: (m.fileIds?.length ? resolvedFiles.filter(f => m.fileIds.includes(f.id)) : undefined),
@@ -537,14 +831,54 @@ export default function AIChat() {
         }
     }, [messages, isLoading, isPinned, view]);
 
-    const handleSend = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!input.trim() && attachedFiles.length === 0) return;
+    const streamAssistantMessage = (content: string, meta: { toolUsed?: string; toolResult?: any; thinking?: string; toolArgs?: any }) => {
+        const messageId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+        setMessages(prev => [...prev, {
+            id: messageId,
+            role: 'ai',
+            content: '',
+            toolUsed: meta.toolUsed,
+            toolResult: meta.toolResult,
+            thinking: meta.thinking,
+            toolArgs: meta.toolArgs
+        }]);
+
+        return new Promise<void>((resolve) => {
+            let cursor = 0;
+            const step = () => {
+                cursor = Math.min(content.length, cursor + 4);
+                setMessages(prev => prev.map(m => m.id === messageId ? { ...m, content: content.slice(0, cursor) } : m));
+
+                if (cursor < content.length) {
+                    setTimeout(step, streamSpeedRef.current);
+                    return;
+                }
+
+                resolve();
+            };
+
+            if (content.length > 0) {
+                step();
+            } else {
+                resolve();
+            }
+        });
+    };
+
+    const sendMessage = async (text: string) => {
+        if (isBackgroundBusy) {
+            toast.message('Background agent is working. Please wait for it to finish.');
+            return;
+        }
+        if (!text.trim() && attachedFiles.length === 0) return;
 
         let sessionId = activeSessionId;
 
         if (!sessionId) {
-            const title = buildSessionTitle(input);
+            const title = buildSessionTitle(text);
             const sessionRes = await createChatSession(title);
             if (!sessionRes.success || !sessionRes.session) {
                 toast.error(sessionRes.message || 'Failed to create chat session');
@@ -554,16 +888,17 @@ export default function AIChat() {
             setActiveSessionId(sessionId);
             setActiveSessionTitle(sessionRes.session.title || title);
             setChatSessions(prev => [sessionRes.session, ...prev]);
+            await refreshAgentStatus(sessionId);
         } else if (activeSessionTitle === 'New Chat') {
-            const title = buildSessionTitle(input);
+            const title = buildSessionTitle(text);
             await updateChatSessionTitle(sessionId, title);
             setActiveSessionTitle(title);
             setChatSessions(prev => prev.map(s => s.id === sessionId ? { ...s, title } : s));
         }
 
-        const userMsg = { role: 'user' as const, content: input, files: [...attachedFiles] };
+        const userMsg = { role: 'user' as const, content: text, files: [...attachedFiles] };
         setMessages(prev => [...prev, userMsg]);
-        setPromptHistory(prev => [input, ...prev]);
+        setPromptHistory(prev => [text, ...prev]);
         setInput('');
         setHistoryIndex(-1); // Reset history index on send
         // DON'T clear attachedFiles - keep them for context
@@ -591,13 +926,20 @@ export default function AIChat() {
             });
 
             const contextMsg = activePreviewContext
-                ? `[CONTEXT: User is currently PREVIEWING file "${activePreviewContext.name}" (ID: ${activePreviewContext.id}). Assume changes apply to this app/folder unless specified. If editing, look for files in folder ID: ${activePreviewContext.parentId || 'root'}]\n${userMsg.content}`
+                ? `[CONTEXT: User is currently PREVIEWING file "${activePreviewContext.name}". Assume changes apply to this app/folder unless specified. If editing, look for files in the same folder as the previewed file.]\n${userMsg.content}`
                 : userMsg.content;
 
             console.log('📤 Sending to AI:', userMsg.content);
             console.log('📎 Files in context:', Array.from(allFileIds));
             console.log('📂 Current Folder:', currentFolderContext.name, currentFolderContext.id);
-            const res = await chatWithAI(contextMsg, Array.from(allFileIds), geminiHistory, currentFolderContext.name, currentFolderContext.id || undefined);
+            const res = await chatWithAI(
+                contextMsg,
+                Array.from(allFileIds),
+                geminiHistory,
+                currentFolderContext.name,
+                currentFolderContext.id || undefined,
+                { sessionId: sessionId || undefined, allowToolExecution: false }
+            );
             console.log('📥 AI Response:', JSON.stringify(res, null, 2));
             console.log('📥 AI Response Text:', res.text);
             console.log('📥 AI Response Success:', res.success);
@@ -619,14 +961,25 @@ export default function AIChat() {
                     const thinkingMatch = text.match(/<thinking>([\s\S]*?)<\/thinking>/);
                     const thinking = thinkingMatch ? thinkingMatch[1].trim() : undefined;
                     const cleanText = text.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+                    const contentToStream = cleanText || text;
 
-                    setMessages(prev => [...prev, {
-                        role: 'ai',
-                        content: cleanText || text, // Fallback if everything was thinking
-                        toolUsed: (res as any).toolUsed,
-                        toolResult: (res as any).toolResult,
-                        thinking
-                    }]);
+                    if (contentToStream) {
+                        await streamAssistantMessage(contentToStream, {
+                            toolUsed: (res as any).toolUsed,
+                            toolResult: (res as any).toolResult,
+                            thinking,
+                            toolArgs: (res as any).toolArgs
+                        });
+                    } else {
+                        setMessages(prev => [...prev, {
+                            role: 'ai',
+                            content: text,
+                            toolUsed: (res as any).toolUsed,
+                            toolResult: (res as any).toolResult,
+                            thinking,
+                            toolArgs: (res as any).toolArgs
+                        }]);
+                    }
 
                     // Auto-open preview for HTML files
                     if ((res as any).toolUsed === 'create_html_file' && (res as any).toolResult?.success && (res as any).toolResult?.file) {
@@ -635,7 +988,7 @@ export default function AIChat() {
                     }
 
                     if (sessionId) {
-                        await addChatMessage(sessionId, 'ai', res.text as string, [], (res as any).toolUsed);
+                        await addChatMessage(sessionId, 'ai', res.text as string, [], (res as any).toolUsed, (res as any).thinking);
                     }
 
                     if ((res as any).toolUsed) {
@@ -682,6 +1035,36 @@ export default function AIChat() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleSend = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await sendMessage(input);
+    };
+
+    const approveFromBubble = async () => {
+        if (!activeSessionId) {
+            await sendMessage('approve');
+            return;
+        }
+
+        try {
+            const approval = await approveLatestAgentJob(activeSessionId);
+            if (approval.success) {
+                const userMsg = { role: 'user' as const, content: 'approve', files: [] as SelectedFile[] };
+                const aiMsg = { role: 'ai' as const, content: '✅ Approved. Background agent started.' };
+                setMessages(prev => [...prev, userMsg, aiMsg]);
+                await addChatMessage(activeSessionId, 'user', userMsg.content, []);
+                await addChatMessage(activeSessionId, 'ai', aiMsg.content, [], 'enqueue_agent_job');
+                await refreshAgentStatus(activeSessionId);
+                toast.success('Approved. Background agent started.');
+                return;
+            }
+        } catch (error) {
+            console.error('Approve failed:', error);
+        }
+
+        await sendMessage('approve');
     };
 
     const handleSavePrompt = async (data: {
@@ -801,6 +1184,52 @@ export default function AIChat() {
         create_task: 'Create a task from this request'
     };
 
+    const quickTips = useMemo(() => {
+        const defaultTips = [
+            { text: 'Organize these files into a clean structure', icon: '🗂️' },
+            { text: 'Summarize the attached document with key points', icon: '📝' },
+            { text: 'Create a workflow for this recurring task', icon: '⚡' }
+        ];
+        const receiptTips = [
+            { text: 'Analyze these Dominican receipts and extract ITBIS', icon: '🧾' },
+            { text: 'Verify RNC and NCF for this receipt', icon: '🔎' },
+            { text: 'Generate a markdown report from receipt data', icon: '📊' }
+        ];
+        const codeTips = [
+            { text: 'Review this code for security and performance issues', icon: '🔒' },
+            { text: 'Find bugs and suggest optimizations', icon: '🛠️' },
+            { text: 'Refactor this module with best practices', icon: '🧠' }
+        ];
+        const webTips = [
+            { text: 'Design a premium SaaS landing page for a new product', icon: '✨' },
+            { text: 'Create a marketing site for a fintech startup', icon: '💸' },
+            { text: 'Build a portfolio site concept with dark mode glassmorphism', icon: '🌙' },
+            { text: 'Create a product launch microsite with a hero and features', icon: '🚀' },
+            { text: 'Design a CRM dashboard UI with charts and tables', icon: '📈' }
+        ];
+
+        const name = (activePrompt?.name || '').toLowerCase();
+        let pool = defaultTips;
+        if (name.includes('receipt') || name.includes('fiscal')) pool = receiptTips;
+        if (name.includes('code') || name.includes('review')) pool = codeTips;
+        if (name.includes('web') || name.includes('architect') || name.includes('ui') || name.includes('ux')) pool = webTips;
+
+        return [...pool].sort(() => Math.random() - 0.5).slice(0, 3);
+    }, [activePrompt?.name]);
+
+    // Listen for emoji celebration events
+    useEffect(() => {
+        const handleCelebration = (e: any) => {
+            const emoji = e.detail?.emoji;
+            if (emoji) {
+                setCelebration({ emoji, timestamp: Date.now() });
+            }
+        };
+
+        window.addEventListener('emoji-celebration', handleCelebration);
+        return () => window.removeEventListener('emoji-celebration', handleCelebration);
+    }, []);
+
     if (isPinned) {
         return (
             <>
@@ -817,6 +1246,14 @@ export default function AIChat() {
                                     <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
                                     <span className="text-[8px] text-white/20 uppercase tracking-[0.2em] font-bold">System Online</span>
                                 </div>
+                                {isBackgroundBusy && (
+                                    <div className="flex items-center gap-1.5 mt-1">
+                                        <div className="w-1 h-1 rounded-full bg-amber-400 animate-pulse" />
+                                        <span className="text-[8px] text-amber-200/80 uppercase tracking-[0.2em] font-bold">
+                                            Background Agent Active{backgroundJobLabel ? `: ${backgroundJobLabel}` : ''}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="flex items-center gap-1">
@@ -899,111 +1336,45 @@ export default function AIChat() {
                                                     </p>
                                                 </div>
                                                 <div className="grid grid-cols-1 gap-2 w-full pt-4 relative z-10">
-                                                    {[
-                                                        "Analyze these Dominican receipts",
-                                                        "Review my project files for security",
-                                                        "Automate a workflow from these documents"
-                                                    ].map((tip, ix) => (
+                                                    {quickTips.map((tip, ix) => (
                                                         <button
                                                             key={ix}
-                                                            onClick={() => setInput(tip)}
+                                                            onClick={() => setInput(tip.text)}
                                                             className="p-3 bg-white/5 border border-white/5 rounded-xl text-left text-[11px] text-white/40 hover:bg-white/10 hover:text-white/80 transition-all active:scale-[0.98]"
                                                         >
-                                                            "{tip}"
+                                                            "{tip.text}"
                                                         </button>
                                                     ))}
                                                 </div>
                                             </div>
                                         )}
                                         {messages.map((msg, i) => (
-                                            <div key={i} className={cn("flex flex-col gap-2 max-w-[95%] w-full animate-in fade-in slide-in-from-bottom-2 duration-500", msg.role === 'user' ? "ml-auto items-end" : "items-start")}>
-                                                {msg.files && msg.files.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1.5 mb-1 justify-end">
-                                                        {msg.files.map(f => (
-                                                            <div key={f.id} className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 rounded-lg text-[9px] text-blue-300 border border-blue-500/20 shadow-lg">
-                                                                {f.type === 'pdf' ? <FileText size={10} /> : <ImageIcon size={10} />}
-                                                                {f.name}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-
-                                                {msg.role === 'ai' && msg.thinking && (
-                                                    <ThinkingProcess content={msg.thinking} />
-                                                )}
-
-                                                {msg.role === 'ai' && msg.toolUsed && (
-                                                    <AgentStepBadge tool={msg.toolUsed} status="done" />
-                                                )}
-
-                                                <div className={cn(
-                                                    "px-5 py-4 rounded-[1.8rem] text-[13px] leading-relaxed relative group/msg",
-                                                    msg.role === 'user'
-                                                        ? "bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-tr-none shadow-xl shadow-blue-500/10"
-                                                        : "bg-white/[0.03] text-white/90 rounded-tl-none border border-white/5 backdrop-blur-xl shadow-2xl"
-                                                )}>
-                                                    <div className="markdown-content max-w-full overflow-x-hidden break-words">
-                                                        <ReactMarkdown
-                                                            remarkPlugins={[remarkGfm]}
-                                                            components={{
-                                                                table: ({ node, ...props }) => (
-                                                                    <div className="table-container my-4">
-                                                                        <table {...props} className="text-[11px] w-full border-collapse" />
-                                                                    </div>
-                                                                ),
-                                                                a: ({ node, ...props }) => (
-                                                                    <a {...props} className="text-blue-400 hover:text-blue-300 underline decoration-blue-500/30 underline-offset-4" target="_blank" rel="noopener noreferrer" />
-                                                                ),
-                                                                code: ({ node, ...props }) => (
-                                                                    <code {...props} className="bg-black/40 px-1.5 py-0.5 rounded text-blue-300 font-mono text-[11px]" />
-                                                                )
-                                                            }}
-                                                        >
-                                                            {normalizeMarkdown(msg.content)}
-                                                        </ReactMarkdown>
-                                                    </div>
-
-                                                    {msg.role === 'ai' && msg.toolUsed && (
-                                                        <div className="pt-2 border-t border-white/5 mt-4">
-                                                            <ToolResultPreview tool={msg.toolUsed} result={msg.toolResult} />
-                                                        </div>
-                                                    )}
-
-                                                    {msg.role === 'ai' && (
-                                                        <div className="mt-4 flex flex-wrap gap-2">
-                                                            {/* Show as Table button */}
-                                                            {(msg.content.toLowerCase().includes('need') ||
-                                                                msg.content.toLowerCase().includes('information') ||
-                                                                msg.content.toLowerCase().includes('proceed') ||
-                                                                msg.toolUsed === 'verify_dgii_rnc') && !hasMarkdownTable(msg.content) && (
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setInput("Display the extracted receipt data in a markdown table, including all fields (Date, Provider, RNC, NCF, Total Amount, ITBIS) and the business verification information from DGII.");
-                                                                            setActiveTool('extract_alegra_bill');
-                                                                        }}
-                                                                        className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 rounded-xl text-[10px] text-purple-300 hover:text-purple-100 transition-all border border-purple-500/20"
-                                                                    >
-                                                                        <Receipt size={12} className="text-purple-400" />
-                                                                        <span>Show as Table</span>
-                                                                    </button>
-                                                                )}
-
-                                                            {/* Generate Markdown File button */}
-                                                            {hasMarkdownTable(msg.content) && (
-                                                                <button
-                                                                    onClick={() => setInput("Export this table as a markdown file. Please ask me if I want a new folder first.")}
-                                                                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl text-[10px] text-blue-300 hover:text-white transition-all border border-blue-500/20"
-                                                                >
-                                                                    <FileText size={12} />
-                                                                    <span>Save as Report</span>
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
+                                            <MessageBubble
+                                                key={i}
+                                                msg={msg}
+                                                attachedFiles={attachedFiles}
+                                                setInput={setInput}
+                                                setActiveTool={setActiveTool}
+                                                isBackgroundBusy={isBackgroundBusy}
+                                                onApprove={approveFromBubble}
+                                                hasMarkdownTable={hasMarkdownTable}
+                                                normalizeMarkdown={normalizeMarkdown}
+                                                remarkGfm={remarkGfm}
+                                                ToolResultPreview={ToolResultPreview}
+                                            />
                                         ))}
-                                        {isLoading && <div className="text-[10px] text-white/20 uppercase font-black tracking-widest animate-pulse">Computing...</div>}
+                                        {isLoading && (
+                                            <div className="flex flex-col gap-1">
+                                                <div className="text-[10px] text-emerald-400 uppercase font-black tracking-widest animate-pulse">
+                                                    {isBackgroundBusy ? (backgroundJobLabel || "Computing") : "Computing"}...
+                                                </div>
+                                                {isBackgroundBusy && backgroundJobLabel && (
+                                                    <span className="text-[8px] text-white/20 uppercase tracking-widest font-bold ml-0.5">
+                                                        Agent processing in background
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="p-4 border-t border-white/5 bg-black/40">
                                         {/* Unified Context Bar */}
@@ -1081,12 +1452,13 @@ export default function AIChat() {
                                                             }
                                                         }
                                                     }}
-                                                    placeholder="Ask anything..."
-                                                    className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-3 pl-4 pr-12 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500/30 focus:bg-white/[0.05] transition-all resize-none"
+                                                    disabled={isLoading || isBackgroundBusy}
+                                                    placeholder={isBackgroundBusy ? "Background agent working..." : "Ask anything..."}
+                                                    className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-3 pl-4 pr-12 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500/30 focus:bg-white/[0.05] transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                                                 />
                                                 <button
                                                     type="submit"
-                                                    disabled={isLoading}
+                                                    disabled={isLoading || isBackgroundBusy}
                                                     className={cn(
                                                         "absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all",
                                                         input.trim() || attachedFiles.length > 0 ? "bg-blue-600 text-white shadow-lg" : "text-white/20"
@@ -1154,8 +1526,19 @@ export default function AIChat() {
             </>
         );
     }
+
     return (
         <>
+            {/* Emoji Celebration Animation */}
+            <AnimatePresence>
+                {celebration && (
+                    <EmojiCelebration
+                        emoji={celebration.emoji}
+                        onComplete={() => setCelebration(null)}
+                    />
+                )}
+            </AnimatePresence>
+
             <div className="fixed bottom-8 right-8 z-[9999] flex flex-col items-end gap-4 font-sans">
                 <AnimatePresence>
                     {isOpen && (
@@ -1179,6 +1562,14 @@ export default function AIChat() {
                                             <div className="w-1 h-1 rounded-full bg-emerald-500" />
                                             <span className="text-[8px] text-white/20 uppercase tracking-[0.2em] font-bold">Core Active</span>
                                         </div>
+                                        {isBackgroundBusy && (
+                                            <div className="flex items-center gap-1.5 mt-1">
+                                                <div className="w-1 h-1 rounded-full bg-amber-400 animate-pulse" />
+                                                <span className="text-[8px] text-amber-200/80 uppercase tracking-[0.2em] font-bold">
+                                                    Background Agent Active{backgroundJobLabel ? `: ${backgroundJobLabel}` : ''}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -1274,144 +1665,192 @@ export default function AIChat() {
                                             )}
                                             <div
                                                 ref={scrollRef}
-                                                className="flex-1 overflow-y-auto overflow-x-hidden p-7 space-y-8 custom-scrollbar bg-slate-950/20"
+                                                className="flex-1 overflow-y-auto overflow-x-hidden p-7 space-y-8 custom-scrollbar bg-slate-950/20 relative"
+                                                onScroll={(e) => {
+                                                    const target = e.target as HTMLDivElement;
+                                                    const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 100;
+                                                    setShowScrollButton(!isNearBottom && messages.length > 3);
+                                                }}
                                             >
                                                 {messages.length === 0 && (
-                                                    <div className="h-full flex flex-col items-center justify-center text-center space-y-6 px-12">
+                                                    <div className="h-full flex flex-col items-center justify-center text-center space-y-6 px-12 relative">
+                                                        {/* Animated gradient background */}
+                                                        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                                                            <motion.div
+                                                                animate={{
+                                                                    background: [
+                                                                        'radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 50%)',
+                                                                        'radial-gradient(circle at 80% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%)',
+                                                                        'radial-gradient(circle at 50% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 50%)',
+                                                                        'radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 50%)',
+                                                                    ]
+                                                                }}
+                                                                transition={{
+                                                                    duration: 10,
+                                                                    repeat: Infinity,
+                                                                    ease: "linear"
+                                                                }}
+                                                                className="absolute inset-0"
+                                                            />
+                                                        </div>
+
                                                         <div className="relative group">
-                                                            <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full scale-150 group-hover:bg-blue-500/40 transition-all duration-1000" />
-                                                            <div className="w-20 h-20 rounded-[2rem] bg-white/5 flex items-center justify-center border border-white/10 text-blue-400 relative z-10 shadow-2xl">
-                                                                <Sparkles size={40} />
-                                                            </div>
+                                                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-3xl rounded-full scale-150 group-hover:scale-[2] transition-all duration-1000" />
+                                                            <motion.div
+                                                                animate={{
+                                                                    rotate: [0, 360],
+                                                                    scale: [1, 1.05, 1]
+                                                                }}
+                                                                transition={{
+                                                                    rotate: { duration: 20, repeat: Infinity, ease: "linear" },
+                                                                    scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                                                                }}
+                                                                className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/20 text-blue-400 relative z-10 shadow-2xl backdrop-blur-xl"
+                                                            >
+                                                                <Sparkles size={48} className="drop-shadow-2xl" />
+                                                            </motion.div>
                                                         </div>
-                                                        <div className="space-y-1 relative z-10">
-                                                            <p className="text-white/40 text-[10px] leading-relaxed uppercase tracking-[0.3em] font-bold">
+                                                        <div className="space-y-2 relative z-10">
+                                                            <motion.p
+                                                                initial={{ opacity: 0, y: 10 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                transition={{ delay: 0.2 }}
+                                                                className="text-white/60 text-sm font-semibold"
+                                                            >
+                                                                Premium AI Assistant
+                                                            </motion.p>
+                                                            <motion.p
+                                                                initial={{ opacity: 0, y: 10 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                transition={{ delay: 0.3 }}
+                                                                className="text-white/40 text-[10px] leading-relaxed uppercase tracking-[0.3em] font-bold"
+                                                            >
                                                                 Agent Ready
-                                                            </p>
+                                                            </motion.p>
                                                         </div>
-                                                        <div className="grid grid-cols-1 gap-3 w-full pt-4 relative z-10">
-                                                            {[
-                                                                "Analyze these Dominican receipts",
-                                                                "Review my project files for security",
-                                                                "Automate a workflow from these documents"
-                                                            ].map((tip, ix) => (
-                                                                <button
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 20 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            transition={{ delay: 0.4 }}
+                                                            className="grid grid-cols-1 gap-3 w-full pt-4 relative z-10"
+                                                        >
+                                                            {quickTips.map((tip, ix) => (
+                                                                <motion.button
                                                                     key={ix}
-                                                                    onClick={() => setInput(tip)}
-                                                                    className="p-4 bg-white/5 border border-white/5 rounded-2xl text-left text-xs text-white/50 hover:bg-white/10 hover:text-white/80 transition-all active:scale-[0.98]"
+                                                                    initial={{ opacity: 0, x: -20 }}
+                                                                    animate={{ opacity: 1, x: 0 }}
+                                                                    transition={{ delay: 0.5 + ix * 0.1 }}
+                                                                    onClick={() => setInput(tip.text)}
+                                                                    className="group p-4 bg-gradient-to-br from-white/[0.08] to-white/[0.03] border border-white/10 rounded-2xl text-left text-xs text-white/50 hover:text-white/90 hover:border-white/20 hover:from-white/[0.12] hover:to-white/[0.06] transition-all duration-300 active:scale-[0.98] backdrop-blur-xl shadow-lg hover:shadow-xl relative overflow-hidden"
                                                                 >
-                                                                    "{tip}"
-                                                                </button>
+                                                                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-purple-500/5 to-pink-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                                                    <div className="relative flex items-center gap-3">
+                                                                        <span className="text-2xl">{tip.icon}</span>
+                                                                        <span className="flex-1 font-medium">{tip.text}</span>
+                                                                        <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                    </div>
+                                                                </motion.button>
                                                             ))}
-                                                        </div>
+                                                        </motion.div>
                                                     </div>
                                                 )}
 
                                                 {messages.map((msg, i) => (
-                                                    <div
+                                                    <MessageBubble
                                                         key={i}
-                                                        className={cn(
-                                                            "flex flex-col gap-3 max-w-[90%]",
-                                                            msg.role === 'user' ? "ml-auto items-end" : "items-start"
-                                                        )}
-                                                    >
-                                                        {msg.files && msg.files.length > 0 && (
-                                                            <div className="flex flex-wrap gap-2 mb-1 justify-end">
-                                                                {msg.files.map(f => (
-                                                                    <div key={f.id} className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 rounded-xl text-[11px] text-blue-300 border border-blue-500/20 shadow-lg">
-                                                                        {f.type === 'pdf' ? <FileText size={12} /> : <ImageIcon size={12} />}
-                                                                        {f.name}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-
-                                                        {msg.toolUsed && (
-                                                            <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg mb-1 transition-all">
-                                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                                                <span className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">
-                                                                    Triggered: {msg.toolUsed.replace('_', ' ')}
-                                                                </span>
-                                                            </div>
-                                                        )}
-
-                                                        <div className={cn(
-                                                            "px-5 py-4 rounded-[1.5rem] text-sm leading-relaxed shadow-xl",
-                                                            msg.role === 'user'
-                                                                ? "bg-blue-600 text-white rounded-tr-none shadow-blue-500/10"
-                                                                : "bg-white/5 text-white/90 rounded-tl-none border border-white/5 backdrop-blur-xl"
-                                                        )}>
-                                                            <div className="markdown-content max-w-full overflow-x-hidden break-words">
-                                                                <ReactMarkdown
-                                                                    remarkPlugins={[remarkGfm]}
-                                                                    components={{
-                                                                        table: ({ node, ...props }) => (
-                                                                            <div className="table-container">
-                                                                                <table {...props} />
-                                                                            </div>
-                                                                        )
-                                                                    }}
-                                                                >
-                                                                    {normalizeMarkdown(msg.content)}
-                                                                </ReactMarkdown>
-                                                            </div>
-
-                                                            {msg.role === 'ai' && msg.toolUsed && (
-                                                                <ToolResultPreview tool={msg.toolUsed} result={msg.toolResult} />
-                                                            )}
-
-                                                            {/* Suggested Action Buttons */}
-                                                            {msg.role === 'ai' && (
-                                                                <div className="mt-4 pt-4 border-t border-white/5 flex flex-wrap gap-2">
-                                                                    {/* Show as Table button - appears when AI mentions needing info or analyzing */}
-                                                                    {(msg.content.toLowerCase().includes('need') ||
-                                                                        msg.content.toLowerCase().includes('information') ||
-                                                                        msg.content.toLowerCase().includes('proceed') ||
-                                                                        msg.toolUsed === 'verify_dgii_rnc') && !hasMarkdownTable(msg.content) && (
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    setInput("Display the extracted receipt data in a markdown table, including all fields (Date, Provider, RNC, NCF, Total Amount, ITBIS) and the business verification information from DGII.");
-                                                                                    setActiveTool('extract_alegra_bill');
-                                                                                }}
-                                                                                className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-xl text-xs text-purple-200 hover:text-purple-100 transition-all border border-purple-500/30 shadow-lg shadow-purple-500/10"
-                                                                            >
-                                                                                <Receipt size={14} className="text-purple-400" />
-                                                                                <span>Show as Table</span>
-                                                                            </button>
-                                                                        )}
-
-                                                                    {/* Generate Markdown File button - appears when table exists */}
-                                                                    {hasMarkdownTable(msg.content) && (
-                                                                        <button
-                                                                            onClick={() => setInput("Export this table as a markdown file. Please ask me if I want a new folder first.")}
-                                                                            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs text-white/60 hover:text-white transition-all border border-white/5"
-                                                                        >
-                                                                            <FileText size={14} className="text-blue-400" />
-                                                                            <span>Generate Markdown File</span>
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
+                                                        msg={msg}
+                                                        attachedFiles={attachedFiles}
+                                                        setInput={setInput}
+                                                        setActiveTool={setActiveTool}
+                                                        isBackgroundBusy={isBackgroundBusy}
+                                                        onApprove={approveFromBubble}
+                                                        hasMarkdownTable={hasMarkdownTable}
+                                                        normalizeMarkdown={normalizeMarkdown}
+                                                        remarkGfm={remarkGfm}
+                                                        ToolResultPreview={ToolResultPreview}
+                                                    />
                                                 ))}
 
                                                 {isLoading && (
-                                                    <div className="flex flex-col items-start gap-2">
-                                                        <div className="bg-white/5 px-5 py-4 rounded-[1.5rem] text-white/40 flex items-center gap-3 rounded-tl-none border border-white/5 shadow-xl">
-                                                            <div className="flex gap-1">
-                                                                <motion.span animate={{ opacity: [0, 1, 0] }} transition={{ repeat: Infinity, duration: 1 }} className="w-2 h-2 bg-blue-400 rounded-full" />
-                                                                <motion.span animate={{ opacity: [0, 1, 0] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-blue-400 rounded-full" />
-                                                                <motion.span animate={{ opacity: [0, 1, 0] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-blue-400 rounded-full" />
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        className="flex flex-col items-start gap-2"
+                                                    >
+                                                        <div className="relative group">
+                                                            {/* Glow effect */}
+                                                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-[1.5rem] blur-xl opacity-60 group-hover:opacity-100 transition-opacity" />
+
+                                                            <div className="relative bg-gradient-to-br from-white/[0.08] to-white/[0.03] px-6 py-5 rounded-[1.5rem] text-white/40 flex items-center gap-4 rounded-tl-none border border-white/10 backdrop-blur-xl shadow-2xl">
+                                                                <div className="flex gap-1.5">
+                                                                    <motion.span
+                                                                        animate={{
+                                                                            scale: [1, 1.3, 1],
+                                                                            opacity: [0.3, 1, 0.3]
+                                                                        }}
+                                                                        transition={{ repeat: Infinity, duration: 1.2 }}
+                                                                        className="w-2.5 h-2.5 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full shadow-lg shadow-blue-400/50"
+                                                                    />
+                                                                    <motion.span
+                                                                        animate={{
+                                                                            scale: [1, 1.3, 1],
+                                                                            opacity: [0.3, 1, 0.3]
+                                                                        }}
+                                                                        transition={{ repeat: Infinity, duration: 1.2, delay: 0.2 }}
+                                                                        className="w-2.5 h-2.5 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full shadow-lg shadow-purple-400/50"
+                                                                    />
+                                                                    <motion.span
+                                                                        animate={{
+                                                                            scale: [1, 1.3, 1],
+                                                                            opacity: [0.3, 1, 0.3]
+                                                                        }}
+                                                                        transition={{ repeat: Infinity, duration: 1.2, delay: 0.4 }}
+                                                                        className="w-2.5 h-2.5 bg-gradient-to-r from-pink-400 to-blue-400 rounded-full shadow-lg shadow-pink-400/50"
+                                                                    />
+                                                                </div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-xs font-bold tracking-widest uppercase bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+                                                                        {isBackgroundBusy ? (backgroundJobLabel || "Computing") : "Computing"}...
+                                                                    </span>
+                                                                    {isBackgroundBusy && backgroundJobLabel && (
+                                                                        <span className="text-[8px] text-white/30 uppercase tracking-widest font-bold mt-0.5">
+                                                                            Background Specialist Active
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                            <span className="text-xs font-bold tracking-widest uppercase opacity-80 text-blue-300">Agent Working...</span>
                                                         </div>
-                                                    </div>
+                                                    </motion.div>
                                                 )}
                                             </div>
 
-                                            {/* Input Area */}
-                                            <div className="p-4 border-t border-white/5 bg-black/40">
+                                            {/* Premium Scroll to Bottom Button */}
+                                            <AnimatePresence>
+                                                {showScrollButton && (
+                                                    <motion.button
+                                                        initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, y: 20, scale: 0.8 }}
+                                                        onClick={() => {
+                                                            scrollRef.current?.scrollTo({
+                                                                top: scrollRef.current.scrollHeight,
+                                                                behavior: 'smooth'
+                                                            });
+                                                        }}
+                                                        className="absolute bottom-24 right-8 z-20 p-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-full shadow-2xl shadow-blue-500/50 hover:shadow-blue-500/70 border border-white/20 backdrop-blur-xl transition-all duration-300 hover:scale-110 active:scale-95 group"
+                                                        title="Scroll to bottom"
+                                                    >
+                                                        <ArrowDown size={20} className="text-white group-hover:animate-bounce" />
+                                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    </motion.button>
+                                                )}
+                                            </AnimatePresence>
+
+                                            {/* Input Area - Premium Design */}
+                                            <div className="relative p-6 border-t border-white/10 bg-gradient-to-b from-black/20 to-black/60 backdrop-blur-xl">
+                                                {/* Gradient accent line */}
+                                                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
+
                                                 <div className="flex flex-col gap-3">
                                                     {(enabledToolIds.length > 0 || attachedFiles.length > 0) && (
                                                         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -1428,10 +1867,10 @@ export default function AIChat() {
                                                                             setInput(isActive ? '' : (toolPromptById[toolId] || tool.description));
                                                                         }}
                                                                         className={cn(
-                                                                            "shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all",
+                                                                            "shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all duration-300 hover:scale-105 active:scale-95",
                                                                             isActive
-                                                                                ? "bg-blue-500/20 border-blue-500/40 text-blue-300"
-                                                                                : "bg-white/5 border-white/10 text-white/30 hover:text-white/60"
+                                                                                ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-blue-500/40 text-blue-300 shadow-lg shadow-blue-500/20"
+                                                                                : "bg-white/5 border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10"
                                                                         )}
                                                                     >
                                                                         {tool.name}
@@ -1441,12 +1880,16 @@ export default function AIChat() {
 
                                                             {attachedFiles.length > 0 && (
                                                                 <>
-                                                                    <div className="w-px h-3 bg-white/10 shrink-0 mx-1" />
+                                                                    <div className="w-px h-4 bg-gradient-to-b from-transparent via-white/20 to-transparent shrink-0 mx-1" />
                                                                     {attachedFiles.map(f => (
                                                                         <div key={f.id} className="relative shrink-0 group">
-                                                                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/5 border border-blue-500/10 rounded-full text-[10px] text-blue-400/60 group-hover:text-blue-400 transition-colors cursor-default">
-                                                                                {f.name}
-                                                                                <button onClick={() => removeFile(f.id)} className="hover:text-red-400 transition-colors ml-1">
+                                                                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-full text-[10px] text-blue-400/80 group-hover:text-blue-300 transition-all duration-300 cursor-default shadow-lg shadow-blue-500/10">
+                                                                                <Paperclip size={10} className="opacity-60" />
+                                                                                <span className="font-medium">{f.name}</span>
+                                                                                <button
+                                                                                    onClick={() => removeFile(f.id)}
+                                                                                    className="hover:text-red-400 transition-colors ml-1 hover:scale-110 active:scale-90"
+                                                                                >
                                                                                     <X size={10} />
                                                                                 </button>
                                                                             </div>
@@ -1458,49 +1901,72 @@ export default function AIChat() {
                                                     )}
 
                                                     <form onSubmit={handleSend} className="relative group/input">
-                                                        <textarea
-                                                            rows={1}
-                                                            value={input}
-                                                            onChange={(e) => setInput(e.target.value)}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter' && !e.shiftKey) {
-                                                                    e.preventDefault();
-                                                                    handleSend(e);
-                                                                }
-                                                                // History Navigation
-                                                                if (e.key === 'ArrowUp') {
-                                                                    e.preventDefault();
-                                                                    const nextIndex = historyIndex + 1;
-                                                                    if (nextIndex < promptHistory.length) {
-                                                                        setHistoryIndex(nextIndex);
-                                                                        setInput(promptHistory[nextIndex]);
+                                                        {/* Glow effect on focus */}
+                                                        <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-[1.25rem] opacity-0 group-focus-within/input:opacity-100 blur-xl transition-opacity duration-500" />
+
+                                                        <div className="relative">
+                                                            <textarea
+                                                                rows={1}
+                                                                value={input}
+                                                                onChange={(e) => setInput(e.target.value)}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                                                        e.preventDefault();
+                                                                        handleSend(e);
                                                                     }
-                                                                }
-                                                                if (e.key === 'ArrowDown') {
-                                                                    e.preventDefault();
-                                                                    const prevIndex = historyIndex - 1;
-                                                                    if (prevIndex >= 0) {
-                                                                        setHistoryIndex(prevIndex);
-                                                                        setInput(promptHistory[prevIndex]);
-                                                                    } else {
-                                                                        setHistoryIndex(-1);
-                                                                        setInput('');
+                                                                    // History Navigation
+                                                                    if (e.key === 'ArrowUp') {
+                                                                        e.preventDefault();
+                                                                        const nextIndex = historyIndex + 1;
+                                                                        if (nextIndex < promptHistory.length) {
+                                                                            setHistoryIndex(nextIndex);
+                                                                            setInput(promptHistory[nextIndex]);
+                                                                        }
                                                                     }
-                                                                }
-                                                            }}
-                                                            placeholder="Ask anything..."
-                                                            className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-3 pl-4 pr-12 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500/30 focus:bg-white/[0.05] transition-all resize-none"
-                                                        />
-                                                        <button
-                                                            type="submit"
-                                                            disabled={isLoading}
-                                                            className={cn(
-                                                                "absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all",
-                                                                input.trim() || attachedFiles.length > 0 ? "bg-blue-600 text-white shadow-lg" : "text-white/20"
-                                                            )}
-                                                        >
-                                                            <Send size={14} />
-                                                        </button>
+                                                                    if (e.key === 'ArrowDown') {
+                                                                        e.preventDefault();
+                                                                        const prevIndex = historyIndex - 1;
+                                                                        if (prevIndex >= 0) {
+                                                                            setHistoryIndex(prevIndex);
+                                                                            setInput(promptHistory[prevIndex]);
+                                                                        } else {
+                                                                            setHistoryIndex(-1);
+                                                                            setInput('');
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                disabled={isLoading || isBackgroundBusy}
+                                                                placeholder={isBackgroundBusy ? "Background agent working..." : "Ask anything..."}
+                                                                className="w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 pr-14 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-black/20 font-medium"
+                                                                style={{
+                                                                    minHeight: '52px',
+                                                                    maxHeight: '200px'
+                                                                }}
+                                                            />
+                                                            <button
+                                                                type="submit"
+                                                                disabled={isLoading || isBackgroundBusy || (!input.trim() && attachedFiles.length === 0)}
+                                                                className={cn(
+                                                                    "absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-xl transition-all duration-300 shadow-lg",
+                                                                    input.trim() || attachedFiles.length > 0
+                                                                        ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 hover:scale-110 active:scale-95 shadow-blue-500/50"
+                                                                        : "bg-white/5 text-white/20 cursor-not-allowed"
+                                                                )}
+                                                            >
+                                                                <Send size={16} className={input.trim() || attachedFiles.length > 0 ? "animate-pulse" : ""} />
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Character count / hint */}
+                                                        {input.length > 0 && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, y: -10 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                className="absolute -top-6 right-0 text-[9px] text-white/30 font-mono"
+                                                            >
+                                                                {input.length} chars
+                                                            </motion.div>
+                                                        )}
                                                     </form>
                                                 </div>
                                             </div>
