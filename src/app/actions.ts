@@ -1297,6 +1297,16 @@ export async function createHtmlFile(data: {
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
         if (!user) throw new Error('User not found');
 
+        // Validate that the folder exists if folderId is provided
+        if (data.folderId) {
+            const folder = await prisma.workspaceFile.findUnique({
+                where: { id: data.folderId, type: 'folder' }
+            });
+            if (!folder) {
+                return { success: false, message: 'Parent folder not found. Please create the folder first.' };
+            }
+        }
+
         // Create a dedicated directory for the app/folder to ensure isolation
         // If no folderId, use '_root_' as a namespace
         const directoryName = data.folderId ? data.folderId : '_root_';
