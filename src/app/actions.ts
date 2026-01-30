@@ -1295,14 +1295,16 @@ export async function createMarkdownFile(data: {
  */
 function sanitizeFolderName(name: string): string {
     const sanitized = name
+        .replace(/\.\./g, '-') // Prevent path traversal
+        .replace(/^\./g, '') // Remove leading dots
         .replace(/[<>:"/\\|?*]/g, '-') // Replace unsafe characters with dash
         .replace(/\s+/g, '-') // Replace spaces with dash
         .replace(/-+/g, '-') // Replace multiple dashes with single dash
         .replace(/^-|-$/g, '') // Remove leading/trailing dashes
         .toLowerCase(); // Normalize to lowercase
     
-    // Return empty string if sanitization resulted in empty or only special chars
-    return sanitized.trim() || '';
+    // Return empty string if sanitization resulted in empty name
+    return sanitized || '';
 }
 
 export async function createHtmlFile(data: {
