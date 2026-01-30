@@ -933,6 +933,34 @@ export default function AIChat() {
             console.log('📤 Sending to AI:', userMsg.content);
             console.log('📎 Files in context:', Array.from(allFileIds));
             console.log('📂 Current Folder:', currentFolderContext.name, currentFolderContext.id);
+            
+            // TODO: Enable streaming for simple queries
+            // For queries without attachments and not requiring tool execution,
+            // you can use the streaming endpoint for better UX:
+            // 
+            // const useStreaming = allFileIds.size === 0 && !text.toLowerCase().includes('create');
+            // if (useStreaming) {
+            //     const messageId = crypto.randomUUID();
+            //     setMessages(prev => [...prev, { id: messageId, role: 'ai', content: '' }]);
+            //     
+            //     const { output } = await chatWithAIStream(
+            //         contextMsg,
+            //         Array.from(allFileIds),
+            //         geminiHistory,
+            //         currentFolderContext.name,
+            //         currentFolderContext.id || undefined,
+            //         { sessionId: sessionId || undefined }
+            //     );
+            //     
+            //     for await (const delta of readStreamableValue(output)) {
+            //         setMessages(prev => prev.map(m => 
+            //             m.id === messageId ? { ...m, content: delta || '' } : m
+            //         ));
+            //     }
+            //     setIsLoading(false);
+            //     return;
+            // }
+            
             const res = await chatWithAI(
                 contextMsg,
                 Array.from(allFileIds),
