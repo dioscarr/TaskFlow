@@ -64,7 +64,7 @@ export async function addChatMessage(
     toolUsed?: string,
     thinking?: string
 ) {
-    const message = await prisma.chatMessage.create({
+    const message = await (prisma.chatMessage as any).create({
         data: {
             sessionId,
             role,

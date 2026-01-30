@@ -1,17 +1,16 @@
 'use server';
 
 import prisma from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath as nextRevalidatePath } from 'next/cache';
 
 /**
  * Safe wrapper for revalidatePath that doesn't crash in background/CLI contexts
  */
-function safeRevalidatePath(path: string) {
+function safeRevalidatePath(path: string, type?: 'layout' | 'page') {
     try {
-        revalidatePath(path);
+        nextRevalidatePath(path, type);
     } catch (e) {
         // Ignore "Invariant: static generation store missing" in background scripts
-        // console.log(`⏩ Skipping revalidation for ${path} (background context)`);
     }
 }
 import { writeFile, readFile as readFileFS, rename, copyFile, mkdir } from 'fs/promises';
@@ -452,7 +451,7 @@ export async function updateTaskStatus(id: string, status: string) {
             where: { id },
             data: { status },
         });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Failed to update task status:', error);
@@ -465,7 +464,7 @@ export async function deleteTask(id: string) {
         await prisma.task.delete({
             where: { id },
         });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Failed to delete task:', error);
@@ -494,7 +493,7 @@ export async function createTask(data: { title: string; description?: string }) 
                 })
             },
         });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Failed to create task:', error);
@@ -523,7 +522,7 @@ export async function simulateIncomingEmail(data: { from: string, subject: strin
                 })
             },
         });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Failed to simulate email:', error);
@@ -549,7 +548,7 @@ export async function createFile(data: { name: string, type: string, size?: stri
             }
         });
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, file: newFile };
     } catch (error) {
         console.error('Failed to create file:', error);
@@ -560,7 +559,7 @@ export async function createFile(data: { name: string, type: string, size?: stri
 export async function deleteFile(id: string) {
     try {
         await prisma.workspaceFile.delete({ where: { id } });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Failed to delete file:', error);
@@ -574,7 +573,7 @@ export async function renameFile(id: string, name: string) {
             where: { id },
             data: { name }
         });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Failed to rename file:', error);
@@ -607,7 +606,7 @@ export async function uploadFile(formData: FormData) {
             }
         });
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, file: newFile };
     } catch (error) {
         console.error('Failed to upload file:', error);
@@ -648,7 +647,7 @@ export async function convertFolderToApp(folderId: string, entryFileId: string) 
             }
         });
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('Failed to convert folder to app:', error);
@@ -695,7 +694,7 @@ export async function unpromoteApp(folderId: string) {
         // where: { appId: folderId }
         // });
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, message: 'App destroyed. Data wiped 🗑️' };
     } catch (error) {
         console.error('Failed to unpromote app:', error);
@@ -724,7 +723,7 @@ export async function moveFile(id: string, parentId: string | null) {
             where: { id },
             data: { parentId }
         });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         return { success: false };
@@ -737,7 +736,7 @@ export async function toggleFileShare(id: string, shared: boolean) {
             where: { id },
             data: { shared }
         });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         return { success: false };
@@ -752,7 +751,7 @@ export async function reorderFiles(items: { id: string, order: number }[]) {
                 data: { order: item.order }
             }))
         );
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         return { success: false };
@@ -905,7 +904,7 @@ export async function createPrompt(data: {
                 isActive: count === 0
             }
         });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, prompt: newPrompt };
     } catch (error) {
         return { success: false };
@@ -920,7 +919,7 @@ export async function setActivePrompt(id: string) {
             prisma.aIPromptSet.updateMany({ where: { userId: user.id }, data: { isActive: false } }),
             prisma.aIPromptSet.update({ where: { id }, data: { isActive: true } })
         ]);
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         return { success: false };
@@ -930,7 +929,7 @@ export async function setActivePrompt(id: string) {
 export async function deletePrompt(id: string) {
     try {
         await prisma.aIPromptSet.delete({ where: { id } });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         return { success: false };
@@ -956,7 +955,7 @@ export async function updatePrompt(id: string, data: {
                 triggerKeywords: data.triggerKeywords
             }
         });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         return { success: false };
@@ -1092,7 +1091,7 @@ export async function createAlegraBill(data: any) {
                 observations: data.observations
             }
         });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, bill };
     } catch (error) {
         console.error(error);
@@ -1103,7 +1102,7 @@ export async function createAlegraBill(data: any) {
 export async function deleteAlegraBill(id: string) {
     try {
         await prisma.alegraBill.delete({ where: { id } });
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
         return { success: false };
@@ -1439,9 +1438,9 @@ export async function moveFilesToFolder(
 
         console.log(`✅ Successfully moved ${results.length} files to folder "${targetFolder.name}"`);
 
-        revalidatePath('/');
-        revalidatePath('/', 'layout');
-        revalidatePath('/', 'page');
+        safeRevalidatePath('/');
+        safeRevalidatePath('/', 'layout');
+        safeRevalidatePath('/', 'page');
 
         return {
             success: true,
@@ -1475,7 +1474,7 @@ export async function highlightWorkspaceFile(data: {
             }
         });
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, file: updated };
     } catch (error) {
         console.error('Failed to highlight file:', error);
@@ -1499,7 +1498,7 @@ export async function removeWorkspaceHighlights(fileIds: string[]) {
                     highlightFontWeight: null
                 }
             });
-            revalidatePath('/');
+            safeRevalidatePath('/');
             return { success: true, message: 'Cleared all workspace highlights' };
         }
 
@@ -1513,7 +1512,7 @@ export async function removeWorkspaceHighlights(fileIds: string[]) {
             }
         });
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, message: `Cleared highlights for ${fileIds.length} file(s)` };
     } catch (error) {
         return { success: false, message: 'Failed to remove highlights' };
@@ -1572,7 +1571,7 @@ export async function batchRenameFiles(data: {
         });
 
         const results = await Promise.all(updates);
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, renamed: results.length, message: `Successfully renamed ${results.length} files` };
     } catch (error) {
         console.error('Batch rename failed:', error);
@@ -1696,7 +1695,7 @@ export async function copyFilesToFolder(
         const copiedCount = copiedFiles.length;
         const copiedFileIds = copiedFiles.map(f => f!.id);
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, copied: copiedCount, copiedFileIds, message: `Copied ${copiedCount} file(s) to target folder` };
     } catch (error) {
         console.error('Failed to copy files:', error);
@@ -1747,7 +1746,7 @@ export async function editFile(data: { fileId: string; content: string }) {
             }
         });
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, file, message: `File ${file.name} updated successfully.` };
 
     } catch (error) {
@@ -2113,7 +2112,7 @@ export async function configureMagicFolder(data: { folderId: string, rule: strin
             userId: user.id
         });
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, message: `Magic rule "${data.rule}" applied to folder "${folder.name}"` };
     } catch (error) {
         return { success: false, message: 'Failed to configure magic folder' };
@@ -2449,7 +2448,7 @@ export async function createWorkflow(data: { name: string, triggerKeywords?: str
             }
         });
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return {
             success: true,
             message: `Workflow "${data.name}" architected and saved successfully. Trigger: ${data.triggerKeywords?.join(', ') || 'Manual only'}`,
@@ -2511,7 +2510,7 @@ export async function updateAgent(data: { agentId: string, systemPrompt?: string
             await setActivePrompt(agent.id);
         }
 
-        revalidatePath('/');
+        safeRevalidatePath('/');
         return { success: true, message: `Agent "${agent.name}" configuration updated successfully.` };
     } catch (error) {
         return { success: false, message: 'Error configuring agent' };
