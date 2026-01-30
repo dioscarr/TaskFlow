@@ -1291,14 +1291,18 @@ export async function createMarkdownFile(data: {
 /**
  * Sanitize a folder name for use as a directory name
  * Removes or replaces characters that are not safe for file systems
+ * Returns empty string if the name cannot be sanitized (caller should use fallback)
  */
 function sanitizeFolderName(name: string): string {
-    return name
+    const sanitized = name
         .replace(/[<>:"/\\|?*]/g, '-') // Replace unsafe characters with dash
         .replace(/\s+/g, '-') // Replace spaces with dash
         .replace(/-+/g, '-') // Replace multiple dashes with single dash
         .replace(/^-|-$/g, '') // Remove leading/trailing dashes
         .toLowerCase(); // Normalize to lowercase
+    
+    // Return empty string if sanitization resulted in empty or only special chars
+    return sanitized.trim() || '';
 }
 
 export async function createHtmlFile(data: {
@@ -1321,8 +1325,18 @@ export async function createHtmlFile(data: {
             if (!folder) {
                 return { success: false, message: 'Parent folder not found. Please create the folder first.' };
             }
-            // Use the human-readable folder name instead of the database ID
-            directoryName = sanitizeFolderName(folder.name);
+            
+            // Try to use the human-readable folder name for better user experience
+            const sanitizedName = sanitizeFolderName(folder.name);
+            
+            if (sanitizedName) {
+                // Use the clean, sanitized folder name
+                // This makes folders easy to find: "ProductLaunchMicrosite" -> "productlaunchmicrosite"
+                directoryName = sanitizedName;
+            } else {
+                // Fallback to folder ID if name cannot be sanitized (e.g., all special characters)
+                directoryName = folder.id;
+            }
         }
 
         const uploadsDir = join(process.cwd(), 'public', 'uploads', directoryName);
@@ -1338,7 +1352,7 @@ export async function createHtmlFile(data: {
         await writeFile(filePath, data.content);
 
         // storagePath needs to be the relative path from 'uploads/' so the frontend can construct the URL
-        // e.g., 'productlaunchmicrosite/index.html'
+        // e.g., 'productlaunchmicrosite/index.html' (clean, human-readable path)
         const relativeStoragePath = `${directoryName}/${diskFileName}`;
 
         const file = await prisma.workspaceFile.create({
