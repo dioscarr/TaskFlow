@@ -966,7 +966,7 @@ export async function generateSystemPrompt(description: string) {
     try {
         const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
         const genAI = new GoogleGenerativeAI(apiKey!);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
         const prompt = `You are a Prompt Engineer. Enhance the following Agent description into a professional system instruction: "${description}". 
         
         STRUCTURE:
@@ -3193,7 +3193,7 @@ OPERATIONAL RULES:
             tools = getSkillSchemas(DEFAULT_SKILLS);
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", systemInstruction, tools });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp", systemInstruction, tools });
         let promptParts: any[] = [query + workflowInstructions];
 
         // Resolve all file IDs (including those inside folders)
@@ -3567,4 +3567,83 @@ OPERATIONAL RULES:
         console.error('💥 chatWithAI error:', error);
         return { success: false, message: error instanceof Error ? error.message : 'AI failed' };
     }
+}
+
+/**
+ * Streaming version of chatWithAI using Vercel AI SDK
+ * Returns a streamable value that can be consumed on the client
+ */
+export async function chatWithAIStream(
+    query: string,
+    fileIds: string[] = [],
+    history: { role: 'user' | 'model'; parts: { text: string }[] }[] = [],
+    currentFolder?: string,
+    currentFolderId?: string,
+    options?: { sessionId?: string; allowToolExecution?: boolean; agentMode?: 'chat' | 'tool-agent' }
+) {
+    'use server';
+    
+    const { createStreamableValue } = await import('ai/rsc');
+    const stream = createStreamableValue('');
+    
+    // Run the streaming in the background
+    (async () => {
+        try {
+            const allowToolExecution = options?.allowToolExecution !== false;
+            const agentMode = options?.agentMode || 'chat';
+            const isToolAgent = agentMode === 'tool-agent';
+            const sessionId = options?.sessionId;
+            const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+            
+            if (!apiKey) {
+                stream.error('API Key missing');
+                return;
+            }
+
+            const genAI = new GoogleGenerativeAI(apiKey);
+
+            // Get necessary data (simplified version - you may need to expand this)
+            const [demoUser, activePromptSet, allFiles] = await Promise.all([
+                prisma.user.findUnique({ where: { email: 'demo@example.com' } }),
+                prisma.aIPromptSet.findFirst({ where: { isActive: true } }),
+                prisma.workspaceFile.findMany({ select: { id: true, name: true, type: true, parentId: true, order: true } })
+            ]);
+
+            const defaultInstruction = `You are TaskFlow AI, an intelligent assistant.`;
+            const baseInstruction = activePromptSet ? activePromptSet.prompt : defaultInstruction;
+            
+            const systemInstruction = baseInstruction + "\n\nRespond concisely and helpfully.";
+
+            // For streaming, we'll use a simpler model configuration without tools
+            // to focus on text streaming
+            const model = genAI.getGenerativeModel({ 
+                model: "gemini-2.0-flash-exp",
+                systemInstruction
+            });
+
+            const chat = model.startChat({ history });
+            
+            // Use generateContentStream for streaming
+            const result = await model.generateContentStream(query);
+            
+            let accumulatedText = '';
+            for await (const chunk of result.stream) {
+                const chunkText = chunk.text();
+                accumulatedText += chunkText;
+                stream.update(accumulatedText);
+            }
+            
+            // Save the message to database if sessionId is provided
+            if (sessionId && demoUser) {
+                await addChatMessage(sessionId, 'ai', accumulatedText, [], undefined, undefined);
+            }
+            
+            stream.done();
+        } catch (error) {
+            console.error('💥 chatWithAIStream error:', error);
+            stream.error(error instanceof Error ? error.message : 'Streaming failed');
+        }
+    })();
+    
+    return { output: stream.value };
 }
