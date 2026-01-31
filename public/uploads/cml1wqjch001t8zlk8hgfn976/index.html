@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apt3k - Market Intelligence</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* Typography */
+        body {
+            font-family: 'sans-serif', sans-serif; /* Clean Sans-Serif */
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'serif', serif; /* Sophisticated Serif */
+        }
+
+        /* Colors (Slate, Champagne, and Midnight) */
+        :root {
+            --slate: #708090;
+            --champagne: #F7E7CE;
+            --midnight: #2c3e50;
+        }
+
+        .bg-slate { background-color: var(--slate); }
+        .text-slate { color: var(--slate); }
+        .bg-champagne { background-color: var(--champagne); }
+        .text-champagne { color: var(--champagne); }
+        .bg-midnight { background-color: var(--midnight); }
+        .text-midnight { color: var(--midnight); }
+
+        /* Glassmorphism effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Most Popular Badge */
+        .most-popular {
+            position: absolute;
+            top: -10px;
+            right: 10px;
+            background-color: var(--champagne);
+            color: var(--midnight);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        /* Subtle Glow */
+        .glow-border {
+            box-shadow: 0 0 8px rgba(247, 231, 206, 0.7); /* Champagne glow */
+        }
+
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- Navigation (Sticky Header) -->
+    <header class="sticky top-0 z-50 bg-white shadow-md py-4">
+        <div class="container mx-auto px-4 flex items-center justify-between">
+            <a href="/" class="text-2xl font-bold text-midnight">Apt3k</a>
+            <nav class="space-x-6">
+                <a href="#product" class="text-gray-700 hover:text-midnight">Product</a>
+                <a href="#solutions" class="text-gray-700 hover:text-midnight">Solutions</a>
+                <a href="#pricing" class="text-gray-700 hover:text-midnight">Pricing</a>
+                <a href="#about" class="text-gray-700 hover:text-midnight">About</a>
+                <a href="#contact" class="text-gray-700 hover:text-midnight">Contact</a>
+                <a href="#" class="bg-midnight text-champagne py-2 px-4 rounded-md hover:bg-slate transition duration-300">Book a Demo</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Home (The Hook) -->
+    <section id="home" class="py-20">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h1 class="text-5xl font-bold text-midnight mb-6">Unlock Deeper Market Insights.</h1>
+                    <p class="text-lg text-gray-700 mb-8">Gain a competitive edge with our cutting-edge market intelligence platform. Understand trends, identify opportunities, and optimize your strategies.</p>
+                    <a href="#" class="bg-champagne text-midnight py-3 px-6 rounded-md hover:bg-slate hover:text-champagne transition duration-300">Explore the Platform</a>
+                </div>
+                <div>
+                    <img src="placeholder-hero.jpg" alt="Market Intelligence Dashboard" class="rounded-lg shadow-lg">
+                </div>
+            </div>
+
+            <!-- Trust Bar -->
+            <div class="mt-16 py-8 border-t border-gray-200">
+                <h3 class="text-center text-gray-500 uppercase tracking-wider mb-4">Trusted By Leading Companies</h3>
+                <div class="flex items-center justify-around space-x-8">
+                    <img src="placeholder-logo1.png" alt="Partner 1" class="h-12 grayscale">
+                    <img src="placeholder-logo2.png" alt="Partner 2" class="h-12 grayscale">
+                    <img src="placeholder-logo3.png" alt="Partner 3" class="h-12 grayscale">
+                    <img src="placeholder-logo4.png" alt="Partner 4" class="h-12 grayscale">
+                    <img src="placeholder-logo5.png" alt="Partner 5" class="h-12 grayscale">
+                </div>
+            </div>
+
+             <!-- Features (Zig-Zag Layout) -->
+             <div class="mt-20">
+                <h2 class="text-3xl font-bold text-midnight text-center mb-12">Key Features</h2>
+
+                <!-- Feature 1 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-16">
+                    <div>
+                        <img src="placeholder-feature1.jpg" alt="Feature 1" class="rounded-lg shadow-md">
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-semibold text-midnight mb-4">Real-Time Data Analysis</h3>
+                        <p class="text-gray-700">Get instant access to up-to-the-minute market data, analyzed and visualized for quick decision-making.</p>
+                    </div>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-16">
+                    <div>
+                        <h3 class="text-2xl font-semibold text-midnight mb-4">Predictive Analytics</h3>
+                        <p class="text-gray-700">Leverage our advanced algorithms to forecast market trends and anticipate future opportunities.</p>
+                    </div>
+                    <div>
+                        <img src="placeholder-feature2.jpg" alt="Feature 2" class="rounded-lg shadow-md">
+                    </div>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-16">
+                    <div>
+                        <img src="placeholder-feature3.jpg" alt="Feature 3" class="rounded-lg shadow-md">
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-semibold text-midnight mb-4">Customizable Dashboards</h3>
+                        <p class="text-gray-700">Tailor your dashboard to display the specific metrics and insights that matter most to your business.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Product/Platform (The Value) -->
+    <section id="product" class="py-20 bg-gray-100">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-midnight text-center mb-12">Our Platform's Core Pillars</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                <!-- Pillar 1 -->
+                <div class="glass p-6 rounded-lg hover:shadow-xl transition duration-300">
+                    <i class="fas fa-chart-line text-3xl text-midnight mb-4"></i>
+                    <h3 class="text-xl font-semibold text-midnight mb-2">Data Aggregation</h3>
+                    <p class="text-gray-700">Collect and consolidate data from diverse sources for a comprehensive market view.</p>
+                    <a href="#" class="text-champagne hover:text-slate mt-4 inline-block">Learn More</a>
+                </div>
+
+                <!-- Pillar 2 -->
+                <div class="glass p-6 rounded-lg hover:shadow-xl transition duration-300">
+                    <i class="fas fa-lightbulb text-3xl text-midnight mb-4"></i>
+                    <h3 class="text-xl font-semibold text-midnight mb-2">Insight Generation</h3>
+                    <p class="text-gray-700">Transform raw data into actionable insights with advanced analytics and visualization tools.</p>
+                    <a href="#" class="text-champagne hover:text-slate mt-4 inline-block">Learn More</a>
+                </div>
+
+                <!-- Pillar 3 -->
+                <div class="glass p-6 rounded-lg hover:shadow-xl transition duration-300">
+                    <i class="fas fa-rocket text-3xl text-midnight mb-4"></i>
+                    <h3 class="text-xl font-semibold text-midnight mb-2">Strategic Activation</h3>
+                    <p class="text-gray-700">Empower your team to make data-driven decisions and execute winning market strategies.</p>
+                    <a href="#" class="text-champagne hover:text-slate mt-4 inline-block">Learn More</a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Solutions (The Use Case) -->
+    <section id="solutions" class="py-20">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-midnight text-center mb-12">Tailored Solutions for Your Industry</h2>
+
+            <!-- E-commerce -->
+            <div class="mb-16">
+                <h3 class="text-2xl font-semibold text-midnight mb-4">E-commerce</h3>
+                <p class="text-gray-700 mb-4">Optimize your product listings, pricing strategies, and marketing campaigns with real-time market data. Identify emerging trends and stay ahead of the competition.</p>
+                <div class="flex items-center justify-between bg-champagne p-4 rounded-md">
+                    <div>
+                        <p class="text-midnight font-semibold">Increase Conversion Rates</p>
+                    </div>
+                    <div class="text-3xl text-midnight font-bold">
+                        +15%
+                    </div>
+                </div>
+            </div>
+
+            <!-- B2B SaaS -->
+            <div class="mb-16">
+                <h3 class="text-2xl font-semibold text-midnight mb-4">B2B SaaS</h3>
+                <p class="text-gray-700 mb-4">Understand your target audience, track competitor activity, and identify new market opportunities. Improve customer acquisition and retention with data-driven insights.</p>
+                <div class="flex items-center justify-between bg-champagne p-4 rounded-md">
+                    <div>
+                        <p class="text-midnight font-semibold">Reduce Churn Rate</p>
+                    </div>
+                    <div class="text-3xl text-midnight font-bold">
+                        -10%
+                    </div>
+                </div>
+            </div>
+
+            <!-- Finance -->
+             <div class="mb-16">
+                <h3 class="text-2xl font-semibold text-midnight mb-4">Finance</h3>
+                <p class="text-gray-700 mb-4">Make smarter investment decisions, mitigate risks, and identify new growth opportunities. Stay ahead of market fluctuations and maximize your returns.</p>
+                <div class="flex items-center justify-between bg-champagne p-4 rounded-md">
+                    <div>
+                        <p class="text-midnight font-semibold">Improve ROI</p>
+                    </div>
+                    <div class="text-3xl text-midnight font-bold">
+                        +8%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing (The Decision) -->
+    <section id="pricing" class="py-20 bg-gray-100">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-midnight text-center mb-12">Choose the Right Plan for Your Needs</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                <!-- Basic Plan -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-xl font-semibold text-midnight mb-4">Basic</h3>
+                    <div class="text-5xl font-bold text-midnight mb-4">$49 <span class="text-lg text-gray-500">/ month</span></div>
+                    <ul class="list-disc list-inside text-gray-700 mb-6">
+                        <li>Limited Data Access</li>
+                        <li>Standard Reporting</li>
+                        <li>Email Support</li>
+                    </ul>
+                    <a href="#" class="bg-champagne text-midnight py-2 px-4 rounded-md hover:bg-slate hover:text-champagne transition duration-300 block text-center">Get Started</a>
+                </div>
+
+                <!-- Premium Plan -->
+                <div class="bg-white rounded-lg shadow-md p-6 relative glow-border">
+                    <span class="most-popular">Most Popular</span>
+                    <h3 class="text-xl font-semibold text-midnight mb-4">Premium</h3>
+                    <div class="text-5xl font-bold text-midnight mb-4">$99 <span class="text-lg text-gray-500">/ month</span></div>
+                    <ul class="list-disc list-inside text-gray-700 mb-6">
+                        <li>Full Data Access</li>
+                        <li>Advanced Reporting & Analytics</li>
+                        <li>Priority Support</li>
+                        <li>Dedicated Account Manager</li>
+                    </ul>
+                    <a href="#" class="bg-midnight text-champagne py-2 px-4 rounded-md hover:bg-slate transition duration-300 block text-center">Get Started</a>
+                </div>
+
+                <!-- Enterprise Plan -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-xl font-semibold text-midnight mb-4">Enterprise</h3>
+                    <div class="text-5xl font-bold text-midnight mb-4">Contact Us</div>
+                    <p class="text-gray-700 mb-6">Customized solutions for large organizations with specific needs. Contact us to discuss your requirements.</p>
+                    <a href="#" class="bg-champagne text-midnight py-2 px-4 rounded-md hover:bg-slate hover:text-champagne transition duration-300 block text-center">Contact Sales</a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- About/Contact (The Trust) -->
+    <section id="about" class="py-20">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-midnight text-center mb-12">About Us</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h3 class="text-2xl font-semibold text-midnight mb-4">Our Mission</h3>
+                    <p class="text-gray-700">To empower businesses with actionable market intelligence, enabling them to make informed decisions and achieve sustainable growth. We are committed to providing innovative solutions and exceptional customer service.</p>
+                    <p class="text-gray-700 mt-4">Our team comprises experienced data scientists, analysts, and industry experts dedicated to helping you succeed in today's dynamic market.</p>
+                </div>
+                <div>
+                    <img src="placeholder-team.jpg" alt="Team" class="rounded-xl shadow-lg">
+                </div>
+            </div>
+        </div>
+    </section>
+
+     <!-- Contact Form -->
+     <section id="contact" class="py-20 bg-gray-100">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-midnight text-center mb-12">Contact Us</h2>
+            <div class="max-w-lg mx-auto">
+                <form class="space-y-4">
+                    <div>
+                        <label for="name" class="block text-gray-700 text-sm font-bold mb-2">Name</label>
+                        <input type="text" id="name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Your Name">
+                    </div>
+                    <div>
+                        <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                        <input type="email" id="email" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Your Email">
+                    </div>
+                    <div>
+                        <label for="message" class="block text-gray-700 text-sm font-bold mb-2">Message</label>
+                        <textarea id="message" rows="5" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Your Message"></textarea>
+                    </div>
+                    <div>
+                        <button type="submit" class="bg-midnight text-champagne py-2 px-4 rounded-md hover:bg-slate transition duration-300 w-full">Send Message</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-midnight py-8 text-center text-champagne">
+        <p>&copy; 2024 Apt3k. All rights reserved.</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

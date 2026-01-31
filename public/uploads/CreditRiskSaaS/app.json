@@ -1,0 +1,12 @@
+{
+    "name": "credit-risk-saas",
+    "version": "1.0.0",
+    "description": "AI-Powered Credit Risk Assessment SaaS",
+    "main": "index.html",
+    "theme": "glassmorphism",
+    "features": [
+        "risk-analysis",
+        "dashboard",
+        "client-management"
+    ]
+}

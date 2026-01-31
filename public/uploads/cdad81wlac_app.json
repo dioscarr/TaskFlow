@@ -1,0 +1,25 @@
+{
+  "name": "Intelligent Financial Planning Tool",
+  "description": "A SaaS tool for intelligent financial planning and scenario analysis.",
+  "version": "1.0.0",
+  "dependencies": {
+    "react": "^17.0.0",
+    "axios": "^0.21.0",
+    "chart.js": "^3.0.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test"
+  },
+  "author": "TaskFlow AI",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/example/financial-planning-tool.git"
+  },
+  "bugs": {
+    "url": "https://github.com/example/financial-planning-tool/issues"
+  },
+  "homepage": "https://example.com"
+}

@@ -8,6 +8,7 @@ interface UseKeyboardShortcutsProps {
     onDelete?: () => void;
     onNew?: () => void;
     onSearch?: () => void;
+    onEdit?: () => void;
     enabled?: boolean;
 }
 
@@ -16,6 +17,7 @@ export function useKeyboardShortcuts({
     onDelete,
     onNew,
     onSearch,
+    onEdit,
     enabled = true,
 }: UseKeyboardShortcutsProps) {
     useEffect(() => {
@@ -56,9 +58,16 @@ export function useKeyboardShortcuts({
                 onNew();
                 return;
             }
+
+            // E - Edit selected file
+            if (e.key === 'e' && onEdit) {
+                e.preventDefault();
+                onEdit();
+                return;
+            }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [enabled, onEscape, onDelete, onNew, onSearch]);
+    }, [enabled, onEscape, onDelete, onNew, onSearch, onEdit]);
 }

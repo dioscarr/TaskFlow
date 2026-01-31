@@ -126,6 +126,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
                 properties: {
                     filename: { type: 'string', description: 'File name including extension (e.g. app.json, notes.md)' },
                     content: { type: 'string', description: 'File content' },
+                    folderId: { type: 'string', description: 'The folder ID to create the file in (PREFERRED). Use this if you just created a folder.' },
                     folderName: { type: 'string', description: 'Optional folder name to create/use' }
                 },
                 required: ['filename', 'content']
@@ -338,12 +339,12 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
     enqueue_agent_job: {
         id: 'enqueue_agent_job',
         name: 'Enqueue Background Agent Job',
-        description: 'Queue a background agent task for asynchronous execution after user approval.',
+        description: 'ONLY use for COMPLEX, LONG-RUNNING tasks that require multiple file operations or code generation. DO NOT use for simple questions, greetings, or information requests. The user MUST approve the job before it runs.',
         category: 'task',
         icon: 'Bot',
         schema: {
             name: 'enqueue_agent_job',
-            description: 'Create a background agent job (requires user approval before execution)',
+            description: 'ONLY for complex multi-file operations. DO NOT use for simple responses, questions, or greetings. Always respond directly first.',
             parameters: {
                 type: 'object',
                 properties: {
@@ -376,30 +377,48 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
     read_file: {
         id: 'read_file',
         name: 'Read File',
-        description: 'Read the contents of one or more files in your workspace.',
+        description: 'Read the contents of one or more files in your workspace (ID-first, name fallback).',
         category: 'workspace',
         icon: 'FileText',
         schema: {
             name: 'read_file',
-            description: 'Read the contents of files from the workspace',
+            description: 'Read the contents of files from the workspace (prefer file IDs over names)',
             parameters: {
                 type: 'object',
                 properties: {
-                    fileIds: { type: 'array', items: { type: 'string' }, description: 'List of file IDs or names to read' }
+                    fileIds: { type: 'array', items: { type: 'string' }, description: 'List of file IDs (preferred) or names to read' }
                 },
                 required: ['fileIds']
+            }
+        }
+    },
+    delete_root_markdown_files: {
+        id: 'delete_root_markdown_files',
+        name: 'Delete Root Markdown Files',
+        description: 'Delete all .md files from the workspace root (does not touch subfolders).',
+        category: 'workspace',
+        icon: 'Trash',
+        schema: {
+            name: 'delete_root_markdown_files',
+            description: 'Delete all .md files from the workspace root. Optional dryRun to preview.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    dryRun: { type: 'boolean', description: 'If true, only list files without deleting', default: false }
+                },
+                required: []
             }
         }
     },
     search_files: {
         id: 'search_files',
         name: 'Search Files',
-        description: 'Search for files in your workspace by name or content.',
+        description: 'Search for files in your workspace by ID, name, or content.',
         category: 'workspace',
         icon: 'Search',
         schema: {
             name: 'search_files',
-            description: 'Search files by query string',
+            description: 'Search files by query string (returns file IDs and storage paths)',
             parameters: {
                 type: 'object',
                 properties: {
@@ -669,7 +688,8 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
                 properties: {
                     filename: { type: 'string', description: 'Name of the file (e.g., landing-page)' },
                     content: { type: 'string', description: 'Full HTML content including styles' },
-                    folderId: { type: 'string', description: 'Optional folder to save in' }
+                    folderId: { type: 'string', description: 'Optional folder ID to save in' },
+                    folderName: { type: 'string', description: 'Optional folder name to save in (used if folderId is missing or invalid)' }
                 },
                 required: ['filename', 'content']
             }
@@ -729,6 +749,59 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
                 }
             }
         }
+    },
+    run_agent_symphony: {
+        id: 'run_agent_symphony',
+        name: 'Run Agent Symphony',
+        description: 'Orchestrate a team of specialized AI agents to solve a complex objective.',
+        category: 'task',
+        icon: 'Bot',
+        schema: {
+            name: 'run_agent_symphony',
+            description: 'Orchestrate a team of specialized AI agents to solve a complex objective.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    objective: { type: 'string', description: 'The high-level goal for the symphony to achieve.' },
+                    strategy: { type: 'string', description: 'Selected strategy details to guide the plan.' }
+                },
+                required: ['objective']
+            }
+        }
+    },
+    sync_workspace_files: {
+        id: 'sync_workspace_files',
+        name: 'Sync Workspace Files',
+        description: 'Synchronize the file system with the database. Call this after creating files manually or if files seem missing.',
+        category: 'workspace',
+        icon: 'RefreshCw',
+        schema: {
+            name: 'sync_workspace_files',
+            description: 'Synchronize the file system with the database.',
+            parameters: {
+                type: 'object',
+                properties: {},
+                required: []
+            }
+        }
+    },
+    suggest_strategies: {
+        id: 'suggest_strategies',
+        name: 'Suggest Strategic Paths',
+        description: 'Generate 3 distinct strategic approaches (plans) for a complex objective. User must select one before execution proceeds.',
+        category: 'task',
+        icon: 'Map',
+        schema: {
+            name: 'suggest_strategies',
+            description: 'Generate 3 execution strategies for an objective',
+            parameters: {
+                type: 'object',
+                properties: {
+                    objective: { type: 'string', description: 'The goal to achieve' }
+                },
+                required: ['objective']
+            }
+        }
     }
 };
 
@@ -779,6 +852,8 @@ export const DEFAULT_TOOLS = [
     'read_file',
     'search_files',
     'create_folder',
+    'sync_workspace_files',
+    'suggest_strategies',
     'organize_files',
     'move_attachments_to_folder',
     'highlight_file',
@@ -797,5 +872,6 @@ export const DEFAULT_TOOLS = [
     'create_html_file',
     'set_file_tags',
     'synthesize_documents',
+    'run_agent_symphony',
     'get_agent_activity'
 ];

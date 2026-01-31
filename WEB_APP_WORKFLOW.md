@@ -31,17 +31,14 @@ Simply say any of these phrases in the chat:
   - `onExistingFolder: 'create_unique'` - Ensures no conflicts
 
 ### Step 2: HTML File Creation
-- **Action**: `create_html_file`
-- **Behavior**: Creates `index.html` inside the newly created folder
-- **Parameters**:
-  - `filename: 'index.html'` - Standard entry point name
-  - `useLastFolder: true` - Uses the folder from Step 1
+    `filename: 'index.html'` - Standard entry point name
+    `folderName: 'ProductLaunchMicrosite'` - Optional folder name for file creation
 
 ## Benefits
-
-### Before (Manual Process):
-1. User: "Create a website"
-2. Agent: "What should I name the folder?"
+                { action: 'create_html_file', params: { filename: 'index.html', folderName: 'ProductLaunchMicrosite', ... } },
+                { action: 'create_html_file', params: { filename: 'about.html', folderName: 'ProductLaunchMicrosite', ... } },
+                { action: 'create_html_file', params: { filename: 'contact.html', folderName: 'ProductLaunchMicrosite', ... } },
+                { action: 'create_html_file', params: { filename: 'styles.css', folderName: 'ProductLaunchMicrosite', ... } }
 3. User: "MyWebsite"
 4. Agent creates folder
 5. User: "Now create index.html in that folder"

@@ -9,7 +9,7 @@ Fix 4 critical bugs in the agent system and implement proper streaming for AI re
 **Problem**: Model `gemini-1.5-flash` doesn't exist in v1beta API
 **Error**: `[GoogleGenerativeAI Error]: models/gemini-1.5-flash is not found for API version v1beta`
 
-**Solution**: Updated all model references to `gemini-2.0-flash-exp`
+**Solution**: Updated all model references to `gemini-2.0-flash`
 - `src/lib/agents/CognitiveAgent.ts` line 52
 - `src/app/actions.ts` lines 970, 3197, 3621
 

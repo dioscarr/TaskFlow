@@ -2,36 +2,43 @@ import { spawn } from 'child_process';
 import path from 'path';
 
 /**
- * lifecycle manager for the agent worker.
- * Restarts the worker if it crashes and handles graceful shutdown.
+ * lifecycle manager for the agent worker cluster.
+ * Launches multiple workers for parallelism and handles restarts.
  */
-function startWorker() {
-    console.log('🚀 Starting Agent Worker Lifecycle Manager...');
+const NUM_WORKERS = process.env.AGENT_CONCURRENCY ? parseInt(process.env.AGENT_CONCURRENCY) : 3;
+
+function startWorker(workerIndex: number) {
+    console.log(`🚀 Starting Agent Worker #${workerIndex + 1}...`);
 
     const workerPath = path.join(process.cwd(), 'src/cli/agent-worker.ts');
 
     const worker = spawn('npx', ['tsx', workerPath], {
         stdio: 'inherit',
-        env: { ...process.env, AGENT_WORKER_ID: `worker-main-${process.pid}` },
+        env: { ...process.env, AGENT_WORKER_ID: `worker-${workerIndex}-${process.pid}` },
         shell: true
     });
 
     worker.on('exit', (code) => {
-        console.log(`📡 Worker exited with code ${code}. Restarting in 5s...`);
-        setTimeout(startWorker, 5000);
-    });
-
-    process.on('SIGINT', () => {
-        console.log('🛑 Shutting down worker...');
-        worker.kill('SIGINT');
-        process.exit(0);
-    });
-
-    process.on('SIGTERM', () => {
-        console.log('🛑 Shutting down worker...');
-        worker.kill('SIGTERM');
-        process.exit(0);
+        console.log(`📡 Worker #${workerIndex + 1} exited with code ${code}. Restarting in 5s...`);
+        setTimeout(() => startWorker(workerIndex), 5000);
     });
 }
 
-startWorker();
+function startCluster() {
+    console.log(`🌍 Initializing Agent Cluster with ${NUM_WORKERS} workers...`);
+
+    for (let i = 0; i < NUM_WORKERS; i++) {
+        startWorker(i);
+    }
+
+    // Handle cluster shutdown
+    const cleanup = () => {
+        console.log('🛑 Shutting down agent cluster...');
+        process.exit(0);
+    };
+
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
+}
+
+startCluster();

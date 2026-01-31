@@ -26,6 +26,12 @@ export class FeedbackLoopEngine {
 
         console.log(`🧠 Analyzing result for job ${jobId} (Iteration ${job.iteration})`);
 
+        const payload = job.payload && typeof job.payload === 'object' ? job.payload : {};
+        const queryText = typeof (payload as { query?: unknown }).query === 'string'
+            ? (payload as { query: string }).query
+            : '';
+        const requiresSelfReflection = /\b(app|web\s*app|website|scaffold|codegen|generate\s+app|build\s+app|e-?commerce)\b/i.test(queryText);
+
         // If the result itself contains a clear error, we need to iterate
         if (result?.success === false) {
             return {
@@ -34,6 +40,20 @@ export class FeedbackLoopEngine {
                 reasoning: `The tool execution failed: ${result.message || 'Unknown error'}. I need to try a different approach or fix the parameters.`,
                 nextStep: 'Retry the previous step with corrected parameters.'
             };
+        }
+
+        if (requiresSelfReflection) {
+            const outputText = typeof result?.text === 'string' ? result.text : '';
+            const hasSelfReflection = /self[-\s]?reflection/i.test(outputText);
+
+            if (!hasSelfReflection) {
+                return {
+                    success: false,
+                    reachedGoal: false,
+                    reasoning: 'The response is missing the required Self-Reflection section for app/code generation tasks.',
+                    nextStep: 'Append a Self-Reflection section with issues found, fixes applied, remaining risks, and a 0–1 confidence score.'
+                };
+            }
         }
 
         // Logic to determine if we should continue based on the type of task

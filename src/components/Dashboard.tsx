@@ -144,24 +144,24 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                         : null;
 
                     return (
-                        <div className="w-full h-[80vh] bg-white rounded-xl overflow-hidden shadow-2xl border border-white/10 animate-in fade-in zoom-in-95 duration-300 flex flex-col">
-                            <div className="bg-gray-100 border-b px-4 py-2 flex items-center justify-between text-xs text-gray-500 shrink-0">
-                                <span className="font-mono">{previewContent.name}</span>
+                        <div className="w-full h-[80vh] bg-[#1e1e1e] rounded-xl overflow-hidden shadow-2xl border border-white/10 animate-in fade-in zoom-in-95 duration-300 flex flex-col">
+                            <div className="bg-[#2d2d2d] border-b border-white/5 px-4 py-3 flex items-center justify-between text-xs text-white/60 shrink-0">
+                                <span className="font-mono text-white/80">{previewContent.name}</span>
                                 <div className="flex items-center gap-3">
                                     <a
                                         href={`/uploads/${previewContent.storagePath || previewContent.name}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center gap-1.5 px-2 py-1 bg-white hover:bg-blue-50 text-gray-500 hover:text-blue-600 rounded border border-gray-200 hover:border-blue-200 transition-colors"
+                                        className="flex items-center gap-1.5 px-2 py-1 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded border border-white/10 hover:border-white/20 transition-colors"
                                         title="Open Full Site in New Tab"
                                     >
                                         <ExternalLink size={12} />
                                         <span className="font-bold uppercase tracking-wider text-[9px]">Open</span>
                                     </a>
-                                    <div className="flex gap-1.5 border-l pl-3 border-gray-200">
+                                    <div className="flex gap-1.5 border-l pl-3 border-white/10">
                                         <button
                                             onClick={() => { setActiveTab('files'); setPreviewContent(null); }}
-                                            className="w-2.5 h-2.5 rounded-full bg-red-400/50 hover:bg-red-500 transition-colors cursor-pointer"
+                                            className="w-2.5 h-2.5 rounded-full bg-red-400/60 hover:bg-red-500 transition-colors cursor-pointer"
                                             title="Close"
                                         />
                                         <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/50" />
@@ -172,11 +172,11 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
 
                             {/* App Navigation Bar */}
                             {(subApps.length > 0 || parentAppEntry) && (
-                                <div className="bg-white border-b px-4 py-2 flex items-center gap-2 overflow-x-auto shrink-0 shadow-sm">
+                                <div className="bg-[#1e1e1e] border-b border-white/5 px-4 py-2 flex items-center gap-2 overflow-x-auto shrink-0 shadow-sm">
                                     {parentAppEntry && (
                                         <button
                                             onClick={() => setPreviewContent(parentAppEntry)}
-                                            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-xs font-medium text-gray-700 transition-colors"
+                                            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-medium text-white/70 hover:text-white transition-colors"
                                         >
                                             <Folder size={12} className="rotate-180" /> {/* Fallback icon if ArrowUp not imported */}
                                             Parent App
@@ -186,7 +186,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                                         <button
                                             key={app.folder.id}
                                             onClick={() => setPreviewContent(app.entry!)}
-                                            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 text-xs font-medium text-blue-700 transition-colors border border-blue-100"
+                                            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-xs font-medium text-blue-200 transition-colors border border-blue-500/20"
                                         >
                                             <LayoutIcon size={12} />
                                             {app.folder.name}

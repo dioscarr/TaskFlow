@@ -1,7 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: 'DM Sans', Helvetica, Arial, Lucida, sans-serif;
+  --font-display: 'Poppins', Helvetica, Arial, Lucida, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -106,8 +108,34 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.7em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  color: #FFFFFF;
+  line-height: 1.2em;
+  font-weight: 500;
+}
+
+h1 {
+  font-size: 50px;
+  letter-spacing: -2px;
+}
+
+h2 {
+  font-weight: 600;
+  font-size: 44px;
+  letter-spacing: -2px;
 }
 
 /* Scrollbar Styling */

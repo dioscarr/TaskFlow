@@ -5,13 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Folder, FileText, Image as ImageIcon, UploadCloud, MoreVertical, Users, X, ChevronLeft, Maximize2, Edit2, Share2, Move, Trash2, Search, LayoutGrid, List, Bot, AlignLeft, Edit, FolderTree, Sparkles, LayoutPanelLeft, Tag, Wand2, ExternalLink } from 'lucide-react';
 import type { WorkspaceFile } from '@prisma/client';
 import { deleteFile, createFile, uploadFile, moveFile, renameFile, toggleFileShare, reorderFiles, getFileContent, convertFolderToApp, unpromoteApp } from '@/app/actions';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import ConfirmationModal from './ConfirmationModal';
 import ContextMenu from './ContextMenu';
+import CodeEditorModal from './CodeEditorModal';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 interface FileManagerProps {
@@ -56,7 +55,7 @@ const FilePreview = ({ file }: { file: WorkspaceFile }) => {
 
             {/* Lazy Image */}
             <img
-                src={`/uploads/${file.name}`}
+                src={`/uploads/${file.storagePath || file.name}`}
                 alt={file.name}
                 loading="lazy"
                 onLoad={() => setIsLoaded(true)}
@@ -77,7 +76,7 @@ export default function FileManager({ files }: FileManagerProps) {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
     const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
-    const [previewFile, setPreviewFile] = useState<WorkspaceFile | null>(null);
+    const [editorMode, setEditorMode] = useState<'edit' | 'preview'>('edit');
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [movingFiles, setMovingFiles] = useState<WorkspaceFile[] | null>(null);
@@ -100,15 +99,22 @@ export default function FileManager({ files }: FileManagerProps) {
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
     const [previewContent, setPreviewContent] = useState<string | null>(null);
 
+    // Code Editor State
+    const [editingFile, setEditingFile] = useState<WorkspaceFile | null>(null);
+    const [editorContent, setEditorContent] = useState('');
+    const [editorContentFileId, setEditorContentFileId] = useState<string | null>(null);
+    const [isSavingStart, setIsSavingStart] = useState(false);
+
     useEffect(() => {
-        if (previewFile && (previewFile.name.endsWith('.md') || previewFile.type === 'md' || previewFile.type === 'markdown')) {
-            getFileContent(previewFile.name).then(res => {
+        if (editingFile && editorMode === 'preview' && (editingFile.name.endsWith('.md') || editingFile.type === 'md' || editingFile.type === 'markdown')) {
+            const previewPath = editingFile.storagePath || editingFile.name;
+            getFileContent(previewPath).then(res => {
                 if (res.success) setPreviewContent(res.content || "");
             });
         } else {
             setPreviewContent(null);
         }
-    }, [previewFile]);
+    }, [editingFile, editorMode]);
 
     // Broadcast current folder to AI Chat and other components
     useEffect(() => {
@@ -232,47 +238,41 @@ export default function FileManager({ files }: FileManagerProps) {
     };
 
     const handleDragOverFile = (e: React.DragEvent, targetFile: WorkspaceFile) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (targetFile.type === 'folder') {
-            handleDragOver(e, targetFile);
-            setReorderTarget(null);
-            return;
-        }
-
         e.dataTransfer.dropEffect = 'move';
         setIsGlobalDragActive(false);
 
         // Calculate drop position logic
         const rect = e.currentTarget.getBoundingClientRect();
-        const isHorizontal = viewMode === 'grid'; // Grid drags left/right, List drags top/bottom usually
-
-        // However, grid flows left-to-right, top-to-bottom.
-        // Let's use a simple box logic:
-        // Center 50% = Group
-        // Left/Top 25% = Insert Before
-        // Right/Bottom 25% = Insert After
-
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         const w = rect.width;
         const h = rect.height;
 
-        const isLeft = x < w * 0.25;
-        const isRight = x > w * 0.75;
-        const isTop = y < h * 0.25;
-        const isBottom = y > h * 0.75;
+        // More generous margins for reordering (30% instead of 25%)
+        const marginX = w * 0.3;
+        const marginY = h * 0.3;
 
-        // Priority to Grouping if in center
+        const isLeft = x < marginX;
+        const isRight = x > w - marginX;
+        const isTop = y < marginY;
+        const isBottom = y > h - marginY;
+
+        // If in center zone -> Action (Move into or Group)
         if (!isLeft && !isRight && !isTop && !isBottom) {
-            if (dragOverFileId !== targetFile.id) setDragOverFileId(targetFile.id);
             setReorderTarget(null);
+            if (targetFile.type === 'folder') {
+                if (dragOverFolderId !== targetFile.id) setDragOverFolderId(targetFile.id);
+                setDragOverFileId(null);
+            } else {
+                if (dragOverFileId !== targetFile.id) setDragOverFileId(targetFile.id);
+                setDragOverFolderId(null);
+            }
             return;
         }
 
         // Reorder logic
-        setDragOverFileId(null); // Clear grouping highlight
+        setDragOverFileId(null);
+        setDragOverFolderId(null);
 
         // Determine Before/After based on dominant axis
         // In grid, X matters more usually, but Y matters too. 
@@ -295,12 +295,8 @@ export default function FileManager({ files }: FileManagerProps) {
         e.preventDefault();
         e.stopPropagation();
 
-        if (targetFile.type === 'folder') {
-            handleDrop(e, targetFile);
-            return;
-        }
-
         setDragOverFileId(null);
+        setDragOverFolderId(null); // Also clear folder highlight
         setIsGlobalDragActive(false);
 
         const sourceId = e.dataTransfer.getData('fileId');
@@ -352,6 +348,7 @@ export default function FileManager({ files }: FileManagerProps) {
             }));
 
             try {
+                console.log('🔄 Triggering reorder for files:', updates);
                 await reorderFiles(updates);
                 toast.success('Reordered', { id: loadingToast });
                 router.refresh();
@@ -362,9 +359,14 @@ export default function FileManager({ files }: FileManagerProps) {
             }
 
         } else {
-            // GROUPING ACTION (Existing Logic)
-            setGroupingData({ sourceIds, targetId: targetFile.id });
-            setNewFolderName(''); // Reset name
+            // NO REORDER TARGET -> Check if we drop on folder (Move) or file (Group)
+            if (targetFile.type === 'folder') {
+                handleDrop(e, targetFile);
+            } else {
+                // GROUPING ACTION (Existing Logic)
+                setGroupingData({ sourceIds, targetId: targetFile.id });
+                setNewFolderName(''); // Reset name
+            }
         }
     };
 
@@ -425,7 +427,11 @@ export default function FileManager({ files }: FileManagerProps) {
         onEscape: () => {
             setActiveMenuId(null);
             setContextMenu(null);
-            setPreviewFile(null);
+            setEditingFile(null);
+            setEditorMode('edit');
+            setEditorContent('');
+            setEditorContentFileId(null);
+            setPreviewContent(null);
             setRenamingFile(null);
             setIsCreateModalOpen(false);
             setMovingFiles(null);
@@ -436,6 +442,14 @@ export default function FileManager({ files }: FileManagerProps) {
         },
         onSearch: () => {
             searchInputRef.current?.focus();
+        },
+        onEdit: () => {
+            const targetId = lastSelectedId || Array.from(selectedFileIds)[0];
+            if (!targetId) return;
+            const file = files.find(f => f.id === targetId);
+            if (file && isEditableFile(file)) {
+                handleEditFile(file);
+            }
         },
         enabled: !deletingId && !isCreateModalOpen
     });
@@ -630,6 +644,81 @@ export default function FileManager({ files }: FileManagerProps) {
         }
     };
 
+    const loadFileContent = async (file: WorkspaceFile, showToast = true) => {
+        const loadingToast = showToast ? toast.loading(`Loading ${file.name}...`) : undefined;
+        try {
+            const { getFileContent } = await import('@/app/actions');
+
+            const res = await getFileContent(file.storagePath || file.name);
+            if (res.success && typeof res.content === 'string') {
+                setEditorContent(res.content);
+                setEditorContentFileId(file.id);
+                if (loadingToast) toast.dismiss(loadingToast);
+                return res.content;
+            }
+
+            if (loadingToast) toast.error('Failed to load file content', { id: loadingToast });
+        } catch (e) {
+            if (loadingToast) toast.error('Error opening file', { id: loadingToast });
+        }
+
+        return null;
+    };
+
+    const handleEditFile = async (file: WorkspaceFile) => {
+        setEditorMode('edit');
+        const content = await loadFileContent(file, true);
+        if (content !== null) {
+            setEditingFile(file);
+            setActiveMenuId(null);
+        }
+    };
+
+    const handlePreviewFile = (file: WorkspaceFile) => {
+        setEditingFile(file);
+        setEditorMode('preview');
+        setActiveMenuId(null);
+        setEditorContent('');
+        setEditorContentFileId(null);
+        window.dispatchEvent(new CustomEvent('preview-opened', { detail: file }));
+    };
+
+    const handleEditorModeChange = async (mode: 'edit' | 'preview') => {
+        setEditorMode(mode);
+        if (mode === 'edit' && editingFile && isEditableFile(editingFile) && editorContentFileId !== editingFile.id) {
+            await loadFileContent(editingFile, false);
+        }
+    };
+
+    const editableExtensions = ['html', 'css', 'js', 'jsx', 'ts', 'tsx', 'json', 'xml', 'txt', 'md', 'yml', 'yaml'];
+    const isEditableFile = (file: WorkspaceFile) => {
+        if (file.type === 'folder') return false;
+        return editableExtensions.some(ext => file.name.endsWith(`.${ext}`) || file.type === ext);
+    };
+
+    const handleSaveFile = async (content: string) => {
+        if (!editingFile) return;
+        setIsSavingStart(true);
+        try {
+            // Dynamic import for client side safety if needed, though usually standard import is fine
+            const { saveFileContent } = await import('@/app/actions');
+
+            const result = await saveFileContent(editingFile.storagePath || editingFile.name, content);
+            if (result.success) {
+                toast.success('File saved successfully');
+                setEditorContent(content); // Update local state
+                setEditorContentFileId(editingFile.id);
+                router.refresh();
+            } else {
+                toast.error('Failed to save file');
+            }
+        } catch (e) {
+            toast.error('Error saving file');
+        } finally {
+            setIsSavingStart(false);
+        }
+    };
+
     const filteredFiles = (searchQuery
         ? files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
         : files.filter(f => f.parentId === currentFolderId)
@@ -782,12 +871,36 @@ export default function FileManager({ files }: FileManagerProps) {
                 isOpen={!!deletingId}
                 onClose={() => setDeletingId(null)}
                 onConfirm={handleConfirmDelete}
-                title="Delete File"
-                message="Are you sure you want to delete this file? This action cannot be undone."
-                confirmText="Delete File"
+                title={Array.isArray(deletingId) && deletingId.length > 1 ? `Delete ${deletingId.length} Items` : "Delete Item"}
+                message={Array.isArray(deletingId) && deletingId.length > 1
+                    ? `Are you sure you want to delete these ${deletingId.length} items? This action cannot be undone.`
+                    : "Are you sure you want to delete this item? This action cannot be undone."
+                }
+                confirmText={Array.isArray(deletingId) && deletingId.length > 1 ? `Delete ${deletingId.length} Items` : "Delete"}
                 isDanger
                 isLoading={isDeleting}
             />
+
+            {editingFile && (
+                <CodeEditorModal
+                    isOpen={!!editingFile}
+                    onClose={() => {
+                        setEditingFile(null);
+                        setEditorMode('edit');
+                        setEditorContent('');
+                        setEditorContentFileId(null);
+                        setPreviewContent(null);
+                    }}
+                    fileName={editingFile.name}
+                    initialContent={editorContent}
+                    onSave={handleSaveFile}
+                    isSaving={isSavingStart}
+                    mode={editorMode}
+                    onModeChange={handleEditorModeChange}
+                    previewFile={editingFile}
+                    previewContent={previewContent}
+                />
+            )}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     {currentFolderId && (
@@ -889,23 +1002,78 @@ export default function FileManager({ files }: FileManagerProps) {
                 />
             </div>
 
-            {/* Path Breadcrumbs */}
-            <div className="flex items-center gap-2 text-sm text-white/50 mb-2 overflow-x-auto pb-2">
-                <button
-                    onClick={() => setCurrentFolderId(null)}
-                    className={cn(
-                        "hover:text-white transition-colors flex items-center gap-1",
-                        !currentFolderId && "text-white font-medium"
+            {/* Selection Info & Path Breadcrumbs */}
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-sm text-white/50 overflow-x-auto pb-2">
+                    <div className="flex items-center gap-2 mr-4">
+                        <input
+                            type="checkbox"
+                            checked={filteredFiles.length > 0 && selectedFileIds.size === filteredFiles.length}
+                            onChange={(e) => {
+                                if (e.target.checked) {
+                                    setSelectedFileIds(new Set(filteredFiles.map(f => f.id)));
+                                } else {
+                                    setSelectedFileIds(new Set());
+                                }
+                            }}
+                            className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-500/50"
+                        />
+                    </div>
+                    <button
+                        onClick={() => setCurrentFolderId(null)}
+                        className={cn(
+                            "hover:text-white transition-colors flex items-center gap-1",
+                            !currentFolderId && "text-white font-medium"
+                        )}
+                    >
+                        <Folder size={14} />
+                        <span>Home</span>
+                    </button>
+                    {currentFolderId && (
+                        <>
+                            <ChevronLeft size={12} className="rotate-180" />
+                            <span className="text-white font-medium">{currentFolder?.name}</span>
+                        </>
                     )}
-                >
-                    <Folder size={14} />
-                    <span>Home</span>
-                </button>
-                {currentFolderId && (
-                    <>
-                        <ChevronLeft size={12} className="rotate-180" />
-                        <span className="text-white font-medium">{currentFolder?.name}</span>
-                    </>
+                </div>
+
+                {selectedFileIds.size > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center gap-4 px-4 py-2 bg-blue-600/20 border border-blue-500/30 rounded-xl"
+                    >
+                        <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">
+                            {selectedFileIds.size} Selected
+                        </span>
+                        <div className="h-4 w-px bg-blue-500/30" />
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => {
+                                    const selectedFiles = files.filter(f => selectedFileIds.has(f.id));
+                                    setMovingFiles(selectedFiles);
+                                }}
+                                className="p-1.5 hover:bg-white/10 rounded-md text-blue-400 transition-colors"
+                                title="Move Selection"
+                            >
+                                <Move size={16} />
+                            </button>
+                            <button
+                                onClick={() => handleDeleteRequest(Array.from(selectedFileIds))}
+                                className="p-1.5 hover:bg-red-500/20 rounded-md text-red-400 transition-colors"
+                                title="Delete Selection"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                            <button
+                                onClick={() => setSelectedFileIds(new Set())}
+                                className="p-1.5 hover:bg-white/10 rounded-md text-white/50 hover:text-white transition-colors"
+                                title="Clear Selection"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </motion.div>
                 )}
             </div>
 
@@ -934,6 +1102,7 @@ export default function FileManager({ files }: FileManagerProps) {
                             onDragStart={(e: any) => handleDragStart(e, file)}
                             onDragOver={(e) => handleDragOverFile(e, file)}
                             onDragLeave={(e) => {
+                                setReorderTarget(null);
                                 if (file.type === 'folder') {
                                     handleDragLeave(e);
                                 } else {
@@ -947,7 +1116,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                 if (file.type === 'folder') {
                                     setCurrentFolderId(file.id);
                                 } else {
-                                    setPreviewFile(file);
+                                    handlePreviewFile(file);
                                 }
                             }}
                             className={cn(
@@ -965,13 +1134,13 @@ export default function FileManager({ files }: FileManagerProps) {
                             {/* Reorder Indicators */}
                             {reorderTarget?.id === file.id && reorderTarget.position === 'before' && (
                                 <div className={cn(
-                                    "absolute bg-blue-500 z-50 rounded-full",
+                                    "absolute bg-blue-500 z-50 rounded-full pointer-events-none",
                                     viewMode === 'grid' ? "left-0 top-0 bottom-0 w-1 shadow-[0_0_10px_#3b82f6]" : "top-0 left-0 right-0 h-1 shadow-[0_0_10px_#3b82f6]"
                                 )} />
                             )}
                             {reorderTarget?.id === file.id && reorderTarget.position === 'after' && (
                                 <div className={cn(
-                                    "absolute bg-blue-500 z-50 rounded-full",
+                                    "absolute bg-blue-500 z-50 rounded-full pointer-events-none",
                                     viewMode === 'grid' ? "right-0 top-0 bottom-0 w-1 shadow-[0_0_10px_#3b82f6]" : "bottom-0 left-0 right-0 h-1 shadow-[0_0_10px_#3b82f6]"
                                 )} />
                             )}
@@ -981,14 +1150,45 @@ export default function FileManager({ files }: FileManagerProps) {
                                 <>
                                     <div className="flex flex-col gap-3 mb-2">
                                         <div className="flex justify-between items-start">
-                                            {file.type === 'folder' ? (
-                                                <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 text-blue-400">
-                                                    <Folder size={24} className="fill-blue-500/20" />
-                                                </div>
-                                            ) : (
-                                                <FilePreview file={file} />
-                                            )}
-                                            <div className={cn("relative z-30", file.type !== 'folder' ? "absolute top-4 right-4" : "")} onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedFileIds.has(file.id)}
+                                                    onChange={(e) => {
+                                                        const newSelected = new Set(selectedFileIds);
+                                                        if (e.target.checked) {
+                                                            newSelected.add(file.id);
+                                                            setLastSelectedId(file.id);
+                                                        } else {
+                                                            newSelected.delete(file.id);
+                                                        }
+                                                        setSelectedFileIds(newSelected);
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-500/50 cursor-pointer"
+                                                />
+                                                {file.type === 'folder' ? (
+                                                    <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 text-blue-400">
+                                                        <Folder size={24} className="fill-blue-500/20" />
+                                                    </div>
+                                                ) : (
+                                                    <FilePreview file={file} />
+                                                )}
+                                            </div>
+                                            <div className={cn("relative z-30 flex items-center gap-1", file.type !== 'folder' ? "absolute top-4 right-4" : "")} onClick={(e) => e.stopPropagation()}>
+                                                {isEditableFile(file) && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            handleEditFile(file);
+                                                        }}
+                                                        title="Edit code"
+                                                        className="p-1.5 rounded-md bg-black/20 hover:bg-black/60 backdrop-blur-sm text-white/50 hover:text-white transition-colors border border-white/5"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={(e) => {
                                                         e.preventDefault();
@@ -996,6 +1196,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                                         const rect = e.currentTarget.getBoundingClientRect();
                                                         setContextMenu({ x: rect.left, y: rect.bottom + 5, file });
                                                     }}
+                                                    title="More actions"
                                                     className="p-1.5 rounded-md bg-black/20 hover:bg-black/60 backdrop-blur-sm text-white/50 hover:text-white transition-colors border border-white/5"
                                                 >
                                                     <MoreVertical size={16} />
@@ -1046,7 +1247,23 @@ export default function FileManager({ files }: FileManagerProps) {
                                 // LIST VIEW ROW
                                 <>
                                     {/* Icon Column */}
-                                    <div className="flex-shrink-0">
+                                    <div className="flex-shrink-0 flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedFileIds.has(file.id)}
+                                            onChange={(e) => {
+                                                const newSelected = new Set(selectedFileIds);
+                                                if (e.target.checked) {
+                                                    newSelected.add(file.id);
+                                                    setLastSelectedId(file.id);
+                                                } else {
+                                                    newSelected.delete(file.id);
+                                                }
+                                                setSelectedFileIds(newSelected);
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-500/50 cursor-pointer"
+                                        />
                                         {file.type === 'folder' ? (
                                             <div className="p-2 rounded-md bg-blue-500/10 text-blue-400">
                                                 <Folder size={20} className="fill-blue-500/20" />
@@ -1054,7 +1271,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                         ) : (
                                             ['image', 'png', 'jpg', 'jpeg'].includes(file.type) ? (
                                                 <div className="w-9 h-9 rounded-md overflow-hidden bg-white/5">
-                                                    <img src={`/uploads/${file.name}`} className="w-full h-full object-cover" alt="" />
+                                                    <img src={`/uploads/${file.storagePath || file.name}`} className="w-full h-full object-cover" alt="" />
                                                 </div>
                                             ) : (
                                                 <div className="p-2 rounded-md bg-white/5 text-white/40">
@@ -1086,7 +1303,20 @@ export default function FileManager({ files }: FileManagerProps) {
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="flex-shrink-0 ml-2" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex-shrink-0 ml-2 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                        {isEditableFile(file) && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    handleEditFile(file);
+                                                }}
+                                                title="Edit code"
+                                                className="p-1.5 rounded-md hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                                            >
+                                                <Edit2 size={16} />
+                                            </button>
+                                        )}
                                         <button
                                             onClick={(e) => {
                                                 e.preventDefault();
@@ -1094,6 +1324,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                                 const rect = e.currentTarget.getBoundingClientRect();
                                                 setContextMenu({ x: rect.left, y: rect.bottom + 5, file });
                                             }}
+                                            title="More actions"
                                             className="p-1.5 rounded-md hover:bg-white/10 text-white/40 hover:text-white transition-colors"
                                         >
                                             <MoreVertical size={16} />
@@ -1346,77 +1577,6 @@ export default function FileManager({ files }: FileManagerProps) {
                 )}
             </AnimatePresence>
 
-            {/* Preview Modal */}
-            <AnimatePresence>
-                {previewFile && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/90 backdrop-blur-md"
-                            onClick={() => setPreviewFile(null)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="relative w-full max-w-4xl bg-zinc-900 rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
-                        >
-                            <div className="flex items-center justify-between p-4 border-b border-white/5">
-                                <h2 className="text-white font-medium">{previewFile.name}</h2>
-                                <button
-                                    onClick={() => setPreviewFile(null)}
-                                    className="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
-                            <div className="p-8 flex items-center justify-center min-h-[400px]">
-                                {previewFile.type === 'image' || ['png', 'jpg', 'jpeg', 'webp'].includes(previewFile.type) ? (
-                                    <img
-                                        src={`/uploads/${previewFile.name}`}
-                                        alt={previewFile.name}
-                                        className="max-w-full max-h-[70vh] object-contain rounded-lg"
-                                    />
-                                ) : previewFile.type === 'pdf' ? (
-                                    <iframe
-                                        src={`/uploads/${previewFile.name}`}
-                                        className="w-full h-[70vh] rounded-lg border-0 bg-white"
-                                    />
-                                ) : (previewFile.name.endsWith('.html') || previewFile.type === 'html') ? (
-                                    <iframe
-                                        src={`/uploads/${previewFile.name}`}
-                                        className="w-full h-[70vh] rounded-lg border-0 bg-white"
-                                        title={previewFile.name}
-                                    />
-                                ) : (previewFile.name.endsWith('.md') || previewFile.type === 'md' || previewFile.type === 'markdown') ? (
-                                    <div className="w-full max-h-[70vh] overflow-y-auto p-8 bg-black/40 rounded-xl border border-white/5 custom-scrollbar">
-                                        <div className="markdown-content max-w-none">
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                {previewContent || 'Loading content...'}
-                                            </ReactMarkdown>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="text-center space-y-4">
-                                        <FileText size={64} className="mx-auto text-white/20" />
-                                        <p className="text-white/50">Preview not available for this file type</p>
-                                        <a
-                                            href={`/uploads/${previewFile.name}`}
-                                            download
-                                            className="inline-block px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
-                                        >
-                                            Download File
-                                        </a>
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
             {
                 contextMenu && (
                     <ContextMenu
@@ -1432,10 +1592,15 @@ export default function FileManager({ files }: FileManagerProps) {
                                     if (contextMenu.file.type === 'folder') {
                                         setCurrentFolderId(contextMenu.file.id);
                                     } else {
-                                        setPreviewFile(contextMenu.file);
-                                        window.dispatchEvent(new CustomEvent('preview-opened', { detail: contextMenu.file }));
+                                        handlePreviewFile(contextMenu.file);
                                     }
                                 }
+                            },
+                            {
+                                label: 'Edit Code',
+                                icon: <Edit size={16} className="text-blue-400" />,
+                                onClick: () => handleEditFile(contextMenu.file),
+                                className: !isEditableFile(contextMenu.file) ? 'hidden' : ''
                             },
                             {
                                 label: 'Open in New Tab',
@@ -1724,6 +1889,6 @@ export default function FileManager({ files }: FileManagerProps) {
                     transition: all 0.3s ease;
                 }
             `}</style>
-        </div >
+        </div>
     );
 }

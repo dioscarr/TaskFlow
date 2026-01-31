@@ -62,13 +62,30 @@ export async function addChatMessage(
     content: string,
     fileIds?: string[],
     toolUsed?: string,
-    thinking?: string
+    thinking?: string,
+    toolResult?: any,
+    toolArgs?: any
 ) {
+    // Append tool result to content for persistence/context since we can't reliably update prisma client
+    let finalContent = content;
+    if (toolResult && toolResult !== '{}') {
+        const resultStr = typeof toolResult === 'string'
+            ? toolResult
+            : (toolResult.output ? (typeof toolResult.output === 'string' ? toolResult.output : JSON.stringify(toolResult.output)) : JSON.stringify(toolResult));
+
+        if (resultStr.length > 0) {
+            // Check if content already contains it to avoid duplication if called multiple times
+            if (!finalContent.includes(resultStr.substring(0, 50))) {
+                finalContent += `\n\n[System: Tool '${toolUsed}' Result: ${resultStr}]`;
+            }
+        }
+    }
+
     const message = await (prisma.chatMessage as any).create({
         data: {
             sessionId,
             role,
-            content,
+            content: finalContent,
             fileIds: fileIds || [],
             toolUsed,
             thinking

@@ -1,0 +1,8 @@
+{
+    "name": "Financial Planning Tool",
+    "description": "A SaaS tool for intelligent financial planning with scenario analysis.",
+    "collections": ["users", "financial_data", "goals", "scenarios"],
+    "events": ["data_input", "goal_set", "scenario_created"],
+    "inputs": [],
+    "outputs": []
+}

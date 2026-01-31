@@ -1,0 +1,447 @@
+
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Save, Loader2, Code2, Maximize2, Minimize2, Copy, FileText, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+type PreviewFile = {
+    name: string;
+    type: string;
+    storagePath?: string | null;
+};
+
+interface CodeEditorModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    fileName: string;
+    initialContent: string;
+    onSave: (content: string) => Promise<void>;
+    isSaving?: boolean;
+    mode?: 'edit' | 'preview';
+    onModeChange?: (mode: 'edit' | 'preview') => void;
+    previewFile?: PreviewFile | null;
+    previewContent?: string | null;
+}
+
+export default function CodeEditorModal({
+    isOpen,
+    onClose,
+    fileName,
+    initialContent,
+    onSave,
+    isSaving = false,
+    mode = 'edit',
+    onModeChange,
+    previewFile,
+    previewContent
+}: CodeEditorModalProps) {
+    const [content, setContent] = useState(initialContent);
+    const [isMaximized, setIsMaximized] = useState(false);
+    const [activeMode, setActiveMode] = useState<'edit' | 'preview'>(mode);
+    const [isMagicOpen, setIsMagicOpen] = useState(false);
+    const [magicGoal, setMagicGoal] = useState('');
+    const [magicResult, setMagicResult] = useState<string | null>(null);
+    const [isMagicGenerating, setIsMagicGenerating] = useState(false);
+    const [isMagicApplying, setIsMagicApplying] = useState(false);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const lineNumbersRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setContent(initialContent);
+    }, [initialContent, isOpen]);
+
+    useEffect(() => {
+        setActiveMode(mode);
+    }, [mode, isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setIsMagicOpen(false);
+            setMagicGoal('');
+            setMagicResult(null);
+            setIsMagicGenerating(false);
+            setIsMagicApplying(false);
+        }
+    }, [isOpen]);
+
+    // Sync scroll
+    const handleScroll = () => {
+        if (textareaRef.current && lineNumbersRef.current) {
+            lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;
+        }
+    };
+
+    const handleSave = async () => {
+        await onSave(content);
+    };
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(content);
+        toast.success('Copied to clipboard');
+    };
+
+    const handleOpenMagic = () => {
+        setIsMagicOpen(true);
+        setMagicResult(null);
+    };
+
+    const handleGenerateMagic = async () => {
+        if (!magicGoal.trim()) {
+            toast.error('Add a goal for the AI update');
+            return;
+        }
+        setIsMagicGenerating(true);
+        try {
+            const { generateMagicContent } = await import('@/app/actions');
+            const res = await generateMagicContent({
+                fileName,
+                content,
+                goal: magicGoal.trim()
+            });
+            if (res.success && typeof res.text === 'string') {
+                setMagicResult(res.text);
+            } else {
+                toast.error('Failed to generate content');
+            }
+        } catch (error) {
+            toast.error('Magic generation failed');
+        } finally {
+            setIsMagicGenerating(false);
+        }
+    };
+
+    const handleApplyMagic = async () => {
+        if (!magicResult) return;
+        setIsMagicApplying(true);
+        try {
+            setContent(magicResult);
+            setActiveMode('edit');
+            onModeChange?.('edit');
+            await onSave(magicResult);
+            toast.success('Magic content applied');
+            setIsMagicOpen(false);
+            setMagicResult(null);
+            setMagicGoal('');
+        } catch (error) {
+            toast.error('Failed to apply content');
+        } finally {
+            setIsMagicApplying(false);
+        }
+    };
+
+    const lines = content.split('\n').length;
+    const language = fileName.split('.').pop() || 'text';
+    const previewPath = previewFile ? (previewFile.storagePath || previewFile.name) : '';
+    const isMarkdown = previewFile && (previewFile.name.endsWith('.md') || previewFile.type === 'md' || previewFile.type === 'markdown');
+    const isImage = previewFile && (previewFile.type === 'image' || ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(previewFile.type));
+    const isHtml = previewFile && (previewFile.name.endsWith('.html') || previewFile.type === 'html');
+
+    if (!isOpen) return null;
+
+    return (
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+                onClick={onClose}
+            >
+                <motion.div
+                    initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                    animate={{
+                        scale: 1,
+                        opacity: 1,
+                        y: 0,
+                        width: isMaximized ? '98vw' : '100%',
+                        height: isMaximized ? '95vh' : '80vh',
+                        maxWidth: isMaximized ? 'none' : '64rem'
+                    }}
+                    exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                    className="bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl overflow-hidden flex flex-col relative"
+                    onClick={e => e.stopPropagation()}
+                >
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d2d] border-b border-white/5 select-none">
+                        <div className="flex items-center gap-4">
+                            <div className="p-2 bg-blue-500/10 rounded-lg">
+                                <Code2 className="text-blue-400" size={18} />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-medium text-white/90">{fileName}</h3>
+                                <p className="text-[10px] text-white/40 font-mono uppercase tracking-wider">{language}</p>
+                            </div>
+                            <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-white/5">
+                                <button
+                                    onClick={() => {
+                                        setActiveMode('edit');
+                                        onModeChange?.('edit');
+                                    }}
+                                    className={cn(
+                                        "px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-colors",
+                                        activeMode === 'edit' ? "bg-blue-500/20 text-blue-200" : "text-white/50 hover:text-white"
+                                    )}
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setActiveMode('preview');
+                                        onModeChange?.('preview');
+                                    }}
+                                    disabled={!previewFile}
+                                    className={cn(
+                                        "px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-colors",
+                                        activeMode === 'preview' ? "bg-emerald-500/20 text-emerald-200" : "text-white/50 hover:text-white",
+                                        !previewFile && "opacity-50 cursor-not-allowed"
+                                    )}
+                                >
+                                    Preview
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            {activeMode === 'edit' && (
+                                <button
+                                    onClick={handleCopy}
+                                    className="p-2 hover:bg-white/10 text-white/60 hover:text-white rounded-lg transition-colors"
+                                    title="Copy Content"
+                                >
+                                    <Copy size={16} />
+                                </button>
+                            )}
+                            <button
+                                onClick={handleOpenMagic}
+                                className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors"
+                                title="AI Magic Content"
+                            >
+                                <Sparkles size={14} className="text-emerald-300" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Magic</span>
+                            </button>
+                            <button
+                                onClick={() => setIsMaximized(!isMaximized)}
+                                className="p-2 hover:bg-white/10 text-white/60 hover:text-white rounded-lg transition-colors"
+                                title={isMaximized ? "Restore" : "Maximize"}
+                            >
+                                {isMaximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                            </button>
+                            {activeMode === 'edit' && (
+                                <button
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                    className={cn(
+                                        "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all",
+                                        isSaving
+                                            ? "bg-blue-600/50 cursor-wait text-white/70"
+                                            : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 active:scale-95"
+                                    )}
+                                >
+                                    {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                    {isSaving ? 'Saving...' : 'Save'}
+                                </button>
+                            )}
+                            <div className="w-px h-6 bg-white/10 mx-1" />
+                            <button
+                                onClick={onClose}
+                                className="p-2 hover:bg-red-500/20 text-white/40 hover:text-red-400 rounded-lg transition-colors"
+                                title="Close"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {activeMode === 'edit' ? (
+                        <>
+                            {/* Editor Area */}
+                            <div className="flex-1 relative flex overflow-hidden bg-[#1e1e1e]">
+                                {/* Line Numbers */}
+                                <div
+                                    ref={lineNumbersRef}
+                                    className="w-12 h-full bg-[#252526] border-r border-[#3e3e42] flex flex-col items-end py-4 pr-3 select-none text-[#858585] font-mono text-sm leading-6 overflow-hidden"
+                                >
+                                    {Array.from({ length: Math.max(lines, 1) }).map((_, i) => (
+                                        <span key={i} className="opacity-50">{i + 1}</span>
+                                    ))}
+                                </div>
+
+                                {/* Text Area */}
+                                <textarea
+                                    ref={textareaRef}
+                                    value={content}
+                                    onChange={(e) => setContent(e.target.value)}
+                                    onScroll={handleScroll}
+                                    spellCheck={false}
+                                    aria-label="Code editor"
+                                    title="Code editor"
+                                    className="flex-1 h-full bg-transparent text-[#d4d4d4] p-4 font-mono text-sm leading-6 resize-none focus:outline-none custom-scrollbar whitespace-pre tab-size-4"
+                                />
+                            </div>
+
+                            {/* Footer */}
+                            <div className="px-4 py-2 bg-[#007acc] text-white text-[10px] font-mono flex items-center justify-between pointer-events-none">
+                                <div className="flex gap-4">
+                                    <span>Ln {lines}, Col {content.length}</span>
+                                    <span>UTF-8</span>
+                                </div>
+                                <span className="uppercase">{language}</span>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 p-6 bg-[#1e1e1e] overflow-hidden">
+                            <div className="w-full h-full rounded-xl border border-white/5 bg-black/20 overflow-hidden flex items-center justify-center">
+                                {isImage ? (
+                                    <img
+                                        src={`/uploads/${previewPath}`}
+                                        alt={previewFile?.name || fileName}
+                                        className="max-w-full max-h-[70vh] object-contain"
+                                    />
+                                ) : previewFile?.type === 'pdf' ? (
+                                    <iframe
+                                        src={`/uploads/${previewPath}`}
+                                        className="w-full h-full border-0 bg-white"
+                                        title={previewFile?.name || fileName}
+                                    />
+                                ) : isHtml ? (
+                                    <iframe
+                                        src={`/uploads/${previewPath}`}
+                                        className="w-full h-full border-0 bg-white"
+                                        title={previewFile?.name || fileName}
+                                    />
+                                ) : isMarkdown ? (
+                                    <div className="w-full h-full overflow-y-auto p-8 custom-scrollbar">
+                                        <div className="markdown-content max-w-none">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                {previewContent || 'Loading content...'}
+                                            </ReactMarkdown>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center space-y-4">
+                                        <FileText size={64} className="mx-auto text-white/20" />
+                                        <p className="text-white/50">Preview not available for this file type</p>
+                                        {previewPath && (
+                                            <a
+                                                href={`/uploads/${previewPath}`}
+                                                download
+                                                className="inline-block px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                                            >
+                                                Download File
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    <AnimatePresence>
+                        {isMagicOpen && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 z-10 bg-black/70 backdrop-blur-sm flex items-center justify-center p-6"
+                                onClick={() => setIsMagicOpen(false)}
+                            >
+                                <motion.div
+                                    initial={{ scale: 0.95, opacity: 0, y: 10 }}
+                                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                                    exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                                    className="w-full max-w-2xl bg-[#1e1e1e] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className="flex items-center justify-between px-5 py-4 bg-[#2d2d2d] border-b border-white/5">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-emerald-500/10 rounded-lg">
+                                                <Sparkles size={16} className="text-emerald-300" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-sm font-semibold text-white/90">AI Magic Content</h3>
+                                                <p className="text-[11px] text-white/40">Update {fileName} with a clear goal</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setIsMagicOpen(false)}
+                                            className="p-2 hover:bg-red-500/20 text-white/40 hover:text-red-400 rounded-lg transition-colors"
+                                            title="Close Magic Content"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+
+                                    <div className="p-5 space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold uppercase tracking-wider text-white/50">Goal</label>
+                                            <textarea
+                                                value={magicGoal}
+                                                onChange={(e) => setMagicGoal(e.target.value)}
+                                                placeholder="Describe what you want changed (e.g., improve layout, add CTA, refine copy)"
+                                                className="w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm text-white/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 custom-scrollbar"
+                                                aria-label="Magic content goal"
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center justify-between">
+                                            <button
+                                                onClick={handleGenerateMagic}
+                                                disabled={isMagicGenerating}
+                                                className={cn(
+                                                    "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all",
+                                                    isMagicGenerating
+                                                        ? "bg-emerald-600/40 text-white/60 cursor-wait"
+                                                        : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                                                )}
+                                            >
+                                                {isMagicGenerating ? 'Generating...' : 'Generate'}
+                                            </button>
+                                            <span className="text-[11px] text-white/40">Uses current editor content</span>
+                                        </div>
+
+                                        {magicResult && (
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-bold uppercase tracking-wider text-white/50">Preview</label>
+                                                <div className="max-h-60 overflow-y-auto rounded-xl border border-white/10 bg-black/40 p-3 text-xs text-white/70 custom-scrollbar whitespace-pre-wrap">
+                                                    {magicResult}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="px-5 py-4 bg-[#2d2d2d] border-t border-white/5 flex items-center justify-between">
+                                        <button
+                                            onClick={() => setIsMagicOpen(false)}
+                                            className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-white/50 hover:text-white transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleApplyMagic}
+                                            disabled={!magicResult || isMagicApplying}
+                                            className={cn(
+                                                "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all",
+                                                !magicResult
+                                                    ? "bg-white/5 text-white/30 cursor-not-allowed"
+                                                    : isMagicApplying
+                                                        ? "bg-emerald-600/40 text-white/70 cursor-wait"
+                                                        : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                                            )}
+                                        >
+                                            {isMagicApplying ? 'Applying...' : 'Apply to File'}
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </motion.div>
+            </motion.div>
+        </AnimatePresence>
+    );
+}

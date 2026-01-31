@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Credit Risk Assessment</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.5);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* Background Orbs */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            animation: float 10s infinite ease-in-out;
+        }
+
+        .orb-1 {
+            width: 300px;
+            height: 300px;
+            background: #4f46e5;
+            top: 10%;
+            left: 20%;
+        }
+
+        .orb-2 {
+            width: 200px;
+            height: 200px;
+            background: #ec4899;
+            bottom: 20%;
+            right: 20%;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(30px, -30px);
+            }
+        }
+
+        /* Glass Container */
+        .container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+            width: 90%;
+            max-width: 1000px;
+            box-shadow: var(--glass-shadow);
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 40px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            border-right: 1px solid var(--glass-border);
+            padding-right: 20px;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(to right, #fff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            transform: translateX(5px);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 10px;
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin: 0 0 10px 0;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .score-display {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-align: center;
+            margin: 20px 0;
+            text-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .risk-level {
+            text-align: center;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            display: inline-block;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: #fff;
+            font-family: inherit;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+                RiskAI
+            </div>
+            <nav>
+                <div class="nav-item active">Dashboard</div>
+                <div class="nav-item">Assessments</div>
+                <div class="nav-item">Clients</div>
+                <div class="nav-item">Settings</div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h1>Credit Risk Assessment</h1>
+                <div class="subtitle">AI-Powered Financial Analysis Platform</div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Assessment Form -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>New Assessment</h3>
+                    </div>
+                    <form onsubmit="return false;">
+                        <div class="input-group">
+                            <label>Annual Income</label>
+                            <input type="number" placeholder="$0.00">
+                        </div>
+                        <div class="input-group">
+                            <label>Credit Score</label>
+                            <input type="number" placeholder="300-850">
+                        </div>
+                        <div class="input-group">
+                            <label>Debt-to-Income Ratio</label>
+                            <input type="number" placeholder="%">
+                        </div>
+                        <button class="btn-primary">Analyze Risk</button>
+                    </form>
+                </div>
+
+                <!-- Results Panel -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Risk Analysis</h3>
+                        <span>ID: #8824</span>
+                    </div>
+                    <div class="score-display">85/100</div>
+                    <div class="risk-level"
+                        style="color: #4ade80; background: rgba(74, 222, 128, 0.1); border-color: rgba(74, 222, 128, 0.3);">
+                        Low Risk Profile
+                    </div>
+                    <div style="margin-top: 20px; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
+                        • Strong payment history detected<br>
+                        • Low credit utilization (<10%)<br>
+                            • Stable employment duration
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Launch: AuroraOS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #030711;
+      --card-bg: rgba(255, 255, 255, 0.03);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --primary: #818cf8;
+      --accent: #38bdf8;
+      --gradient-primary: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      --gradient-surface: radial-gradient(circle at top center, #1e293b 0%, #020617 100%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      background-image:
+        radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.15) 0%, transparent 50%);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .container {
+      width: min(1200px, 92%);
+      margin: 0 auto;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Glassmorphism Utilities */
+    .glass {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+    }
+
+    .glass-panel {
+      border-radius: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    header {
+      padding: 32px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.5rem;
+      letter-spacing: -0.02em;
+      background: linear-gradient(to right, #fff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 28px;
+      border-radius: 9999px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 0.95rem;
+      letter-spacing: 0.01em;
+    }
+
+    .btn-primary {
+      background: var(--text);
+      color: var(--bg);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(8px);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 120px 0 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 40px;
+    }
+
+    .badge {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(3.5rem, 6vw, 5.5rem);
+      line-height: 1.05;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      max-width: 900px;
+      background: linear-gradient(180deg, #ffffff 0%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1.25rem;
+      max-width: 680px;
+      font-weight: 300;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin: 80px 0 120px;
+    }
+
+    .feature-card {
+      padding: 40px 32px;
+      transition: transform 0.3s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      color: #a5b4fc;
+      font-size: 1.5rem;
+    }
+
+    .feature-card h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .feature-card p {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+
+    footer {
+      border-top: 1px solid var(--card-border);
+      color: var(--muted);
+      padding: 80px 0;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    /* Animation */
+    @keyframes float {
+      0% {
+        transform: translateY(0px);
+      }
+
+      50% {
+        transform: translateY(-10px);
+      }
+
+      100% {
+        transform: translateY(0px);
+      }
+    }
+
+    .hero-visual {
+      position: absolute;
+      top: 100px;
+      right: -100px;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+      filter: blur(60px);
+      z-index: -1;
+      animation: float 10s ease-in-out infinite;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="hero-visual"></div>
+  <div class="container">
+    <header>
+      <div class="logo">AuroraOS</div>
+      <a class="btn btn-ghost" href="#login">Sign In</a>
+    </header>
+
+    <section class="hero">
+      <div class="badge">✨ Private Beta is Live</div>
+      <h1>Orchestrate your AI Workforce.</h1>
+      <p class="subtitle">The first operating system for autonomous agent symphonies. Design, conduct, and scale your AI
+        workflows in a unified glassmorphic canvas.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#request">Start Conducting</a>
+        <a class="btn btn-ghost" href="#demo">Watch Demo</a>
+      </div>
+    </section>
+
+    <section id="features" class="features-grid">
+      <div class="glass glass-panel feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Agent Orchestration</h3>
+        <p>Define roles, set permissions, and watch your specialized agents collaborate to solve complex problems in
+          real-time.</p>
+      </div>
+      <div class="glass glass-panel feature-card">
+        <div class="feature-icon">🛡️</div>
+        <h3>Enterprise Guardrails</h3>
+        <p>Built-in "Human-in-the-Loop" checkpoints and strict schema validation to ensure your Symphony never hits a
+          false note.</p>
+      </div>
+      <div class="glass glass-panel feature-card">
+        <div class="feature-icon">🧠</div>
+        <h3>Shared Memory</h3>
+        <p>A persistent state layer allowing agents to share context, documents, and reasoning chains across sessions.
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      <p>&copy; 2026 AuroraOS Inc. Built for the Agentic Future.</p>
+    </footer>
+  </div>
+</body>
+
+</html>

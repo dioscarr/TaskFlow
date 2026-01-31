@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligent Financial Planning Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        header {
+            background: #5cb85c;
+            color: white;
+            padding-top: 30px;
+            min-height: 70px;
+            border-bottom: 3px solid #444;
+        }
+
+        header a {
+            color: #fff;
+            text-decoration: none;
+            text-transform: uppercase;
+            font-size: 16px;
+        }
+
+        header ul {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+            overflow: hidden;
+        }
+
+        header li {
+            float: left;
+            display: inline;
+            padding: 0 20px 0 20px;
+        }
+
+        header #branding {
+            float: left;
+        }
+
+        header #branding h1 {
+            margin: 0;
+        }
+
+        header nav {
+            float: right;
+            margin-top: 10px;
+        }
+
+        /* Showcase */
+        #showcase {
+            min-height: 400px;
+            background: url('./img/showcase.jpg') no-repeat 0 -400px;
+            text-align: center;
+            color: #fff;
+        }
+
+        #showcase h1 {
+            margin-top: 100px;
+            font-size: 55px;
+            margin-bottom: 10px;
+        }
+
+        #newsletter {
+            padding: 15px;
+            color: #fff;
+            background: #35424a;
+        }
+
+        #newsletter h1 {
+            float: left;
+        }
+
+        #newsletter form {
+            float: right;
+            margin-top: 15px;
+        }
+
+        #newsletter input[type="email"] {
+            padding: 4px;
+            height: 25px;
+            width: 250px;
+        }
+
+        /* Boxes */
+        #boxes {
+            margin-top: 20px;
+        }
+
+        #boxes .box {
+            float: left;
+            text-align: center;
+            width: 30%;
+            padding: 10px;
+        }
+
+        #boxes .box img {
+            width: 90px;
+        }
+
+        /* Sidebar */
+        aside#sidebar {
+            float: right;
+            width: 30%;
+            margin-top: 10px;
+        }
+
+        /* Main-col */
+        article#main-col {
+            float: left;
+            width: 65%;
+        }
+
+        /* Services */
+        ul#services li {
+            padding: 20px;
+            border: #cccccc solid 1px;
+            margin-bottom: 5px;
+            background: #e6e6e6;
+        }
+
+        /* Footer */
+        footer {
+            padding: 20px;
+            margin-top: 20px;
+            color: #fff;
+            background-color: #5cb85c;
+            text-align: center;
+        }
+
+        /* Media Queries */
+        @media(max-width: 768px) {
+            header #branding,
+            header nav,
+            header nav li,
+            #newsletter h1,
+            #newsletter form,
+            #boxes .box,
+            aside#sidebar,
+            article#main-col {
+                float: none;
+                text-align: center;
+                width: 100%;
+            }
+
+            header {
+                padding-bottom: 50px;
+            }
+
+            #showcase h1 {
+                margin-top: 40px;
+            }
+
+            #newsletter button {
+                display: block;
+                width: 100%;
+            }
+
+            #newsletter form input[type="email"] {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div id="branding">
+                <h1><span class="highlight">Financial</span> Planning Tool</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="about.html">About</a></li>
+                    <li><a href="services.html">Services</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <section id="showcase">
+        <div class="container">
+            <h1>Intelligent Financial Planning</h1>
+            <p>Plan your future with confidence using our scenario analysis tool.</p>
+        </div>
+    </section>
+
+    <section id="newsletter">
+        <div class="container">
+            <h1>Subscribe to Our Newsletter</h1>
+            <form>
+                <input type="email" placeholder="Enter Email...">
+                <button type="submit" class="button_1">Subscribe</button>
+            </form>
+        </div>
+    </section>
+
+    <section id="boxes">
+        <div class="container">
+            <div class="box">
+                <img src="./img/logo_html.png">
+                <h3>HTML5 Markup</h3>
+                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Pariatur, veritatis!</p>
+            </div>
+            <div class="box">
+                <img src="./img/logo_css.png">
+                <h3>CSS3 Styling</h3>
+                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Pariatur, veritatis!</p>
+            </div>
+            <div class="box">
+                <img src="./img/logo_brush.png">
+                <h3>Graphic Design</h3>
+                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Pariatur, veritatis!</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>Financial Planning Tool, Copyright &copy; 2024</p>
+    </footer>
+</body>
+</html>

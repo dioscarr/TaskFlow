@@ -14,7 +14,8 @@
     "agent:worker": "tsx src/cli/agent-worker.ts",
     "agent:start": "tsx src/cli/start-agent-worker.ts",
     "agent:monitor": "tsx src/cli/agent-monitor.ts",
-    "db:migrate": "prisma migrate dev"
+    "db:migrate": "prisma migrate dev",
+    "sync:files": "tsx src/scripts/sync_uploads.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -35,7 +36,9 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "zod": "^3.25.76",
+    "zod-validation-error": "^5.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

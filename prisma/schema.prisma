@@ -25,6 +25,7 @@ model User {
   activities    AgentActivity[]
   agentJobs    AgentJob[]
   protoData     PrototypeData[]
+  skills        Skill[]
  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -202,6 +203,7 @@ model ChatSession {
   title       String   @default("New Chat")
   messages    ChatMessage[]
   agentJobs   AgentJob[]
+  activities  AgentActivity[]
   
   userId      String?
   user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -216,6 +218,8 @@ model ChatMessage {
   content     String   @db.Text
   fileIds     String[] @default([]) // Array of attached file IDs
   toolUsed    String?  // Tool that was executed (if any)
+  toolResult  Json?    // Result of the tool execution
+  toolArgs    Json?    // Arguments passed to the tool
   thinking    String?  @db.Text // AI's internal reasoning/thoughts
   
   sessionId   String
@@ -231,6 +235,9 @@ model AgentActivity {
   message   String   @db.Text
   toolUsed  String?
   fileId    String?  // Optional link to a specific file
+  
+  sessionId String?
+  session   ChatSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -308,4 +315,35 @@ model PrototypeData {
   updatedAt DateTime @updatedAt
 
   @@index([appId, collection])
+}
+
+model Skill {
+  id              String   @id @default(cuid())
+  name            String
+  description     String   @db.Text
+  category        String   // 'receipt_processing', 'file_management', 'fiscal_operations', 'workspace_organization', 'custom'
+  icon            String?  @default("Zap")
+  enabled         Boolean  @default(true)
+  
+  // Skill definition
+  schema          Json     // Gemini function declaration schema
+  capabilities    String[] @default([]) // What this skill can do
+  
+  // Execution strategy
+  handlerType     String   @default("workflow") // 'workflow', 'builtin', 'custom'
+  handlerRef      String?  // Reference to built-in handler or custom code
+  workflow        Json?    // Array of WorkflowStep for workflow-based skills
+  
+  // Metadata
+  tags            String[] @default([])
+  isBuiltin       Boolean  @default(false) // Built-in skills vs user-defined
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, enabled])
+  @@index([category])
 }
