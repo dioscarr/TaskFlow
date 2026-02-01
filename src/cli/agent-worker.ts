@@ -35,6 +35,8 @@ type ChatResult = {
     message?: string;
 };
 
+type ActivityType = 'info' | 'success' | 'warning' | 'error';
+
 const workerId = process.env.AGENT_WORKER_ID || `worker-${process.pid}`;
 const pollMs = Number(process.env.AGENT_POLL_MS || 2000);
 
@@ -72,14 +74,21 @@ async function claimNextJob() {
     }
 }
 
-async function logActivity(userId: string, title: string, message: string, toolUsed?: string) {
+async function logActivity(
+    userId: string,
+    title: string,
+    message: string,
+    options?: { type?: ActivityType; toolUsed?: string; sessionId?: string; fileId?: string }
+) {
     try {
         await prisma.agentActivity.create({
             data: {
-                type: 'info',
+                type: options?.type || 'info',
                 title,
                 message,
-                toolUsed,
+                toolUsed: options?.toolUsed,
+                sessionId: options?.sessionId,
+                fileId: options?.fileId,
                 userId
             }
         });
@@ -87,6 +96,33 @@ async function logActivity(userId: string, title: string, message: string, toolU
         console.error('Failed to log agent activity:', error);
     }
 }
+
+const buildQueryPreview = (query?: string) => {
+    if (!query) return 'n/a';
+    const normalized = query.replace(/\s+/g, ' ').trim();
+    return normalized.length > 200 ? `${normalized.slice(0, 200)}…` : normalized;
+};
+
+const formatFailureDetails = (message?: string, error?: unknown, jobId?: string, iteration?: number) => {
+    const safeMessage = message || 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : error ? String(error) : '';
+    const errorStack = error instanceof Error ? error.stack : '';
+    const stackPreview = errorStack ? errorStack.split('\n').slice(0, 6).join('\n') : '';
+    const parts = [
+        jobId ? `Job: ${jobId}` : undefined,
+        iteration !== undefined ? `Iteration: ${iteration}` : undefined,
+        `Reason: ${safeMessage}`,
+        errorMessage && errorMessage !== safeMessage ? `Error: ${errorMessage}` : undefined,
+        stackPreview ? `Stack:\n${stackPreview}` : undefined
+    ].filter(Boolean);
+    return parts.join('\n');
+};
+
+const isFatalFailure = (message?: string) => {
+    if (!message) return false;
+    const lowered = message.toLowerCase();
+    return lowered.includes('api key missing') || lowered.includes('gemini api key missing');
+};
 
 async function finalizeJob(jobId: string, status: 'succeeded' | 'failed', result: unknown, error?: string) {
     await prisma.agentJob.update({
@@ -105,17 +141,33 @@ const communicator = new AgentCommunicator();
 
 async function runJob(job: AgentJobRecord) {
     if (job.type !== 'chat_task') {
-        await finalizeJob(job.id, 'failed', null, `Unknown job type: ${job.type}`);
+        const failureMessage = `Unknown job type: ${job.type}`;
+        await finalizeJob(job.id, 'failed', null, failureMessage);
+        await logActivity(job.userId, 'Background Agent Failed', formatFailureDetails(failureMessage, null, job.id, job.iteration), {
+            type: 'error',
+            toolUsed: 'agent_worker',
+            sessionId: job.sessionId || undefined
+        });
         return;
     }
 
     const payload = (job.payload && typeof job.payload === 'object' ? job.payload : {}) as Partial<ChatJobPayload>;
     if (!payload.query || typeof payload.query !== 'string') {
-        await finalizeJob(job.id, 'failed', null, 'Missing query in job payload');
+        const failureMessage = 'Missing query in job payload';
+        await finalizeJob(job.id, 'failed', null, failureMessage);
+        await logActivity(job.userId, 'Background Agent Failed', formatFailureDetails(failureMessage, null, job.id, job.iteration), {
+            type: 'error',
+            toolUsed: 'agent_worker',
+            sessionId: job.sessionId || undefined
+        });
         return;
     }
 
-    await logActivity(job.userId, 'Background Agent Started', `Processing job ${job.id} (Iteration ${job.iteration || 0})`, 'agent_worker');
+    await logActivity(job.userId, 'Background Agent Started', `Processing job ${job.id} (Iteration ${job.iteration || 0})\nQuery: ${buildQueryPreview(payload.query)}`, {
+        type: 'info',
+        toolUsed: 'agent_worker',
+        sessionId: job.sessionId || undefined
+    });
 
     try {
         const result = await chatWithAI(
@@ -165,28 +217,46 @@ async function runJob(job: AgentJobRecord) {
                 });
 
                 await feedbackEngine.createIterationJob(job.id, nextAction, payload);
-                await logActivity(job.userId, 'Iteration Created', `Task requires more work: ${analysis.reasoning}`, result.toolUsed);
+                await logActivity(job.userId, 'Iteration Created', `Task requires more work: ${analysis.reasoning}`, {
+                    type: 'info',
+                    toolUsed: result.toolUsed,
+                    sessionId: job.sessionId || undefined
+                });
             } else {
                 await finalizeJob(job.id, 'succeeded', result);
-                await logActivity(job.userId, 'Background Agent Completed', `Job ${job.id} finished successfully.`, result.toolUsed);
+                await logActivity(job.userId, 'Background Agent Completed', `Job ${job.id} finished successfully.`, {
+                    type: 'success',
+                    toolUsed: result.toolUsed,
+                    sessionId: job.sessionId || undefined
+                });
             }
             // ---------------------------
 
         } else {
             // Handle Tool/AI Failure
-            await finalizeJob(job.id, 'failed', result, result.message || 'Background agent failed');
-            await logActivity(job.userId, 'Background Agent Failed', `Job ${job.id} failed: ${result.message}`, result.toolUsed);
+            const failureMessage = result.message || 'Background agent failed';
+            await finalizeJob(job.id, 'failed', result, failureMessage);
+            await logActivity(job.userId, 'Background Agent Failed', formatFailureDetails(failureMessage, null, job.id, job.iteration), {
+                type: 'error',
+                toolUsed: result.toolUsed,
+                sessionId: job.sessionId || undefined
+            });
 
             // Auto-retry if enabled and within limits
-            if (job.iteration < (job.maxIterations || 5)) {
+            if (job.iteration < (job.maxIterations || 5) && !isFatalFailure(failureMessage)) {
                 console.log(`🩹 Attempting auto-recovery for failed job ${job.id}`);
                 await feedbackEngine.createIterationJob(job.id, `The previous attempt failed with: ${result.message}. Please try an alternative approach.`, payload);
             }
         }
     } catch (error: any) {
         console.error('Fatal job error:', error);
-        await finalizeJob(job.id, 'failed', null, error.message);
-        await logActivity(job.userId, 'Background Agent Fatal Error', error.message, 'system');
+        const failureMessage = error?.message || 'Fatal job error';
+        await finalizeJob(job.id, 'failed', null, failureMessage);
+        await logActivity(job.userId, 'Background Agent Fatal Error', formatFailureDetails(failureMessage, error, job.id, job.iteration), {
+            type: 'error',
+            toolUsed: 'system',
+            sessionId: job.sessionId || undefined
+        });
     }
 }
 

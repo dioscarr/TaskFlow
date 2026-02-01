@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Biometric Verification</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #e0eafc, #cfdef3);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden; /* Prevent scrollbars during animations */
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px; /* Reduced width for better focus */
+            padding: 30px; /* Increased padding */
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            text-align: center;
+            position: relative; /* For absolute positioning of overlay */
+            z-index: 1;
+        }
+
+        h1 {
+            color: #0056b3;
+            margin-bottom: 15px; /* Adjusted spacing */
+            font-size: 2em;
+        }
+
+        p {
+            line-height: 1.6;
+            margin-bottom: 25px; /* Adjusted spacing */
+            color: #555;
+        }
+
+        .security-icon {
+            font-size: 4em; /* Increased size */
+            color: #007bff; /* Primary blue */
+            margin-bottom: 15px; /* Adjusted spacing */
+            animation: rotateShield 5s linear infinite;
+        }
+
+        @keyframes rotateShield {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .data-privacy {
+            font-size: 0.85em;
+            color: #777;
+            margin-top: 25px; /* Adjusted spacing */
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px; /* Adjusted padding */
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: background-color 0.3s ease;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Biometric Enrollment/Verification Styles */
+        .biometric-prompt {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 400px;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            background: rgba(255, 255, 255, 0.3); /* Increased opacity */
+            backdrop-filter: blur(10px);
+            text-align: center;
+            z-index: 1000;
+            display: none; /* Hidden by default */
+        }
+
+        .biometric-prompt h2 {
+            color: #007bff;
+            margin-bottom: 15px;
+        }
+
+        #face-scanning-area {
+            width: 200px;
+            height: 200px;
+            border: 2px dashed #007bff;
+            border-radius: 50%;
+            margin: 20px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #face-scanning-area video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #face-scanning-feedback {
+            color: #007bff;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+        }
+
+        .privacy-note {
+            font-size: 0.75em;
+            color: #777;
+            margin-top: 15px;
+        }
+
+        /* Overlay to dim the background */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none; /* Hidden by default */
+        }
+
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            color: #777;
+            cursor: pointer;
+        }
+
+        .close-button:hover {
+            color: #333;
+        }
+
+        .success-message {
+            color: #28a745;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <i class="fas fa-shield-alt security-icon"></i>
+        <h1>Secure Biometric Verification</h1>
+        <p>Your identity is protected using state-of-the-art biometric technology.</p>
+        <button id="start-verification-button">Start Verification</button>
+        <p class="data-privacy">
+            <i class="fas fa-lock"></i> Your data is encrypted end-to-end using TLS 1.3. We comply with GDPR and CCPA.
+        </p>
+    </div>
+
+    <!-- Biometric Enrollment/Verification Prompt -->
+    <div class="biometric-prompt" id="biometric-prompt">
+        <button class="close-button" onclick="closeBiometricPrompt()">&times;</button>
+        <h2>Facial Verification</h2>
+        <p>Please position your face within the scanning area.</p>
+        <div id="face-scanning-area">
+            <video id="face-video" autoplay playsinline muted></video>
+        </div>
+        <div id="face-scanning-feedback"></div>
+        <p class="privacy-note"><i class="fas fa-user-secret"></i> Your biometric data is securely processed and never stored.</p>
+        <div id="error-message" class="error-message">Error accessing camera. Please check your permissions.</div>
+        <div id="success-message" class="success-message"></div>
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay" id="overlay"></div>
+
+    <script>
+        const startVerificationButton = document.getElementById('start-verification-button');
+        const biometricPrompt = document.getElementById('biometric-prompt');
+        const overlay = document.getElementById('overlay');
+        const faceVideo = document.getElementById('face-video');
+        const faceScanningFeedback = document.getElementById('face-scanning-feedback');
+        const errorMessage = document.getElementById('error-message');
+        const successMessage = document.getElementById('success-message');
+
+        startVerificationButton.addEventListener('click', () => {
+            openBiometricPrompt();
+        });
+
+        function openBiometricPrompt() {
+            biometricPrompt.style.display = 'block';
+            overlay.style.display = 'block';
+            startFaceScanning();
+        }
+
+        function closeBiometricPrompt() {
+            biometricPrompt.style.display = 'none';
+            overlay.style.display = 'none';
+            stopFaceScanning();
+            clearFeedback();
+        }
+
+        function startFaceScanning() {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+                .then(stream => {
+                    faceVideo.srcObject = stream;
+                    faceVideo.onloadedmetadata = () => {
+                        faceVideo.play();
+                        // Simulate real-time feedback (replace with actual face detection logic)
+                        simulateFaceDetection();
+                    };
+                })
+                .catch(error => {
+                    console.error("Error accessing camera:", error);
+                    errorMessage.textContent = "Error accessing camera. Please check your permissions.";
+                });
+        }
+
+        function stopFaceScanning() {
+            if (faceVideo.srcObject) {
+                const stream = faceVideo.srcObject;
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+                faceVideo.srcObject = null;
+            }
+        }
+
+        function simulateFaceDetection() {
+            let feedbackMessages = ['Adjust lighting', 'Move closer', 'Slightly to the left', 'Face detected...'];
+            let i = 0;
+            let detectionInterval = setInterval(() => {
+                faceScanningFeedback.textContent = feedbackMessages[i];
+                i = (i + 1) % feedbackMessages.length;
+
+                if (i === 3) {
+                    clearInterval(detectionInterval);
+                    setTimeout(() => {
+                        faceScanningFeedback.textContent = "";
+                        successMessage.textContent = "Verification successful!";
+                    }, 1500);
+                    setTimeout(() => {
+                        closeBiometricPrompt();
+                    }, 3000);
+                }
+            }, 2000); // Simulate feedback every 2 seconds
+        }
+
+        function clearFeedback() {
+            faceScanningFeedback.textContent = "";
+            errorMessage.textContent = "";
+            successMessage.textContent = "";
+        }
+    </script>
+</body>
+</html>

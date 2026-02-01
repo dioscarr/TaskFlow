@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { TaskWithData } from '@/lib/types';
 import TaskDetail from './TaskDetail';
-import AIChat from './AIChat';
 import { useEffect } from 'react';
+import Link from 'next/link';
 
 type FocusContextType = {
     isFocused: boolean;
@@ -29,18 +29,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
     const isFocused = !!focusedItem;
 
-    const [isChatPinned, setIsChatPinned] = useState(false);
-
     const setFocusedItem = (item: TaskWithData | null) => {
         setFocusedItemState(item);
     };
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const handlePinChange = (e: any) => setIsChatPinned(e.detail);
-        window.addEventListener('ai-chat-pin-changed', handlePinChange);
-        return () => window.removeEventListener('ai-chat-pin-changed', handlePinChange);
-    }, []);
 
     return (
         <FocusContext.Provider value={{ isFocused, focusedItem, setFocusedItem }}>
@@ -74,7 +65,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         isFocused ? "scale-90 opacity-40 pointer-events-none blur-sm" : "opacity-100"
                     )}>
                         {/* Navbar */}
-                        <header className="flex items-center justify-between px-8 py-6 sticky top-0 z-20">
+                        <header className="flex items-center justify-between px-6 py-4 sticky top-0 z-20 border-b border-white/5 bg-black/5 backdrop-blur-sm">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg shadow-blue-500/20 flex items-center justify-center font-bold text-white">
                                     T
@@ -86,22 +77,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                 <nav className="hidden md:flex gap-6 text-sm font-medium text-white/60">
                                     <a href="#" className="hover:text-white transition-colors">Dashboard</a>
                                     <a href="#" className="text-white transition-colors">Inbox</a>
-                                    <a href="#" className="hover:text-white transition-colors">Calendar</a>
+                                    <Link href="/processes" className="hover:text-white transition-colors flex items-center gap-1.5">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <rect x="2" y="3" width="20" height="14" rx="2" />
+                                            <line x1="8" y1="21" x2="16" y2="21" />
+                                            <line x1="12" y1="17" x2="12" y2="21" />
+                                        </svg>
+                                        Processes
+                                    </Link>
                                 </nav>
                                 <div className="w-px h-6 bg-white/10" />
                                 <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 hover:border-white/30 transition-colors cursor-pointer" />
                             </div>
                         </header>
 
-                        <main className={cn(
-                            "flex-1 overflow-auto p-4 md:p-8 w-full transition-all",
-                            isChatPinned ? "px-10" : "max-w-6xl mx-auto px-4 md:px-8"
-                        )}>
+                        <main className="flex-1 w-full h-full relative overflow-hidden">
                             {children}
                         </main>
                     </div>
-
-                    <AIChat />
                 </div>
 
                 {/* Focus Mode Modal Layer */}

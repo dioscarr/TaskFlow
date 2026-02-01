@@ -2,10 +2,14 @@
 'use server';
 
 import { readdir, stat, unlink } from 'fs/promises';
-import { join } from 'path';
+import { join, resolve } from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { createServer } from 'net';
 
 import prisma from '@/lib/prisma';
 import { revalidatePath as nextRevalidatePath } from 'next/cache';
+import { memory } from '@/lib/agents/symphony/memory';
 
 /**
  * Safe wrapper for revalidatePath that doesn't crash in background/CLI contexts
@@ -21,20 +25,19 @@ import { writeFile, readFile as readFileFS, rename, copyFile, mkdir } from 'fs/p
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { DEFAULT_TOOLS, getToolSchemas } from '@/lib/toolLibrary';
 import { DEFAULT_SKILLS } from '@/lib/skillsLibrary';
-import { AgentSymphony } from '@/lib/agents/AgentSymphony';
-import { GeminiAgentAdapter } from '@/lib/agents/symphony/adapters';
 import { getSkillSchemas } from '@/lib/skillsLibrary';
 import { executeSkill } from '@/lib/skillsExecution';
 import { DEFAULT_INTENT_RULES, DEFAULT_WORKFLOWS, WorkflowStep } from '@/lib/intentLibrary';
 import { TOOL_LIBRARY } from '@/lib/toolLibrary';
 import { addChatMessage } from '@/app/chatActions';
 import { SOFTWARE_ARCHITECT_PROMPT } from '@/lib/agents/prompts';
+import { AGENT_ROLES } from '@/lib/agents/prompts';
+import { AgentSymphony } from '@/lib/agents/AgentSymphony';
+import { GeminiAgentAdapter } from '@/lib/agents/symphony/adapters';
+import { SymphonyOptions } from '@/lib/agents/symphony/types';
 
 // import { CognitiveAgent } from '@/lib/agents/CognitiveAgent';
 // import { DesignAgent } from '@/lib/agents/DesignAgent';
-
-// ... existing code ...
-
 const MAX_ATTACHMENT_CONTEXT_IDS = 50;
 
 const resolveAttachmentFileIds = async (userId: string, inputIds: string[] = []) => {
@@ -77,6 +80,37 @@ const getWorkspaceFilePath = (file: { storagePath?: string | null; name: string 
     return join(process.cwd(), 'public', 'uploads', file.storagePath || file.name);
 };
 
+const getWorkspaceFolderPath = (folderId: string) => {
+    return join(process.cwd(), 'public', 'uploads', folderId);
+};
+
+const execAsync = promisify(exec);
+
+const isPortAvailable = (port: number) => new Promise<boolean>((resolve) => {
+    const server = createServer();
+    server.once('error', () => resolve(false));
+    server.once('listening', () => {
+        server.close(() => resolve(true));
+    });
+    server.listen(port, '127.0.0.1');
+});
+
+const getAvailablePort = async (start = 4100, end = 4999) => {
+    for (let port = start; port <= end; port += 1) {
+        if (await isPortAvailable(port)) return port;
+    }
+    throw new Error('No available ports found');
+};
+
+const writeProxyConfig = async (internalDomain: string, port: number) => {
+    const proxyDir = join(process.cwd(), 'proxy-config', 'nginx');
+    await mkdir(proxyDir, { recursive: true });
+    const configPath = join(proxyDir, `${internalDomain}.conf`);
+    const config = `server {\n    listen 80;\n    server_name ${internalDomain};\n\n    location / {\n        proxy_pass http://127.0.0.1:${port};\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n    }\n}\n`;
+    await writeFile(configPath, config);
+    return configPath;
+};
+
 async function executeAction(actionId: string, args: any): Promise<{ success: boolean, message?: string, [key: string]: any }> {
     console.log(`🚀 Executing Action: ${actionId}`, args);
     if (Array.isArray(args?.fileIds) && args.fileIds.length > 0) {
@@ -114,14 +148,13 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
         const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
         if (!apiKey) return { success: false, message: 'API Key missing' };
 
-
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        // Using 2.0 Flash for orchestrator/critic for speed + reasoning
-        const orchestratorModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-        // Using 1.5 Flash for workers for cost efficiency
-        const workerModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // Using 3.0 Pro Preview for orchestrator/critic for speed + reasoning
+        const orchestratorModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+        // Using 3.0 Flash Preview for workers for cost efficiency
+        const workerModel = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
         const symphony = new AgentSymphony({
             orchestrator: new GeminiAgentAdapter("Orchestrator", orchestratorModel),
@@ -259,6 +292,52 @@ export async function initializeWorkflows() {
                 }
             });
         }
+    }
+}
+
+/**
+ * Load workflows defined as markdown files in .agent/workflows
+ */
+async function loadFileSystemWorkflows() {
+    const workflowsDir = join(process.cwd(), '.agent', 'workflows');
+    try {
+        const files = await readdir(workflowsDir);
+        const mdFiles = files.filter(f => f.endsWith('.md'));
+
+        const workflows = [];
+
+        for (const file of mdFiles) {
+            const filePath = join(workflowsDir, file);
+            const content = await readFileFS(filePath, 'utf-8');
+
+            // Basic Frontmatter parsing
+            const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+            let description = '';
+
+            if (frontmatterMatch) {
+                const frontmatter = frontmatterMatch[1];
+                const descMatch = frontmatter.match(/description:\s*(.*)/);
+                if (descMatch) description = descMatch[1].trim();
+            }
+
+            const name = file.replace('.md', '');
+            const command = `/${name}`;
+
+            workflows.push({
+                id: `file-${name}`,
+                name: command, // Use slash command as name for matching
+                description,
+                triggerKeywords: [command, name.replace(/-/g, ' ')],
+                steps: [], // No structured steps for file-based workflows
+                content: content
+            });
+        }
+
+        return workflows;
+
+    } catch (error) {
+        // Silently skip if directory doesn't exist
+        return [];
     }
 }
 
@@ -764,6 +843,178 @@ export async function getFileContent(fileName: string) {
     }
 }
 
+const getRepoAppsRoot = () => join(process.cwd(), 'apps');
+
+const resolveRepoAppsPath = (relativePath: string) => {
+    const root = resolve(getRepoAppsRoot());
+    const sanitized = relativePath.replace(/^[/\\]+/, '');
+    const fullPath = resolve(join(root, sanitized));
+    if (!fullPath.startsWith(root)) {
+        throw new Error('Invalid path');
+    }
+    return fullPath;
+};
+
+const resolveStartScript = (scripts?: Record<string, string> | null) => {
+    if (!scripts) return null;
+    if (scripts.start) return 'start';
+    if (scripts.preview) return 'preview';
+    if (scripts.dev) return 'dev';
+    return null;
+};
+
+export async function listRepoAppEntries(relativePath = '') {
+    try {
+        const root = getRepoAppsRoot();
+        const targetPath = relativePath ? resolveRepoAppsPath(relativePath) : root;
+        const entries = await readdir(targetPath, { withFileTypes: true });
+
+        const mapped = await Promise.all(entries.map(async (entry) => {
+            const name = entry.name;
+            const entryPath = relativePath ? `${relativePath}/${name}` : name;
+            if (entry.isDirectory()) {
+                return { name, path: entryPath, type: 'folder' as const, size: null };
+            }
+            const filePath = resolveRepoAppsPath(entryPath);
+            const fileStat = await stat(filePath);
+            const ext = name.includes('.') ? name.split('.').pop() || 'file' : 'file';
+            return { name, path: entryPath, type: ext, size: fileStat.size };
+        }));
+
+        return { success: true, entries: mapped };
+    } catch (error) {
+        console.error('Failed to list repo app entries:', error);
+        return { success: false, error: 'Failed to list repo app entries' };
+    }
+}
+
+export async function getRepoAppFileContent(relativePath: string) {
+    try {
+        if (!relativePath) throw new Error('Missing path');
+        const filePath = resolveRepoAppsPath(relativePath);
+        const content = await readFileFS(filePath, 'utf-8');
+        return { success: true, content };
+    } catch (error) {
+        console.error('Failed to read repo app file:', error);
+        return { success: false, error: 'Failed to read repo app file' };
+    }
+}
+
+export async function saveRepoAppFileContent(relativePath: string, content: string) {
+    try {
+        if (!relativePath) throw new Error('Missing path');
+        const filePath = resolveRepoAppsPath(relativePath);
+        await writeFile(filePath, content);
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to save repo app file:', error);
+        return { success: false, error: 'Failed to save repo app file' };
+    }
+}
+
+export async function installRepoApp(relativePath: string) {
+    try {
+        if (!relativePath) throw new Error('Missing path');
+        const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+        if (!user) throw new Error('User not found');
+
+        const appPath = resolveRepoAppsPath(relativePath);
+        const folderName = relativePath.split('/').pop() || relativePath;
+        const packageJsonPath = join(appPath, 'package.json');
+        let packageJson: { scripts?: Record<string, string> } | null = null;
+
+        try {
+            const pkgRaw = await readFileFS(packageJsonPath, 'utf-8');
+            packageJson = JSON.parse(pkgRaw);
+        } catch (error) {
+            return { success: false, error: 'Missing or invalid package.json in app folder' };
+        }
+
+        const startScript = resolveStartScript(packageJson?.scripts || null);
+        if (!startScript) {
+            return { success: false, error: 'package.json is missing a start/preview/dev script' };
+        }
+
+        await execAsync('docker version');
+
+        const safeName = folderName.replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase();
+        const internalDomain = `repo-${safeName}.internal`;
+        const imageName = `taskflow-repo-app-${safeName}`;
+        const containerName = `taskflow-repo-app-${safeName}`;
+        const dockerfilePath = join(appPath, 'Dockerfile.taskflow');
+        const dockerfile = `FROM node:20-alpine
+    WORKDIR /app
+    COPY package*.json ./
+    RUN npm install --legacy-peer-deps
+    COPY . .
+    ENV NODE_ENV=production
+    ENV PORT=3000
+    RUN npm run build --if-present
+    EXPOSE 3000
+    CMD ["npm", "run", "${startScript}"]
+    `;
+        await writeFile(dockerfilePath, dockerfile);
+
+        const port = await getAvailablePort();
+
+        try {
+            await execAsync(`docker rm -f ${containerName}`);
+        } catch {
+            // ignore if container doesn't exist
+        }
+
+        await execAsync(`docker build -t ${imageName} -f "${dockerfilePath}" "${appPath}"`);
+        await execAsync(`docker run -d --name ${containerName} -p ${port}:3000 ${imageName}`);
+
+        const proxyConfigPath = await writeProxyConfig(internalDomain, port);
+        const dnsInstructions = `Add a hosts/DNS entry for ${internalDomain} -> 127.0.0.1 and reload your reverse proxy.`;
+
+        const processName = `Repo App ${folderName}`;
+        const existingProcess = await prisma.processRegistry.findFirst({
+            where: { userId: user.id, name: processName }
+        });
+
+        const processData = {
+            name: processName,
+            type: 'docker-app',
+            port,
+            path: appPath,
+            command: `docker run -d --name ${containerName} -p ${port}:3000 ${imageName}`,
+            status: 'running',
+            healthCheckType: 'port',
+            healthInterval: 30000,
+            startedAt: new Date(),
+            stoppedAt: null,
+            metadata: {
+                containerName,
+                imageName,
+                internalDomain,
+                appName: folderName,
+                appPath,
+                startScript,
+                source: 'repo-app'
+            }
+        };
+
+        if (existingProcess) {
+            await prisma.processRegistry.update({
+                where: { id: existingProcess.id },
+                data: processData
+            });
+        } else {
+            await prisma.processRegistry.create({
+                data: { ...processData, userId: user.id }
+            });
+        }
+
+        safeRevalidatePath('/');
+        return { success: true, internalDomain, port, proxyConfigPath, dnsInstructions };
+    } catch (error: any) {
+        console.error('Failed to install repo app:', error);
+        return { success: false, error: error?.message || 'Failed to install repo app' };
+    }
+}
+
 export async function saveFileContent(fileName: string, content: string) {
     try {
         // Enhance security: prevent directory traversal
@@ -878,6 +1129,168 @@ export async function unpromoteApp(folderId: string) {
     } catch (error) {
         console.error('Failed to unpromote app:', error);
         return { success: false, error: 'Failed to destroy app' };
+    }
+}
+
+export async function installDynamicApp(folderId: string) {
+    try {
+        const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+        if (!user) throw new Error('User not found');
+
+        const folder = await prisma.workspaceFile.findFirst({
+            where: { id: folderId, type: 'folder', userId: user.id }
+        });
+
+        if (!folder) {
+            return { success: false, error: 'App folder not found' };
+        }
+
+        const appPath = getWorkspaceFolderPath(folderId);
+        const packageJsonPath = join(appPath, 'package.json');
+
+        let packageJson: { scripts?: Record<string, string> } | null = null;
+        try {
+            const pkgRaw = await readFileFS(packageJsonPath, 'utf-8');
+            packageJson = JSON.parse(pkgRaw);
+        } catch (error) {
+            return { success: false, error: 'Missing or invalid package.json in app folder' };
+        }
+
+        const startScript = resolveStartScript(packageJson?.scripts || null);
+        if (!startScript) {
+            return { success: false, error: 'package.json is missing a start/preview/dev script' };
+        }
+
+        await execAsync('docker version');
+
+        const internalDomain = `app-${folderId}.internal`;
+        const imageName = `taskflow-app-${folderId}`;
+        const containerName = `taskflow-app-${folderId}`;
+
+        const dockerfilePath = join(appPath, 'Dockerfile.taskflow');
+        const dockerfile = `FROM node:20-alpine
+    WORKDIR /app
+    COPY package*.json ./
+    RUN npm install --legacy-peer-deps
+    COPY . .
+    ENV NODE_ENV=production
+    ENV PORT=3000
+    RUN npm run build --if-present
+    EXPOSE 3000
+    CMD ["npm", "run", "${startScript}"]
+    `;
+        await writeFile(dockerfilePath, dockerfile);
+
+        const existingDeployment = await prisma.appDeployment.findFirst({
+            where: { appId: folderId, userId: user.id }
+        });
+
+        const port = await getAvailablePort();
+
+        try {
+            await execAsync(`docker rm -f ${containerName}`);
+        } catch {
+            // ignore if container doesn't exist
+        }
+
+        await execAsync(`docker build -t ${imageName} -f "${dockerfilePath}" "${appPath}"`);
+        await execAsync(`docker run -d --name ${containerName} -p ${port}:3000 ${imageName}`);
+
+        const proxyConfigPath = await writeProxyConfig(internalDomain, port);
+        const dnsInstructions = `Add a hosts/DNS entry for ${internalDomain} -> 127.0.0.1 and reload your reverse proxy.`;
+
+        const deployment = existingDeployment
+            ? await prisma.appDeployment.update({
+                where: { id: existingDeployment.id },
+                data: {
+                    internalDomain,
+                    port,
+                    containerName,
+                    imageName,
+                    status: 'running',
+                    logs: null
+                }
+            })
+            : await prisma.appDeployment.create({
+                data: {
+                    appId: folderId,
+                    internalDomain,
+                    port,
+                    containerName,
+                    imageName,
+                    status: 'running',
+                    userId: user.id
+                }
+            });
+
+        const processName = `Docker App ${folderId}`;
+        const existingProcess = await prisma.processRegistry.findFirst({
+            where: { userId: user.id, name: processName }
+        });
+
+        if (existingProcess) {
+            await prisma.processRegistry.update({
+                where: { id: existingProcess.id },
+                data: {
+                    type: 'docker-app',
+                    port,
+                    path: appPath,
+                    command: `docker run -d --name ${containerName} -p ${port}:3000 ${imageName}`,
+                    status: 'running',
+                    healthCheckType: 'port',
+                    healthInterval: 30000,
+                    startedAt: new Date(),
+                    stoppedAt: null,
+                    metadata: {
+                        containerName,
+                        imageName,
+                        internalDomain,
+                        appId: folderId,
+                        startScript
+                    }
+                }
+            });
+        } else {
+            await prisma.processRegistry.create({
+                data: {
+                    name: processName,
+                    type: 'docker-app',
+                    port,
+                    path: appPath,
+                    command: `docker run -d --name ${containerName} -p ${port}:3000 ${imageName}`,
+                    status: 'running',
+                    healthCheckType: 'port',
+                    healthInterval: 30000,
+                    metadata: {
+                        containerName,
+                        imageName,
+                        internalDomain,
+                        appId: folderId,
+                        startScript
+                    },
+                    userId: user.id
+                }
+            });
+        }
+
+        safeRevalidatePath('/');
+        return { success: true, deployment, internalDomain, port, proxyConfigPath, dnsInstructions };
+    } catch (error: any) {
+        console.error('Failed to install app:', error);
+        return { success: false, error: error?.message || 'Failed to install app' };
+    }
+}
+
+export async function getAppDeployment(appId: string) {
+    try {
+        const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+        if (!user) throw new Error('User not found');
+        const deployment = await prisma.appDeployment.findFirst({
+            where: { appId, userId: user.id }
+        });
+        return { success: true, deployment };
+    } catch (error) {
+        return { success: false, error: 'Failed to load deployment' };
     }
 }
 
@@ -1083,10 +1496,10 @@ export async function createPrompt(data: {
                 isActive: count === 0
             }
         });
-        safeRevalidatePath('/');
+        nextRevalidatePath('/');
         return { success: true, prompt: newPrompt };
-    } catch (error) {
-        return { success: false };
+    } catch (e) {
+        return { success: false, error: 'Failed' };
     }
 }
 
@@ -1162,7 +1575,7 @@ export async function generateSystemPrompt(description: string) {
     }
 }
 
-export async function generateMagicContent(params: { fileName: string; content: string; goal: string }) {
+export async function generateMagicContent(params: { fileName: string; content: string; goal: string; chatContext?: { role: 'user' | 'ai'; content: string }[] }) {
     try {
         const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
         if (!apiKey) {
@@ -1170,13 +1583,18 @@ export async function generateMagicContent(params: { fileName: string; content: 
         }
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const recentContext = params.chatContext
+            ?.filter(m => m.content && m.content.trim().length > 0)
+            .slice(-5)
+            .map(m => `- ${m.role.toUpperCase()}: ${m.content.trim()}`)
+            .join('\n');
         const prompt = `You are an expert front-end engineer and technical writer.
 Update the following file based on the goal. Return ONLY the updated file content with no code fences or commentary.
 
 File Name: ${params.fileName}
 Goal: ${params.goal}
 
-Current Content:
+    ${recentContext ? `Recent Chat Context:\n${recentContext}\n\n` : ''}Current Content:
 ${params.content}
 `;
 
@@ -1190,13 +1608,60 @@ ${params.content}
     }
 }
 
-export async function generateSuggestions(query: string) {
+export async function generateMagicSuggestions(params: { fileName: string; description: string }) {
+    try {
+        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+        if (!apiKey) {
+            return { success: false, error: 'Missing API key' };
+        }
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const prompt = `You are a senior product designer and front-end copywriter.
+Generate exactly 5 concise, high-quality content update suggestions for the file below based on the description.
+Return ONLY a JSON array of 5 strings. No extra text.
+
+File Name: ${params.fileName}
+Description: ${params.description}
+`;
+
+        const result = await model.generateContent(prompt);
+        const text = result.response.text().trim();
+        const jsonMatch = text.match(/\[[\s\S]*\]/);
+        const suggestions = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+        return { success: true, suggestions };
+    } catch (error) {
+        console.error('Failed to generate magic suggestions:', error);
+        return { success: false, error: 'Failed to generate magic suggestions' };
+    }
+}
+
+export async function generateSuggestions(
+    query: string,
+    workflowType?: string,
+    contextPayload?: string
+) {
     try {
         const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
         const genAI = new GoogleGenerativeAI(apiKey!);
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-        const prompt = `You are a visionary product architect and prompt engineer. Generate 5 unique, high-quality "Task Flows" for an AI agent based on this research theme or search query: "${query}".
+        // Parse context if provided
+        let contextString = '';
+        if (contextPayload) {
+            try {
+                const context = JSON.parse(contextPayload);
+                contextString = `\n\nCONTEXT FROM USER'S REQUEST:\n${JSON.stringify(context, null, 2)}\n\nUse this context to generate more relevant and specific task flows.`;
+            } catch (e) {
+                // If parsing fails, just ignore context
+                console.warn('Failed to parse context payload:', e);
+            }
+        }
+
+        const workflowTypeHint = workflowType
+            ? `\n\nFOCUS AREA: This is for ${workflowType.replace(/-/g, ' ')} workflows. Tailor suggestions accordingly.`
+            : '';
+
+        const prompt = `You are a visionary product architect and prompt engineer. Generate 5 unique, high-quality "Task Flows" for an AI agent based on this research theme or search query: "${query}".${workflowTypeHint}${contextString}
         
         Each flow must be a comprehensive multi-step instruction set that an agent can consume to build a premium product or perform a complex task.
         
@@ -2087,11 +2552,13 @@ export async function editFile(data: { fileId: string; content: string }) {
         const filePath = join(uploadsDir, file.name);
         await writeFile(filePath, content);
 
-        // Update size
+        // Update size and ensure storagePath is correct (legacy fix)
+        const relativeStoragePath = `${directoryName}/${file.name}`;
         await prisma.workspaceFile.update({
             where: { id: file.id },
             data: {
-                size: `${Buffer.byteLength(content)} bytes`
+                size: `${Buffer.byteLength(content)} bytes`,
+                storagePath: relativeStoragePath
             }
         });
 
@@ -2212,6 +2679,11 @@ export async function agentDelegate(data: { agentType: string, task: string }) {
                 sessionId: (data as any).sessionId
             });
         }
+
+        // Memory
+        try {
+            await memory.addJobSummary(`magic_design_${Date.now()}`, `Generated Design Spec for: "${data.task}"`);
+        } catch (e) { console.error('Memory failed', e); }
 
         return {
             success: true,
@@ -2478,6 +2950,12 @@ export async function configureMagicFolder(data: { folderId: string, rule: strin
         });
 
         safeRevalidatePath('/');
+
+        // Memorize manual magic action
+        try {
+            await memory.addJobSummary(`magic_rule_${Date.now()}`, `Configured Magic Rule: "${data.rule}" on folder "${folder.name}"`);
+        } catch (e) { console.error('Memory failed', e); }
+
         return { success: true, message: `Magic rule "${data.rule}" applied to folder "${folder.name}"` };
     } catch (error) {
         return { success: false, message: 'Failed to configure magic folder' };
@@ -2552,6 +3030,11 @@ ${mergedContent}`;
             userId: user.id,
             sessionId: (data as any).sessionId
         });
+
+        // Memorize synthesis
+        try {
+            await memory.addJobSummary(`magic_synth_${Date.now()}`, `Synthesized ${data.fileIds.length} docs into ${data.outputFilename}`);
+        } catch (e) { console.error('Memory failed', e); }
 
         return { success: true, message: `Synthesis complete. Saved as ${data.outputFilename}.md` };
     } catch (error) {
@@ -2653,10 +3136,121 @@ export async function enqueueAgentJob(data: {
             });
         }
 
+        // Trigger execution if approved
+        if (job.approved) {
+            processAgentJob(job.id).catch(err => console.error('Background job trigger failed:', err));
+        }
+
         return { success: true, job };
     } catch (error) {
         console.error('Failed to enqueue agent job:', error);
         return { success: false, message: 'Failed to enqueue agent job' };
+    }
+}
+
+async function processAgentJob(jobId: string) {
+    console.log(`⚙️ Processing agent job ${jobId}...`);
+    try {
+        const job = await prisma.agentJob.findUnique({ where: { id: jobId } });
+        if (!job) return;
+
+        await prisma.agentJob.update({
+            where: { id: jobId },
+            data: { status: 'running', startedAt: new Date() }
+        });
+
+        // Initialize Gemini
+        const apiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const flashModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const proModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+
+        // Initialize Agents
+        const orchestrator = new GeminiAgentAdapter(AGENT_ROLES.orchestrator.name, proModel);
+        const critic = new GeminiAgentAdapter("Critic", proModel);
+
+        const workers = {
+            researcher: new GeminiAgentAdapter(AGENT_ROLES.researcher.name, flashModel),
+            developer: new GeminiAgentAdapter(AGENT_ROLES.developer.name, flashModel),
+            designer: new GeminiAgentAdapter(AGENT_ROLES.designer.name, flashModel),
+            writer: new GeminiAgentAdapter("Technical Writer", flashModel)
+        };
+
+        const logger = async (msg: string, type: 'info' | 'thinking' | 'error' = 'info') => {
+            const logEntry = `[${new Date().toISOString()}] [Job ${jobId}] [${type.toUpperCase()}] ${msg}\n`;
+            console.log(`[Job ${jobId}] ${type}: ${msg}`);
+
+            // Hook into live terminal (Persistent Log)
+            try {
+                await mkdir('logs', { recursive: true });
+                await writeFile('logs/symphony.log', logEntry, { flag: 'a' });
+            } catch (e) {
+                // Ignore logging errors to prevent crash
+            }
+
+            if (job.sessionId) {
+                await logAgentActivity({
+                    sessionId: job.sessionId,
+                    userId: job.userId,
+                    type,
+                    title: type === 'thinking' ? '🧠 Agent Thought' : '⚡ Agent Action',
+                    message: msg
+                });
+            }
+        };
+
+        const symphony = new AgentSymphony({
+            orchestrator,
+            critic,
+            workers,
+            options: {
+                maxIterations: job.maxIterations || 3,
+                logger
+            }
+        });
+
+        // Parse payload for objective
+        const objective = (job.payload as any).objective || JSON.stringify(job.payload);
+        const strategy = (job.payload as any).strategy;
+
+        const result = await symphony.run(objective, strategy, jobId);
+
+        await prisma.agentJob.update({
+            where: { id: jobId },
+            data: {
+                status: result.status === 'completed' ? 'succeeded' : 'failed',
+                finishedAt: new Date(),
+                result: result as any
+            }
+        });
+
+        if (job.sessionId) {
+            // Add a completion message to the chat
+            if (result.finalOutput) {
+                await prisma.chatMessage.create({
+                    data: {
+                        sessionId: job.sessionId,
+                        role: 'ai',
+                        content: result.finalOutput,
+                        toolUsed: 'agent_symphony_result'
+                    }
+                });
+            }
+
+            // Refresh UI status
+            // (Client polls, so this is passive)
+        }
+
+    } catch (error) {
+        console.error(`❌ Job ${jobId} failed:`, error);
+        await prisma.agentJob.update({
+            where: { id: jobId },
+            data: {
+                status: 'failed',
+                finishedAt: new Date(),
+                error: String(error)
+            }
+        });
     }
 }
 
@@ -2678,6 +3272,9 @@ export async function approveLatestAgentJob(sessionId: string) {
             data: { approved: true, approvedAt: new Date() }
         });
 
+        // Trigger execution
+        processAgentJob(job.id).catch(err => console.error('Background job trigger failed:', err));
+
         return { success: true, job: updated };
     } catch (error) {
         return { success: false, message: 'Failed to approve job' };
@@ -2697,10 +3294,10 @@ export async function getChatSessionAgentStatus(sessionId: string) {
             prisma.agentJob.findFirst({
                 where: { sessionId, userId: user.id },
                 orderBy: { updatedAt: 'desc' },
-                select: { id: true, type: true, status: true, updatedAt: true, startedAt: true }
+                select: { id: true, type: true, status: true, updatedAt: true, startedAt: true, error: true }
             }),
             prisma.agentActivity.findFirst({
-                where: { userId: user.id },
+                where: { userId: user.id, sessionId },
                 orderBy: { createdAt: 'desc' },
                 select: { message: true, title: true, createdAt: true }
             })
@@ -2969,11 +3566,12 @@ export async function chatWithAI(
     history: { role: 'user' | 'model'; parts: { text: string }[] }[] = [],
     currentFolder?: string,
     currentFolderId?: string,
-    options?: { sessionId?: string; allowToolExecution?: boolean; agentMode?: 'chat' | 'tool-agent' }
+    options?: { sessionId?: string; allowToolExecution?: boolean; agentMode?: 'chat' | 'tool-agent'; verbosity?: 'concise' | 'normal' | 'verbose' }
 ) {
     try {
         let allowToolExecution = options?.allowToolExecution !== false;
         const agentMode = options?.agentMode || 'chat';
+        const verbosity = options?.verbosity || 'concise'; // Default to concise
         const isToolAgent = agentMode === 'tool-agent';
         const sessionId = options?.sessionId;
         const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
@@ -3288,8 +3886,9 @@ export async function chatWithAI(
                 }];
             }
 
-            // Merge with DEFAULT_WORKFLOWS (always available)
-            workflows = [...DEFAULT_WORKFLOWS, ...workflows];
+            // Merge with DEFAULT_WORKFLOWS and File System Workflows
+            const fsWorkflows = await loadFileSystemWorkflows();
+            workflows = [...DEFAULT_WORKFLOWS, ...workflows, ...fsWorkflows];
 
             const matchedWorkflow = workflows
                 .flatMap(wf => {
@@ -3326,57 +3925,73 @@ export async function chatWithAI(
                 const filename = getAutoFilename({ autoFilename: 'timestamp' });
                 const folderName = getAutoFolderName({ autoFolder: 'auto' });
 
-                const res = await executeWorkflow(matchedWorkflowValue.steps as WorkflowStep[], {
-                    content,
-                    query,
-                    lastResponse: lastAssistantText,
-                    filename,
-                    folderName,
-                    fileIds
-                });
+                if (matchedWorkflowValue.content) {
+                    // File-based workflow: Inject content directly as system instructions
+                    workflowInstructions = `\n\n═══════════════════════════════════════════════════════════════════\nSYSTEM OVERRIDE: ACTIVE WORKFLOW: ${matchedWorkflowValue.name}\n═══════════════════════════════════════════════════════════════════\n${matchedWorkflowValue.content}\n\nFOLLOW THESE INSTRUCTIONS EXACTLY TO COMPLETE THE WORKFLOW.`;
 
-                if (res.success) {
-                    let extra = '';
-                    if (res.context?.filesMoved?.moved) {
-                        extra += `\n• Moved ${res.context.filesMoved.moved} file(s) to folder.`;
+                    // Also log activity
+                    if (demoUser) {
+                        await logAgentActivity({
+                            type: 'info',
+                            title: `🚀 Triggered Workflow: ${matchedWorkflowValue.name}`,
+                            message: matchedWorkflowValue.description || 'Executing file-based workflow',
+                            userId: demoUser.id,
+                            sessionId: sessionId
+                        });
                     }
-                    if (res.context?.filesCopied?.copied) {
-                        extra += `\n• Copied ${res.context.filesCopied.copied} file(s) to folder.`;
-                    }
+                } else {
+                    const res = await executeWorkflow(matchedWorkflowValue.steps as WorkflowStep[], {
+                        content,
+                        query,
+                        lastResponse: lastAssistantText,
+                        filename,
+                        folderName,
+                        fileIds
+                    });
 
-                    if (res.context?.workflowPaused) {
-                        const pausedText = res.context.workflowPausedMessage || 'Folder already exists. Update the workflow setting or confirm to proceed.';
+                    if (res.success) {
+                        let extra = '';
+                        if (res.context?.filesMoved?.moved) {
+                            extra += `\n• Moved ${res.context.filesMoved.moved} file(s) to folder.`;
+                        }
+                        if (res.context?.filesCopied?.copied) {
+                            extra += `\n• Copied ${res.context.filesCopied.copied} file(s) to folder.`;
+                        }
+
+                        if (res.context?.workflowPaused) {
+                            const pausedText = res.context.workflowPausedMessage || 'Folder already exists. Update the workflow setting or confirm to proceed.';
+                            return {
+                                success: true,
+                                text: `⏸️ Workflow **${matchedWorkflowValue.name}** paused.\n${pausedText}`,
+                                toolUsed: undefined
+                            };
+                        }
+
+                        const alegraSkipped = res.context?.lastSkippedAction === 'extract_alegra_bill';
+                        const toolUsed = alegraSkipped ? undefined : `workflow:${matchedWorkflowValue.name}`;
+                        let text = alegraSkipped
+                            ? `✅ Workflow **${matchedWorkflowValue.name}** executed successfully (Alegra export disabled).${extra}`
+                            : `✅ Workflow **${matchedWorkflowValue.name}** executed successfully.${extra ? `\n${extra}` : ''}`;
+
+                        // If the workflow generated a report or content, show it.
+                        if (res.context?.markdown) {
+                            text += `\n\n${res.context.markdown}`;
+                        } else if (res.context?.content && res.context.content !== content) {
+                            text += `\n\n${res.context.content}`;
+                        }
+
                         return {
                             success: true,
-                            text: `⏸️ Workflow **${matchedWorkflowValue.name}** paused.\n${pausedText}`,
-                            toolUsed: undefined
+                            text,
+                            toolUsed,
+                            workflowName: matchedWorkflowValue.name
                         };
                     }
 
-                    const alegraSkipped = res.context?.lastSkippedAction === 'extract_alegra_bill';
-                    const toolUsed = alegraSkipped ? undefined : `workflow:${matchedWorkflowValue.name}`;
-                    let text = alegraSkipped
-                        ? `✅ Workflow **${matchedWorkflowValue.name}** executed successfully (Alegra export disabled).${extra}`
-                        : `✅ Workflow **${matchedWorkflowValue.name}** executed successfully.${extra ? `\n${extra}` : ''}`;
-
-                    // If the workflow generated a report or content, show it.
-                    if (res.context?.markdown) {
-                        text += `\n\n${res.context.markdown}`;
-                    } else if (res.context?.content && res.context.content !== content) {
-                        text += `\n\n${res.context.content}`;
-                    }
-
-                    return {
-                        success: true,
-                        text,
-                        toolUsed,
-                        workflowName: matchedWorkflowValue.name
-                    };
+                    // Fallback to injection instructions if server workflow fails
+                    const stepsList = matchedWorkflowValue.steps.map((s: any, i: number) => `${i + 1}. Tool: "${s.action}"`).join('\n');
+                    workflowInstructions = `\n\nSYSTEM OVERRIDE: The user has triggered the workflow "${matchedWorkflowValue.name}".\n\nEXECUTION RULES:\n1. You are MANDATED to execute the following tools in this exact order to complete the workflow:\n${stepsList}\n2. IGNORE the rule about asking for folders. For this workflow, AUTOMATICALLY store files in "Receipts/${new Date().getFullYear()}" without asking.\n3. Analyze the provided image/context to extract any required parameters for these tools.\n4. Do not stop. Execute all steps sequentially now.`;
                 }
-
-                // Fallback to injection instructions if server workflow fails
-                const stepsList = matchedWorkflowValue.steps.map((s: any, i: number) => `${i + 1}. Tool: "${s.action}"`).join('\n');
-                workflowInstructions = `\n\nSYSTEM OVERRIDE: The user has triggered the workflow "${matchedWorkflowValue.name}".\n\nEXECUTION RULES:\n1. You are MANDATED to execute the following tools in this exact order to complete the workflow:\n${stepsList}\n2. IGNORE the rule about asking for folders. For this workflow, AUTOMATICALLY store files in "Receipts/${new Date().getFullYear()}" without asking.\n3. Analyze the provided image/context to extract any required parameters for these tools.\n4. Do not stop. Execute all steps sequentially now.`;
             } else {
                 const rules = await prisma.intentRule.findMany({ where: { userId: demoUser.id, enabled: true } });
                 const matchedRule = rules
@@ -3526,6 +4141,7 @@ OPERATIONAL RULES:
          2. Links use relative paths, not absolute or storage IDs.
          3. An 'index.html' entry point exists.
      ${backgroundRule}
+14. COMMAND EXECUTION: For any terminal commands (npm, docker, npx, git, etc.), ALWAYS use the 'execute_command' tool.
    `;
 
         // Load skills dynamically from skills library
@@ -3605,7 +4221,11 @@ ${plan.suggestedSpecialist && plan.suggestedSpecialist !== 'none' ? `SPECIALIST 
             "\n\nCOGNITIVE ARCHITECTURE: ENABLED." +
             (isToolAgent
                 ? "\nVERBOSITY: LOW. Keep responses concise and focused on tool results."
-                : "\nVERBOSITY: ON. You are encouraged to be verbose. Share your internal roadmap and the specialist's advice with the user so they can follow your logic.") +
+                : verbosity === 'verbose'
+                    ? "\nVERBOSITY: HIGH. Be detailed. Share your internal roadmap and reasoning explicitly."
+                    : verbosity === 'concise'
+                        ? "\nVERBOSITY: LOW. Be straight to the point. Minimal explanation, focus on action and results. Do not repeat the plan if it's obvious."
+                        : "\nVERBOSITY: NORMAL. Provide reasonable context but avoid excessive fluff.") +
             (isToolAgent
                 ? "\nTHINKING PROTOCOL: Do not include <thinking> tags in responses."
                 : `

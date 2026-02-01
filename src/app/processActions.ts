@@ -1,0 +1,413 @@
+'use server';
+
+import prisma from '@/lib/prisma';
+import { writeFile, readFile } from 'fs/promises';
+import { join } from 'path';
+import {
+    ProcessInput,
+    getDemoUser,
+    syncDockerAppProcesses,
+    syncRepoAppProcesses,
+    isDockerProcess,
+    execAsync,
+    getAvailablePort,
+    resolveStartScript
+} from '@/lib/processActionsCore';
+
+export { type ProcessInput };
+
+/**
+ * List all processes for the current user
+ */
+export async function listProcesses() {
+    try {
+        const user = await getDemoUser();
+        await syncDockerAppProcesses(user.id);
+        await syncRepoAppProcesses(user.id);
+        const processes = await prisma.processRegistry.findMany({
+            where: { userId: user.id },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        return { success: true, processes };
+    } catch (error: any) {
+        console.error('Error listing processes:', error);
+        return { success: false, message: error.message };
+    }
+}
+
+/**
+ * Register a new process
+ */
+export async function registerProcess(data: ProcessInput) {
+    try {
+        const user = await getDemoUser();
+        const process = await prisma.processRegistry.create({
+            data: {
+                name: data.name,
+                type: data.type,
+                port: data.port,
+                path: data.path,
+                command: data.command,
+                status: 'running',
+                healthUrl: data.healthUrl,
+                healthCheckType: data.healthCheckType || 'port',
+                healthInterval: data.healthInterval || 30000,
+                metadata: data.metadata || {},
+                userId: user.id
+            }
+        });
+
+        return { success: true, process };
+    } catch (error: any) {
+        console.error('Error registering process:', error);
+        return { success: false, message: error.message };
+    }
+}
+
+/**
+ * Stop a running process
+ */
+export async function stopProcess(id: string) {
+    try {
+        const user = await getDemoUser();
+        const process = await prisma.processRegistry.findFirst({
+            where: { id, userId: user.id }
+        });
+
+        if (!process) {
+            return { success: false, message: 'Process not found' };
+        }
+
+        if (isDockerProcess(process)) {
+            const containerName = process.metadata?.containerName as string | undefined;
+            if (containerName) {
+                try {
+                    await execAsync(`docker stop ${containerName}`);
+                } catch (dockerError: any) {
+                    console.error('Error stopping docker container:', dockerError);
+                }
+            }
+        } else {
+            // Kill the process by PID
+            if (process.pid) {
+                try {
+                    // Windows: taskkill
+                    await execAsync(`taskkill /PID ${process.pid} /F`);
+                } catch (killError: any) {
+                    console.error('Error killing process:', killError);
+                    // Process might already be dead, continue anyway
+                }
+            }
+
+            // Kill by port if no PID
+            if (process.port && !process.pid) {
+                try {
+                    const cmd = `Stop-Process -Id (Get-NetTCPConnection -LocalPort ${process.port}).OwningProcess -Force`;
+                    await execAsync(`powershell -Command "${cmd}"`);
+                } catch (portError: any) {
+                    console.error('Error killing process by port:', portError);
+                }
+            }
+        }
+
+        // Update database
+        const updated = await prisma.processRegistry.update({
+            where: { id },
+            data: {
+                status: 'stopped',
+                stoppedAt: new Date()
+            }
+        });
+
+        return { success: true, process: updated };
+    } catch (error: any) {
+        console.error('Error stopping process:', error);
+        return { success: false, message: error.message };
+    }
+}
+
+/**
+ * Start a process
+ */
+export async function startProcess(id: string) {
+    try {
+        const user = await getDemoUser();
+        const process = await prisma.processRegistry.findFirst({
+            where: { id, userId: user.id }
+        });
+
+        if (!process) {
+            return { success: false, message: 'Process not found' };
+        }
+
+        if (isDockerProcess(process)) {
+            const containerName = process.metadata?.containerName as string | undefined;
+            const appPath = process.metadata?.appPath as string | undefined;
+            const imageName = process.metadata?.imageName as string | undefined;
+
+            if (process.metadata?.source === 'repo-app' && appPath && containerName && imageName) {
+                let startScript = process.metadata?.startScript as string | undefined;
+                if (!startScript) {
+                    try {
+                        const pkgRaw = await readFile(join(appPath, 'package.json'), 'utf-8');
+                        const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
+                        startScript = resolveStartScript(pkg.scripts || null) || undefined;
+                    } catch {
+                        startScript = undefined;
+                    }
+                }
+
+                if (!startScript) {
+                    return { success: false, message: 'package.json is missing a start/preview/dev script' };
+                }
+
+                const port = process.port || await getAvailablePort();
+                const dockerfilePath = join(appPath, 'Dockerfile.taskflow');
+                const dockerfile = `FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --legacy-peer-deps
+COPY . .
+ENV NODE_ENV=production
+ENV PORT=3000
+RUN npm run build --if-present
+EXPOSE 3000
+CMD ["npm", "run", "${startScript}"]
+`;
+
+                await writeFile(dockerfilePath, dockerfile);
+
+                try {
+                    await execAsync(`docker rm -f ${containerName}`);
+                } catch {
+                    // ignore if container doesn't exist
+                }
+
+                try {
+                    await execAsync(`docker build -t ${imageName} -f "${dockerfilePath}" "${appPath}"`);
+                    await execAsync(`docker run -d --name ${containerName} -p ${port}:3000 ${imageName}`);
+                } catch (dockerError: any) {
+                    console.error('Error starting docker container:', dockerError);
+                    return { success: false, message: 'Failed to start docker container' };
+                }
+
+                const updated = await prisma.processRegistry.update({
+                    where: { id },
+                    data: {
+                        status: 'running',
+                        port,
+                        startedAt: new Date(),
+                        stoppedAt: null,
+                        metadata: {
+                            ...process.metadata as any,
+                            startScript
+                        }
+                    }
+                });
+
+                return { success: true, process: updated };
+            }
+
+            if (containerName) {
+                try {
+                    await execAsync(`docker start ${containerName}`);
+                } catch (dockerError: any) {
+                    console.error('Error starting docker container:', dockerError);
+                    return { success: false, message: 'Failed to start docker container' };
+                }
+            }
+
+            const updated = await prisma.processRegistry.update({
+                where: { id },
+                data: {
+                    status: 'running',
+                    startedAt: new Date(),
+                    stoppedAt: null
+                }
+            });
+
+            return { success: true, process: updated };
+        }
+
+        // This would need proper process spawning implementation
+        // For now, we'll just update the status
+        // In a real implementation, use child_process.spawn() and track the PID
+
+        const updated = await prisma.processRegistry.update({
+            where: { id },
+            data: {
+                status: 'running',
+                startedAt: new Date(),
+                stoppedAt: null
+            }
+        });
+
+        return { success: true, process: updated, message: 'To start the process, run the command manually for now' };
+    } catch (error: any) {
+        console.error('Error starting process:', error);
+        return { success: false, message: error.message };
+    }
+}
+
+/**
+ * Check process health
+ */
+export async function checkProcessHealth(id: string) {
+    try {
+        const user = await getDemoUser();
+        const process = await prisma.processRegistry.findFirst({
+            where: { id, userId: user.id }
+        });
+
+        if (!process) {
+            return { success: false, message: 'Process not found' };
+        }
+
+        let healthStatus = 'unknown';
+        let responseTime = 0;
+        const startTime = Date.now();
+
+        // HTTP health check
+        if (process.healthCheckType === 'http' && process.healthUrl) {
+            try {
+                const response = await fetch(process.healthUrl, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(5000)
+                });
+                responseTime = Date.now() - startTime;
+                healthStatus = response.ok ? 'healthy' : 'unhealthy';
+            } catch (error) {
+                healthStatus = 'unhealthy';
+                responseTime = Date.now() - startTime;
+            }
+        }
+
+        // Port check
+        if (process.healthCheckType === 'port' && process.port) {
+            try {
+                const { stdout } = await execAsync(`netstat -ano | findstr :${process.port}`);
+                healthStatus = stdout.includes(`${process.port}`) ? 'healthy' : 'unhealthy';
+                responseTime = Date.now() - startTime;
+            } catch (error) {
+                healthStatus = 'unhealthy';
+                responseTime = Date.now() - startTime;
+            }
+        }
+
+        // Update database
+        const updated = await prisma.processRegistry.update({
+            where: { id },
+            data: {
+                lastHealthCheck: new Date(),
+                healthStatus,
+                responseTime,
+                status: healthStatus === 'healthy' ? 'running' : 'error'
+            }
+        });
+
+        return { success: true, health: { status: healthStatus, responseTime, lastCheck: new Date() } };
+    } catch (error: any) {
+        console.error('Error checking process health:', error);
+        return { success: false, message: error.message };
+    }
+}
+
+/**
+ * Discover running processes on common ports
+ */
+export async function discoverProcesses() {
+    try {
+        const user = await getDemoUser();
+        // Sync docker apps first
+        await syncDockerAppProcesses(user.id);
+        await syncRepoAppProcesses(user.id); // Also sync repo apps
+
+        const commonPorts = [3000, 3001, 5173, 5174, 5175, 5176, 8080, 8081, 4200, 5000, 5001];
+        const discovered = [];
+
+        for (const port of commonPorts) {
+            try {
+                // Determine platform-specific command
+                const isWin = process.platform === 'win32';
+                const cmd = isWin
+                    ? `netstat -ano | findstr :${port}`
+                    : `lsof -i :${port} -t`;
+
+                const { stdout } = await execAsync(cmd);
+
+                // Check if we found anything
+                if (stdout && (isWin ? stdout.includes(`:${port}`) : stdout.trim().length > 0)) {
+                    let pid: number | null = null;
+
+                    if (isWin) {
+                        // Windows parsing: "  TCP    0.0.0.0:3000 ... 1234"
+                        const lines = stdout.trim().split('\n');
+                        // Prefer LISTENING
+                        const listeningLine = lines.find(l => l.includes('LISTENING')) || lines[0];
+                        const match = listeningLine?.match(/\s+(\d+)\r?$/);
+                        pid = match ? parseInt(match[1]) : null;
+                    } else {
+                        // lsof returns just PIDs
+                        const lines = stdout.trim().split('\n');
+                        pid = lines[0] ? parseInt(lines[0]) : null;
+                    }
+
+                    // Check if already registered
+                    const existing = await prisma.processRegistry.findFirst({
+                        where: {
+                            userId: user.id,
+                            port: port
+                        }
+                    });
+
+                    if (!existing && pid) {
+                        // Create the process record
+                        const p = await prisma.processRegistry.create({
+                            data: {
+                                name: `App on Port ${port}`,
+                                type: 'dev-server',
+                                port,
+                                pid,
+                                path: 'Detected locally',
+                                command: `Running on port ${port}`,
+                                status: 'running',
+                                healthCheckType: 'port',
+                                healthInterval: 30000,
+                                startedAt: new Date(),
+                                userId: user.id
+                            }
+                        });
+
+                        discovered.push(p);
+                    }
+                }
+            } catch (error) {
+                // Port not in use, continue
+                continue;
+            }
+        }
+
+        return { success: true, discovered };
+    } catch (error: any) {
+        console.error('Error discovering processes:', error);
+        return { success: false, message: error.message };
+    }
+}
+
+/**
+ * Delete a process from registry
+ */
+export async function deleteProcess(id: string) {
+    try {
+        const user = await getDemoUser();
+        await prisma.processRegistry.delete({
+            where: { id }
+        });
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error deleting process:', error);
+        return { success: false, message: error.message };
+    }
+}

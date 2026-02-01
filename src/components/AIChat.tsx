@@ -26,6 +26,24 @@ export type SelectedFile = {
     parentId?: string | null;
 };
 
+const aiChatStateCache = {
+    messages: [] as {
+        id?: string;
+        role: 'user' | 'ai';
+        content: string;
+        files?: SelectedFile[];
+        toolUsed?: string;
+        toolResult?: any;
+        thinking?: string;
+        toolArgs?: any;
+    }[],
+    attachedFiles: [] as SelectedFile[],
+    activeSessionId: null as string | null,
+    activeSessionTitle: 'New Chat',
+    currentFolderContext: { id: null as string | null, name: 'Root' },
+    activePreviewContext: null as { id: string, name: string, parentId: string | null } | null
+};
+
 const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
     if (!result || !result.success) return null;
 
@@ -520,8 +538,8 @@ const MessageBubble = ({
 
 
 
-export default function AIChat() {
-    const [isOpen, setIsOpen] = useState(false);
+export default function AIChat({ embedded = false }: { embedded?: boolean }) {
+    const [isOpen, setIsOpen] = useState(embedded);
     const [view, setView] = useState<'chat' | 'prompts' | 'sessions'>('chat');
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -537,15 +555,15 @@ export default function AIChat() {
         toolResult?: any;
         thinking?: string;
         toolArgs?: any;
-    }[]>([]);
+    }[]>(() => (aiChatStateCache.messages.length ? [...aiChatStateCache.messages] : []));
     const streamSpeedRef = useRef(14);
-    const [attachedFiles, setAttachedFiles] = useState<SelectedFile[]>([]);
+    const [attachedFiles, setAttachedFiles] = useState<SelectedFile[]>(() => aiChatStateCache.attachedFiles || []);
     const [isDragging, setIsDragging] = useState(false);
     const [prompts, setPrompts] = useState<AIPromptSet[]>([]);
     const [intentRules, setIntentRules] = useState<IntentRule[]>([]);
     const [chatSessions, setChatSessions] = useState<any[]>([]);
-    const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-    const [activeSessionTitle, setActiveSessionTitle] = useState('New Chat');
+    const [activeSessionId, setActiveSessionId] = useState<string | null>(aiChatStateCache.activeSessionId);
+    const [activeSessionTitle, setActiveSessionTitle] = useState(aiChatStateCache.activeSessionTitle || 'New Chat');
     const [workspaceFiles, setWorkspaceFiles] = useState<SelectedFile[]>([]);
     const [isCreatingPrompt, setIsCreatingPrompt] = useState(false);
     const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
@@ -569,14 +587,44 @@ export default function AIChat() {
     const [isDeletingSession, setIsDeletingSession] = useState(false);
     const [isEditPreviewOpen, setIsEditPreviewOpen] = useState(false);
     const [editPreviewData, setEditPreviewData] = useState({ fileName: '', content: '' });
-    const [currentFolderContext, setCurrentFolderContext] = useState<{ id: string | null, name: string }>({ id: null, name: 'Root' });
+    const [currentFolderContext, setCurrentFolderContext] = useState<{ id: string | null, name: string }>(aiChatStateCache.currentFolderContext);
     const [promptHistory, setPromptHistory] = useState<string[]>([]);
-    const [activePreviewContext, setActivePreviewContext] = useState<{ id: string, name: string, parentId: string | null } | null>(null);
+    const [activePreviewContext, setActivePreviewContext] = useState<{ id: string, name: string, parentId: string | null } | null>(aiChatStateCache.activePreviewContext);
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [celebration, setCelebration] = useState<{ emoji: string; timestamp: number } | null>(null);
     const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
     const [sessionActivities, setSessionActivities] = useState<any[]>([]);
     const [manualStop, setManualStop] = useState(false);
+    const [verbosity, setVerbosity] = useState<'concise' | 'normal' | 'verbose'>('concise');
+
+    // Force open if embedded
+    useEffect(() => {
+        if (embedded) setIsOpen(true);
+    }, [embedded]);
+
+    useEffect(() => {
+        aiChatStateCache.messages = messages;
+    }, [messages]);
+
+    useEffect(() => {
+        aiChatStateCache.attachedFiles = attachedFiles;
+    }, [attachedFiles]);
+
+    useEffect(() => {
+        aiChatStateCache.activeSessionId = activeSessionId;
+    }, [activeSessionId]);
+
+    useEffect(() => {
+        aiChatStateCache.activeSessionTitle = activeSessionTitle;
+    }, [activeSessionTitle]);
+
+    useEffect(() => {
+        aiChatStateCache.currentFolderContext = currentFolderContext;
+    }, [currentFolderContext]);
+
+    useEffect(() => {
+        aiChatStateCache.activePreviewContext = activePreviewContext;
+    }, [activePreviewContext]);
 
     // Listen for preview changes
     useEffect(() => {
@@ -591,6 +639,18 @@ export default function AIChat() {
         window.addEventListener('preview-selection-changed', handlePreviewChange);
         return () => window.removeEventListener('preview-selection-changed', handlePreviewChange);
     }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const recentMessages = messages
+            .filter(m => m.content && m.content.trim().length > 0)
+            .slice(-5)
+            .map(m => ({ role: m.role, content: m.content }));
+
+        window.dispatchEvent(new CustomEvent('chat-context-updated', {
+            detail: { messages: recentMessages }
+        }));
+    }, [messages]);
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const lastBackgroundBusyRef = useRef(false);
@@ -661,7 +721,7 @@ export default function AIChat() {
             // Use latest activity title if available, otherwise fall back to job type
             const label = res.latestActivity?.title || res.latestJob?.type || null;
             setBackgroundJobLabel(label);
-            setBackgroundJobMessage((res.latestActivity as any)?.message || null);
+            setBackgroundJobMessage((res.latestActivity as any)?.message || res.latestJob?.error || null);
             return { busy: !!res.busy, latestJob: res.latestJob };
         }
         setIsBackgroundBusy(false);
@@ -1057,8 +1117,8 @@ export default function AIChat() {
     const sendMessage = async (text: string) => {
         setManualStop(false);
         if (isBackgroundBusy) {
-            toast.message('Background agent is working. Please wait for it to finish.');
-            return;
+            // Non-blocking warning/toast instead of return
+            // toast.message('Background agent is active. You can continue chatting.');
         }
         if (!text.trim() && attachedFiles.length === 0) return;
 
@@ -1139,11 +1199,40 @@ export default function AIChat() {
 
             const expandedFileIds = await expandFileIdsWithFolders(Array.from(allFileIds));
 
-            const contextMsg = activePreviewContext
-                ? `[CONTEXT: User is currently PREVIEWING file "${activePreviewContext.name}". Assume changes apply to this app/folder unless specified. If editing, look for files in the same folder as the previewed file.]\n${userMsg.content}`
+            // Build system context to help AI understand current state
+            const systemContext = [];
+
+            // Background job context
+            if (isBackgroundBusy && backgroundJobLabel) {
+                systemContext.push(`[SYSTEM: Background agent is currently running: "${backgroundJobLabel}"]`);
+            }
+
+            // Folder context
+            if (currentFolderContext.name !== 'Root') {
+                systemContext.push(`[SYSTEM: User is currently in folder: "${currentFolderContext.name}"]`);
+            }
+
+            // File preview context
+            if (activePreviewContext) {
+                systemContext.push(`[SYSTEM: User is currently PREVIEWING file "${activePreviewContext.name}". If user says "this file" or "run this", they likely mean this file.]`);
+            }
+
+            // Terminal/App running hint - based on domain knowledge
+            // Note: We can't directly detect terminals from the frontend, but we can provide smart guidance
+            systemContext.push(`[SYSTEM GUIDANCE: If user says "run the app" or "start the server":
+1. First check if they mean a specific file they're previewing
+2. Common scenarios in this project:
+   - Main app runs via "npm run dev" on http://localhost:3000
+   - If they just scaffolded a new app in apps/ folder, that would be in a subdirectory
+3. If unsure which app, ask them to clarify OR check for package.json in their current folder
+4. NEVER just search for files - always provide actionable guidance or commands]`);
+
+            const contextMsg = systemContext.length > 0
+                ? `${systemContext.join('\\n')}\\n\\n${userMsg.content}`
                 : userMsg.content;
 
             console.log('📤 Sending to AI:', userMsg.content);
+            console.log('🧠 System Context:', systemContext.length > 0 ? systemContext : 'None');
             console.log('📎 Files in context:', expandedFileIds);
             console.log('📂 Current Folder:', currentFolderContext.name, currentFolderContext.id);
             let usedStream = false;
@@ -1160,7 +1249,8 @@ export default function AIChat() {
                         history: geminiHistory,
                         currentFolder: currentFolderContext.name,
                         currentFolderId: currentFolderContext.id || undefined,
-                        sessionId: sessionId || undefined
+                        sessionId: sessionId || undefined,
+                        verbosity: verbosity // Pass current verbosity setting
                     })
                 });
 
@@ -1225,7 +1315,7 @@ export default function AIChat() {
                     geminiHistory,
                     currentFolderContext.name,
                     currentFolderContext.id || undefined,
-                    { sessionId: sessionId || undefined, allowToolExecution: false }
+                    { sessionId: sessionId || undefined, allowToolExecution: false, verbosity: verbosity }
                 );
             }
             console.log('📥 AI Response:', JSON.stringify(res, null, 2));
@@ -1327,6 +1417,18 @@ export default function AIChat() {
                         // Trigger edit preview if applicable
                         if ((res as any).toolUsed === 'edit_file' || (res as any).toolUsed === 'create_markdown_file') {
                             if ((res as any).toolArgs) {
+                                // If it's an HTML file, also trigger the live preview split view
+                                const targetName = (res as any).toolArgs.fileId || (res as any).toolArgs.filename || '';
+                                if (targetName.toLowerCase().endsWith('.html')) {
+                                    // Try to find the file in available workspace files to get full object
+                                    const fileObj = workspaceFiles.find(f =>
+                                        f.id === targetName || f.name === targetName || f.storagePath?.endsWith(targetName)
+                                    );
+                                    if (fileObj) {
+                                        window.dispatchEvent(new CustomEvent('open-preview-tab', { detail: fileObj }));
+                                    }
+                                }
+
                                 setEditPreviewData({
                                     fileName: (res as any).toolArgs.fileId || (res as any).toolArgs.filename || 'Resource System',
                                     content: (res as any).toolArgs.content || ''
@@ -1590,7 +1692,7 @@ export default function AIChat() {
         if (name.includes('code') || name.includes('review')) pool = codeTips;
         if (name.includes('web') || name.includes('architect') || name.includes('ui') || name.includes('ux')) pool = webTips;
 
-        return [...pool].sort(() => Math.random() - 0.5).slice(0, 3);
+        return pool.slice(0, 3);
     }, [activePrompt?.name]);
 
     // Listen for emoji celebration events
@@ -1618,64 +1720,88 @@ export default function AIChat() {
                 )}
             </AnimatePresence>
 
-            {isPinned ? (
-                <div className="h-full w-[450px] border-l border-white/10 glass-card flex flex-col relative z-20 overflow-hidden">
+            {isPinned || embedded ? (
+                <div className={cn(
+                    "h-full border-white/10 glass-card flex flex-col relative z-20 overflow-hidden",
+                    embedded ? "w-full border-r" : "w-[450px] border-l"
+                )}>
                     {/* Header (Pinned) */}
-                    <div className="p-6 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <BrainCircuit size={20} className="text-blue-400" />
-                            <div>
-                                <h3 className="font-bold text-white text-xs tracking-tight uppercase">
-                                    {activePrompt?.name || "TaskFlow Agent"}
-                                </h3>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                    <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[8px] text-white/20 uppercase tracking-[0.2em] font-bold">System Online</span>
-                                </div>
-                                {isBackgroundBusy && (
-                                    <div className="flex items-center gap-1.5 mt-1">
-                                        <div className="w-1 h-1 rounded-full bg-amber-400 animate-pulse" />
-                                        <span className="text-[8px] text-amber-200/80 uppercase tracking-[0.2em] font-bold">
-                                            Background Agent Active{backgroundJobLabel ? `: ${backgroundJobLabel}` : ''}
-                                        </span>
-                                        {backgroundJobMessage && (
-                                            <span className="text-[8px] text-white/40 block italic truncate max-w-[200px] pl-1">
-                                                {backgroundJobMessage}
-                                            </span>
-                                        )}
+                    <div className="p-6 border-b border-white/10 bg-white/[0.02]">
+                        <div className={cn("flex items-center justify-between", embedded ? "max-w-3xl mx-auto w-full" : "w-full")}>
+                            <div className="flex items-center gap-3">
+                                <BrainCircuit size={20} className="text-blue-400" />
+                                <div>
+                                    <h3 className="font-bold text-white text-xs tracking-tight uppercase">
+                                        {activePrompt?.name || "TaskFlow Agent"}
+                                    </h3>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                        <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                                        <span className="text-[8px] text-white/20 uppercase tracking-[0.2em] font-bold">System Online</span>
                                     </div>
+                                    {isBackgroundBusy && (
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                            <div className="w-1 h-1 rounded-full bg-amber-400 animate-pulse" />
+                                            <span className="text-[8px] text-amber-200/80 uppercase tracking-[0.2em] font-bold">
+                                                Background Agent Active{backgroundJobLabel ? `: ${backgroundJobLabel}` : ''}
+                                            </span>
+                                            {backgroundJobMessage && (
+                                                <span className="text-[8px] text-white/40 block italic truncate max-w-[200px] pl-1">
+                                                    {backgroundJobMessage}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setVerbosity(v => v === 'concise' ? 'normal' : v === 'normal' ? 'verbose' : 'concise')}
+                                    className={cn(
+                                        "p-2 rounded-lg transition-colors border border-transparent",
+                                        verbosity === 'concise' ? "text-blue-400 bg-blue-500/10 border-blue-500/20" :
+                                            verbosity === 'normal' ? "text-white/60 hover:text-white" :
+                                                "text-purple-400 bg-purple-500/10 border-purple-500/20"
+                                    )}
+                                    title={`Verbosity: ${verbosity.charAt(0).toUpperCase() + verbosity.slice(1)}`}
+                                >
+                                    <div className="flex items-end gap-[1px] h-3 w-3 justify-center pb-0.5">
+                                        <div className="w-[2px] bg-current rounded-full h-[40%]" />
+                                        <div className={cn("w-[2px] bg-current rounded-full", verbosity !== 'concise' ? "h-[70%]" : "h-[40%] opacity-30")} />
+                                        <div className={cn("w-[2px] bg-current rounded-full", verbosity === 'verbose' ? "h-[100%]" : "h-[40%] opacity-30")} />
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => setIsSuggestionsOpen(true)}
+                                    className="p-2 hover:bg-blue-500/10 rounded-lg text-blue-400/60 hover:text-blue-400 transition-colors"
+                                    title="Browse Ideas Library"
+                                >
+                                    <Lightbulb size={18} />
+                                </button>
+                                <button
+                                    onClick={() => setView(view === 'sessions' ? 'chat' : 'sessions')}
+                                    className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
+                                    title="Chat Sessions"
+                                >
+                                    <MessageSquare size={18} />
+                                </button>
+                                <button
+                                    onClick={() => setView(view === 'prompts' ? 'chat' : 'prompts')}
+                                    className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
+                                    title="Agent Prompts"
+                                >
+                                    <Settings size={18} />
+                                </button>
+                                {!embedded && (
+                                    <button
+                                        onClick={togglePin}
+                                        className="p-2 hover:bg-white/5 rounded-lg text-blue-400 transition-colors"
+                                        title="Unpin from UI"
+                                    >
+                                        <PinOff size={18} />
+                                    </button>
                                 )}
                             </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={() => setIsSuggestionsOpen(true)}
-                                className="p-2 hover:bg-blue-500/10 rounded-lg text-blue-400/60 hover:text-blue-400 transition-colors"
-                                title="Browse Ideas Library"
-                            >
-                                <Lightbulb size={18} />
-                            </button>
-                            <button
-                                onClick={() => setView(view === 'sessions' ? 'chat' : 'sessions')}
-                                className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
-                                title="Chat Sessions"
-                            >
-                                <MessageSquare size={18} />
-                            </button>
-                            <button
-                                onClick={() => setView(view === 'prompts' ? 'chat' : 'prompts')}
-                                className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
-                                title="Agent Prompts"
-                            >
-                                <Settings size={18} />
-                            </button>
-                            <button
-                                onClick={togglePin}
-                                className="p-2 hover:bg-white/5 rounded-lg text-blue-400 transition-colors"
-                                title="Unpin from UI"
-                            >
-                                <PinOff size={18} />
-                            </button>
                         </div>
                     </div>
 
@@ -1709,243 +1835,287 @@ export default function AIChat() {
                                     {isDragging && (
                                         <div className="absolute inset-0 z-[100] bg-blue-500/10 backdrop-blur-sm border-2 border-dashed border-blue-500/40 rounded-[2rem] flex flex-col items-center justify-center pointer-events-none m-4">
                                             <div className="bg-zinc-900 shadow-2xl p-6 rounded-[2rem] border border-white/10 flex flex-col items-center gap-4 animate-bounce">
-                                                <div className="p-4 bg-blue-500/20 rounded-full text-blue-400 border border-blue-500/20">
+                                                <div className="p-4 bg-blue-500/10 rounded-2xl text-blue-400">
                                                     <Paperclip size={32} />
                                                 </div>
-                                                <div className="space-y-1 text-center">
-                                                    <h4 className="font-bold text-white text-lg">Drop to Attach</h4>
-                                                    <p className="text-white/40 text-xs">Add context to your request</p>
+                                                <div className="text-center">
+                                                    <p className="text-white font-bold">Drop to Attach</p>
+                                                    <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest mt-1">Context Injection</p>
                                                 </div>
                                             </div>
                                         </div>
                                     )}
-                                    <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6 custom-scrollbar">
-                                        {messages.length === 0 && (
-                                            <div className="flex flex-col items-center justify-center text-center space-y-6 py-12 px-4 mt-8">
-                                                <div className="relative group">
-                                                    <div className="absolute inset-0 bg-blue-500/10 blur-2xl rounded-full scale-150 transition-all duration-1000" />
-                                                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 text-blue-400 relative z-10">
-                                                        <Sparkles size={32} />
+                                    <div
+                                        ref={scrollRef}
+                                        className="flex-1 overflow-y-auto overflow-x-hidden p-6 custom-scrollbar relative"
+                                        onScroll={(e) => {
+                                            const target = e.target as HTMLDivElement;
+                                            const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 100;
+                                            setShowScrollButton(!isNearBottom && messages.length > 3);
+                                        }}
+                                    >
+                                        <div className={cn("space-y-8 pb-8", embedded ? "max-w-3xl mx-auto" : "")}>
+                                            {messages.length === 0 && (
+                                                <div className="flex flex-col items-center justify-center text-center space-y-6 py-12 px-4 mt-8 relative">
+                                                    <div className="relative group">
+                                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-3xl rounded-full scale-150 group-hover:scale-[2] transition-all duration-1000" />
+                                                        <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/20 text-blue-400 relative z-10 shadow-2xl backdrop-blur-xl">
+                                                            <Sparkles size={48} className="drop-shadow-2xl" />
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <div className="space-y-1 relative z-10">
-                                                    <p className="text-white/40 text-[10px] leading-relaxed uppercase tracking-[0.3em] font-bold">
-                                                        Agent Ready
-                                                    </p>
-                                                </div>
-                                                <div className="grid grid-cols-1 gap-3 w-full pt-4 relative z-10">
-                                                    <button
-                                                        onClick={() => setIsSuggestionsOpen(true)}
-                                                        className="group p-5 bg-blue-600/10 border border-blue-500/20 rounded-2xl text-left transition-all hover:bg-blue-600/20 hover:border-blue-500/30 shadow-xl shadow-blue-500/5"
-                                                    >
-                                                        <div className="flex items-center gap-3 mb-2">
-                                                            <div className="p-2 bg-blue-600/20 rounded-xl text-blue-400 group-hover:scale-110 transition-transform">
-                                                                <Compass size={18} />
+                                                    <div className="space-y-2 relative z-10">
+                                                        <p className="text-white/60 text-sm font-semibold">
+                                                            Premium AI Assistant
+                                                        </p>
+                                                        <p className="text-white/40 text-[10px] leading-relaxed uppercase tracking-[0.3em] font-bold">
+                                                            Agent Ready
+                                                        </p>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 gap-3 w-full pt-4 relative z-10">
+                                                        <button
+                                                            onClick={() => setIsSuggestionsOpen(true)}
+                                                            className="group p-5 bg-blue-600/10 border border-blue-500/20 rounded-2xl text-left transition-all hover:bg-blue-600/20 hover:border-blue-500/30 shadow-xl shadow-blue-500/5 backdrop-blur-xl relative overflow-hidden"
+                                                        >
+                                                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            <div className="relative flex items-center gap-4">
+                                                                <div className="p-3 bg-blue-600/20 rounded-xl text-blue-400 group-hover:scale-110 transition-transform">
+                                                                    <Compass size={22} />
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest mb-1">Explore Idea Library</h4>
+                                                                    <p className="text-[10px] text-white/40 leading-relaxed font-medium">Browse high-quality strategic flows and multi-step task instructions.</p>
+                                                                </div>
+                                                                <ChevronRight size={18} className="text-white/20 group-hover:translate-x-1 group-hover:text-blue-400 transition-all" />
                                                             </div>
-                                                            <h4 className="text-xs font-black text-white uppercase tracking-widest">Explore Idea Library</h4>
-                                                        </div>
-                                                        <p className="text-[10px] text-white/40 leading-relaxed font-medium">Browse high-quality strategic flows and multi-step task instructions for the agent.</p>
-                                                    </button>
+                                                        </button>
 
-                                                    <div className="grid grid-cols-1 gap-2 pt-2">
-                                                        {quickTips.map((tip, ix) => (
-                                                            <button
-                                                                key={ix}
-                                                                onClick={() => setInput(tip.text)}
-                                                                className="p-3 bg-white/5 border border-white/5 rounded-xl text-left text-[11px] text-white/40 hover:bg-white/10 hover:text-white/80 transition-all active:scale-[0.98]"
-                                                            >
-                                                                "{tip.text}"
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {messages.map((msg, i) => (
-                                            <MessageBubble
-                                                key={i}
-                                                msg={msg}
-                                                attachedFiles={attachedFiles}
-                                                setInput={setInput}
-                                                setActiveTool={setActiveTool}
-                                                isBackgroundBusy={isBackgroundBusy}
-                                                onApprove={approveFromBubble}
-                                                hasMarkdownTable={hasMarkdownTable}
-                                                normalizeMarkdown={normalizeMarkdown}
-                                                remarkGfm={remarkGfm}
-                                                ToolResultPreview={ToolResultPreview}
-                                            />
-                                        ))}
-                                        {isLoading && (
-                                            <div className="flex flex-col gap-1">
-                                                <div className="text-[10px] text-emerald-400 uppercase font-black tracking-widest animate-pulse">
-                                                    {isBackgroundBusy ? (backgroundJobLabel || "Computing") : "Computing"}...
-                                                </div>
-                                                {isBackgroundBusy && backgroundJobLabel && (
-                                                    <span className="text-[8px] text-white/20 uppercase tracking-widest font-bold ml-0.5">
-                                                        Agent processing in background
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="p-4 border-t border-white/5 bg-black/40">
-                                        {/* Unified Context Bar */}
-                                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mb-2">
-                                            {enabledToolIds.map((toolId) => {
-                                                const tool = TOOL_LIBRARY[toolId];
-                                                if (!tool) return null;
-
-                                                const isActive = activeTool === toolId;
-
-
-                                                return (
-                                                    <button
-                                                        key={toolId}
-                                                        onClick={() => {
-                                                            setActiveTool(isActive ? null : toolId);
-                                                            setInput(isActive ? '' : (toolPromptById[toolId] || tool.description));
-                                                        }}
-                                                        className={cn(
-                                                            "shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all",
-                                                            isActive
-                                                                ? "bg-blue-500/20 border-blue-500/40 text-blue-300"
-                                                                : "bg-white/5 border-white/10 text-white/30 hover:text-white/60"
-                                                        )}
-                                                    >
-                                                        {tool.name}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                        {attachedFiles.length > 0 && (
-                                            <>
-                                                <div className="w-px h-3 bg-white/10 shrink-0 mx-1" />
-                                                {attachedFiles.map(f => (
-                                                    <div key={f.id} className="relative shrink-0 group">
-                                                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/5 border border-blue-500/10 rounded-full text-[10px] text-blue-400/60 group-hover:text-blue-400 transition-colors cursor-default">
-                                                            {f.name}
-                                                            <button onClick={() => removeFile(f.id)} className="hover:text-red-400 transition-colors ml-1">
-                                                                <X size={10} />
-                                                            </button>
+                                                        <div className="grid grid-cols-1 gap-2 pt-2">
+                                                            {quickTips.map((tip, ix) => (
+                                                                <button
+                                                                    key={ix}
+                                                                    onClick={() => setInput(tip.text)}
+                                                                    className="group p-4 bg-gradient-to-br from-white/[0.08] to-white/[0.03] border border-white/10 rounded-2xl text-left text-xs text-white/50 hover:text-white/90 hover:border-white/20 hover:from-white/[0.12] hover:to-white/[0.06] transition-all duration-300 active:scale-[0.98] backdrop-blur-xl shadow-lg hover:shadow-xl relative overflow-hidden"
+                                                                >
+                                                                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-purple-500/5 to-pink-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                                                    <div className="relative flex items-center gap-3">
+                                                                        <span className="text-2xl">{tip.icon}</span>
+                                                                        <span className="flex-1 font-medium">{tip.text}</span>
+                                                                        <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                    </div>
+                                                                </button>
+                                                            ))}
                                                         </div>
                                                     </div>
-                                                ))}
-                                            </>
-                                        )}
-                                        <div className="ml-auto flex items-center gap-2">
-                                            <button
-                                                onClick={async () => {
-                                                    try {
-                                                        toast.info('Syncing workspace files...');
-                                                        const res = await getWorkspaceFiles();
-                                                        setWorkspaceFiles(res as any);
-                                                        toast.success('Workspace synced');
-                                                    } catch (e) {
-                                                        toast.error('Sync failed');
-                                                    }
-                                                }}
-                                                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-colors"
-                                                title="Sync Files"
-                                            >
-                                                <RefreshCw size={12} />
-                                            </button>
-                                        </div>
-                                        <div className="mt-3">
-                                            <form onSubmit={handleSend} className="relative group/input">
-                                                <textarea
-                                                    rows={1}
-                                                    value={input}
-                                                    onChange={(e) => setInput(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                                            e.preventDefault();
-                                                            handleSend(e);
-                                                        }
-                                                        // History Navigation
-                                                        if (e.key === 'ArrowUp') {
-                                                            e.preventDefault();
-                                                            const nextIndex = historyIndex + 1;
-                                                            if (nextIndex < promptHistory.length) {
-                                                                setHistoryIndex(nextIndex);
-                                                                setInput(promptHistory[nextIndex]);
-                                                            }
-                                                        }
-                                                        if (e.key === 'ArrowDown') {
-                                                            e.preventDefault();
-                                                            const prevIndex = historyIndex - 1;
-                                                            if (prevIndex >= 0) {
-                                                                setHistoryIndex(prevIndex);
-                                                                setInput(promptHistory[prevIndex]);
-                                                            } else {
-                                                                setHistoryIndex(-1);
-                                                                setInput('');
-                                                            }
-                                                        }
-                                                    }}
-                                                    disabled={isLoading || isBackgroundBusy}
-                                                    placeholder={isBackgroundBusy ? "Background agent working..." : "Ask anything..."}
-                                                    className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-3 pl-4 pr-12 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500/30 focus:bg-white/[0.05] transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                                </div>
+                                            )}
+                                            {messages.map((msg, i) => (
+                                                <MessageBubble
+                                                    key={i}
+                                                    msg={msg}
+                                                    attachedFiles={attachedFiles}
+                                                    setInput={setInput}
+                                                    setActiveTool={setActiveTool}
+                                                    isBackgroundBusy={isBackgroundBusy}
+                                                    onApprove={handleApproveJob}
+                                                    hasMarkdownTable={hasMarkdownTable}
+                                                    normalizeMarkdown={normalizeMarkdown}
+                                                    remarkGfm={remarkGfm}
+                                                    ToolResultPreview={ToolResultPreview}
                                                 />
-                                                {isBackgroundBusy ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setManualStop(true);
-                                                            setIsBackgroundBusy(false);
-                                                            setBackgroundJobLabel(null);
-                                                            toast.success('Agent stopped manually');
-                                                        }}
-                                                        className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"
-                                                        title="Force stop agent"
-                                                    >
-                                                        <Square size={14} fill="currentColor" />
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        type="submit"
-                                                        disabled={isLoading}
-                                                        className={cn(
-                                                            "absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all",
-                                                            input.trim() || attachedFiles.length > 0 ? "bg-blue-600 text-white shadow-lg" : "text-white/20",
-                                                            isLoading && "opacity-50 cursor-not-allowed"
+                                            ))}
+
+                                            {sessionActivities.length > 0 && (
+                                                <CognitiveTimeline activities={sessionActivities} />
+                                            )}
+
+                                            {isLoading && (
+                                                <div className="flex flex-col items-start gap-2">
+                                                    <div className="relative group">
+                                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-[1.5rem] blur-xl opacity-60 group-hover:opacity-100 transition-opacity" />
+                                                        <div className="relative bg-gradient-to-br from-white/[0.08] to-white/[0.03] px-6 py-5 rounded-[1.5rem] text-white/40 flex items-center gap-4 rounded-tl-none border border-white/10 backdrop-blur-xl shadow-2xl">
+                                                            <div className="flex gap-1.5">
+                                                                <div className="w-2.5 h-2.5 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full shadow-lg shadow-blue-400/50 animate-pulse" />
+                                                                <div className="w-2.5 h-2.5 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full shadow-lg shadow-purple-400/50 animate-pulse delay-75" />
+                                                                <div className="w-2.5 h-2.5 bg-gradient-to-r from-pink-400 to-blue-400 rounded-full shadow-lg shadow-pink-400/50 animate-pulse delay-150" />
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-xs font-bold tracking-widest uppercase bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+                                                                    {isBackgroundBusy ? (backgroundJobLabel || "Computing") : "Computing"}...
+                                                                </span>
+                                                                {isBackgroundBusy && backgroundJobLabel && (
+                                                                    <span className="text-[8px] text-white/30 uppercase tracking-widest font-bold mt-0.5">
+                                                                        Background Specialist Active
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Premium Scroll Button */}
+                                    <AnimatePresence>
+                                        {showScrollButton && (
+                                            <motion.button
+                                                initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: 20, scale: 0.8 }}
+                                                onClick={() => {
+                                                    scrollRef.current?.scrollTo({
+                                                        top: scrollRef.current.scrollHeight,
+                                                        behavior: 'smooth'
+                                                    });
+                                                }}
+                                                className="absolute bottom-32 right-8 z-20 p-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-full shadow-2xl shadow-blue-500/50 hover:shadow-blue-500/70 border border-white/20 backdrop-blur-xl transition-all duration-300 hover:scale-110 active:scale-95 group"
+                                            >
+                                                <ArrowDown size={20} className="text-white group-hover:animate-bounce" />
+                                            </motion.button>
+                                        )}
+                                    </AnimatePresence>
+
+                                    <div className="relative p-6 border-t border-white/10 bg-gradient-to-b from-black/20 to-black/60 backdrop-blur-xl">
+                                        <div className={cn(embedded ? "max-w-3xl mx-auto" : "w-full")}>
+                                            <div className="flex flex-col gap-3">
+                                                {(enabledToolIds.length > 0 || attachedFiles.length > 0) && (
+                                                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                                                        {enabledToolIds.map((toolId) => {
+                                                            const tool = TOOL_LIBRARY[toolId];
+                                                            if (!tool) return null;
+                                                            const isActive = activeTool === toolId;
+
+                                                            return (
+                                                                <button
+                                                                    key={toolId}
+                                                                    onClick={() => {
+                                                                        setActiveTool(isActive ? null : toolId);
+                                                                        setInput(isActive ? '' : (toolPromptById[toolId] || tool.description));
+                                                                    }}
+                                                                    className={cn(
+                                                                        "shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all duration-300 hover:scale-105 active:scale-95",
+                                                                        isActive
+                                                                            ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-blue-500/40 text-blue-300 shadow-lg shadow-blue-500/20"
+                                                                            : "bg-white/5 border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10"
+                                                                    )}
+                                                                >
+                                                                    {tool.name}
+                                                                </button>
+                                                            );
+                                                        })}
+
+                                                        {attachedFiles.length > 0 && (
+                                                            <>
+                                                                <div className="w-px h-4 bg-gradient-to-b from-transparent via-white/20 to-transparent shrink-0 mx-1" />
+                                                                {attachedFiles.map(f => (
+                                                                    <div key={f.id} className="relative shrink-0 group">
+                                                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-full text-[10px] text-blue-400/80 group-hover:text-blue-300 transition-all duration-300 cursor-default shadow-lg shadow-blue-500/10">
+                                                                            <Paperclip size={10} className="opacity-60" />
+                                                                            <span className="font-medium">{f.name}</span>
+                                                                            <button
+                                                                                onClick={() => removeFile(f.id)}
+                                                                                className="hover:text-red-400 transition-colors ml-1 hover:scale-110 active:scale-90"
+                                                                            >
+                                                                                <X size={10} />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </>
                                                         )}
-                                                    >
-                                                        <Send size={14} />
-                                                    </button>
+                                                    </div>
                                                 )}
-                                            </form>
+
+                                                <form onSubmit={handleSend} className="relative group/input">
+                                                    <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-[1.25rem] opacity-0 group-focus-within/input:opacity-100 blur-xl transition-opacity duration-500" />
+                                                    <div className="relative">
+                                                        <textarea
+                                                            rows={1}
+                                                            value={input}
+                                                            onChange={(e) => setInput(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                                    e.preventDefault();
+                                                                    handleSend(e);
+                                                                }
+                                                                if (e.key === 'ArrowUp') {
+                                                                    e.preventDefault();
+                                                                    const nextIndex = historyIndex + 1;
+                                                                    if (nextIndex < promptHistory.length) {
+                                                                        setHistoryIndex(nextIndex);
+                                                                        setInput(promptHistory[nextIndex]);
+                                                                    }
+                                                                }
+                                                                if (e.key === 'ArrowDown') {
+                                                                    e.preventDefault();
+                                                                    const prevIndex = historyIndex - 1;
+                                                                    if (prevIndex >= 0) {
+                                                                        setHistoryIndex(prevIndex);
+                                                                        setInput(promptHistory[prevIndex]);
+                                                                    } else {
+                                                                        setHistoryIndex(-1);
+                                                                        setInput('');
+                                                                    }
+                                                                }
+                                                            }}
+                                                            disabled={isLoading}
+                                                            placeholder={isBackgroundBusy ? "Background agent active. You can continue chatting..." : "Ask anything..."}
+                                                            className="w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 pr-14 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-black/20 font-medium"
+                                                            style={{ minHeight: '52px', maxHeight: '200px' }}
+                                                        />
+                                                        <button
+                                                            type="submit"
+                                                            disabled={isLoading || (!input.trim() && attachedFiles.length === 0)}
+                                                            className={cn(
+                                                                "absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-xl transition-all duration-300 shadow-lg",
+                                                                input.trim() || attachedFiles.length > 0
+                                                                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 hover:scale-110 active:scale-95 shadow-blue-500/50"
+                                                                    : "bg-white/5 text-white/20 cursor-not-allowed"
+                                                            )}
+                                                        >
+                                                            <Send size={16} className={input.trim() || attachedFiles.length > 0 ? "animate-pulse" : ""} />
+                                                        </button>
+                                                    </div>
+                                                    {input.length > 0 && (
+                                                        <div className="absolute -top-6 right-0 text-[9px] text-white/30 font-mono">
+                                                            {input.length} chars
+                                                        </div>
+                                                    )}
+                                                </form>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             ) : view === 'sessions' ? (
                                 renderSessionsView()
                             ) : (
-                                <div className="h-full p-6 space-y-4 overflow-y-auto custom-scrollbar">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h4 className="text-[10px] font-black uppercase text-white/30 tracking-widest">Archetypes</h4>
-                                        <button onClick={() => { setEditingPromptId(null); setNewPrompt({ name: '', description: '', prompt: '', tools: DEFAULT_TOOLS, workflows: [], triggerKeywords: [] }); setIsEditorOpen(true); }} className="p-2 bg-blue-600 rounded-lg text-white">
-                                            <Plus size={16} />
-                                        </button>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {prompts.map(p => (
-                                            <div key={p.id} className={cn("p-4 rounded-2xl border transition-all", p.isActive ? "bg-blue-600/10 border-blue-500/30" : "bg-white/5 border-white/5")}>
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span className="text-[12px] font-bold text-white truncate">{p.name}</span>
-                                                    <div className="flex gap-1 shrink-0">
-                                                        {!p.isActive && <button onClick={() => handleSetActive(p.id)} className="p-1.5 bg-white/5 text-white/40 hover:text-white rounded-lg"><Check size={14} /></button>}
-                                                        <button onClick={() => startEditing(p)} className="p-1.5 bg-white/5 text-white/40 hover:text-white rounded-lg"><Edit2 size={14} /></button>
+                                <div className="h-full p-6 overflow-y-auto custom-scrollbar">
+                                    <div className={cn("space-y-4", embedded ? "max-w-3xl mx-auto" : "")}>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="text-[10px] font-black uppercase text-white/30 tracking-widest">Archetypes</h4>
+                                            <button onClick={() => { setEditingPromptId(null); setNewPrompt({ name: '', description: '', prompt: '', tools: DEFAULT_TOOLS, workflows: [], triggerKeywords: [] }); setIsEditorOpen(true); }} className="p-2 bg-blue-600 rounded-lg text-white">
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {prompts.map(p => (
+                                                <div key={p.id} className={cn("p-4 rounded-2xl border transition-all", p.isActive ? "bg-blue-600/10 border-blue-500/30" : "bg-white/5 border-white/5")}>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="text-[12px] font-bold text-white truncate">{p.name}</span>
+                                                        <div className="flex gap-1 shrink-0">
+                                                            {!p.isActive && <button onClick={() => handleSetActive(p.id)} className="p-1.5 bg-white/5 text-white/40 hover:text-white rounded-lg"><Check size={14} /></button>}
+                                                            <button onClick={() => startEditing(p)} className="p-1.5 bg-white/5 text-white/40 hover:text-white rounded-lg"><Edit2 size={14} /></button>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             )}
                         </AnimatePresence>
                     </div>
-                </div>
+                </div >
             ) : (
                 <div className="fixed bottom-8 right-8 z-[9999] flex flex-col items-end gap-4 font-sans">
                     <AnimatePresence>
@@ -1955,7 +2125,7 @@ export default function AIChat() {
                                 animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
                                 exit={{ opacity: 0, y: 30, scale: 0.9, filter: 'blur(10px)' }}
                                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                                className="glass-card w-[420px] md:w-[600px] h-[750px] flex flex-col shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border border-white/20 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl"
+                                className="glass-card w-[500px] md:w-[800px] xl:w-[1100px] h-[85vh] flex flex-col shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border border-white/20 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl"
                             >
                                 <div className="p-5 border-b border-white/5 bg-black/40 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -2376,8 +2546,8 @@ export default function AIChat() {
                                                                             }
                                                                         }
                                                                     }}
-                                                                    disabled={isLoading || isBackgroundBusy}
-                                                                    placeholder={isBackgroundBusy ? "Background agent working..." : "Ask anything..."}
+                                                                    disabled={isLoading}
+                                                                    placeholder={isBackgroundBusy ? "Background agent active. You can continue chatting..." : "Ask anything..."}
                                                                     className="w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 pr-14 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-black/20 font-medium"
                                                                     style={{
                                                                         minHeight: '52px',
@@ -2386,7 +2556,7 @@ export default function AIChat() {
                                                                 />
                                                                 <button
                                                                     type="submit"
-                                                                    disabled={isLoading || isBackgroundBusy || (!input.trim() && attachedFiles.length === 0)}
+                                                                    disabled={isLoading || (!input.trim() && attachedFiles.length === 0)}
                                                                     className={cn(
                                                                         "absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-xl transition-all duration-300 shadow-lg",
                                                                         input.trim() || attachedFiles.length > 0
@@ -2547,7 +2717,8 @@ export default function AIChat() {
                         }
                     </motion.button>
                 </div>
-            )}
+            )
+            }
 
             {/* Global Modals - Rendered outside of layout containers to avoid clipping */}
             <PromptEditorModal
@@ -2585,6 +2756,12 @@ export default function AIChat() {
                 isOpen={isSuggestionsOpen}
                 onClose={() => setIsSuggestionsOpen(false)}
                 onApply={handleApplySuggestion}
+                workflowContext={{
+                    messages: messages.slice(-10), // Last 10 messages
+                    attachedFiles: attachedFiles.map(f => ({ id: f.id, name: f.name, type: f.type })),
+                    activePrompt: activePrompt ? { name: activePrompt.name, description: activePrompt.description } : undefined
+                }}
+                workflowType="task-planning"
             />
         </>
     );

@@ -1,0 +1,10 @@
+{
+  "lessons": [],
+  "successfulCommands": [
+    "dir"
+  ],
+  "failedCommands": [
+    "ls"
+  ],
+  "environmentFacts": {}
+}

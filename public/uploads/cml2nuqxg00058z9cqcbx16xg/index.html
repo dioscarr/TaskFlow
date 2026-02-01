@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jane Doe - Portfolio</title>
+    <meta name="description" content="Jane Doe is a passionate UI/UX designer and web developer specializing in creating engaging and accessible digital experiences. Explore her portfolio and get in touch!">
+    <link rel="stylesheet" href="style.css">
+    <style>
+       /* Glassmorphism CSS */
+       .glassmorphic {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #e0e5ec;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 1rem 0;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            color: #2c3e50;
+        }
+
+        nav a {
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            color: #3498db;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        nav a:hover {
+            color: #2980b9;
+        }
+
+        section {
+            padding: 4rem 2rem;
+            max-width: 960px;
+            margin: 0 auto;
+            background: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        #about {
+            display: flex;
+            align-items: center;
+        }
+
+        #about img {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin-right: 2rem;
+            object-fit: cover;
+        }
+
+        #about h2 {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        #about p {
+            font-size: 1.1rem;
+            color: #555;
+        }
+
+        #projects {
+            text-align: center;
+        }
+
+        #projects h2 {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .project-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .project-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            background: white;
+        }
+
+        .project-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .project-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .project-item h3 {
+            font-size: 1.3rem;
+            margin: 1rem;
+            color: #333;
+        }
+
+        .project-item p {
+            margin: 0 1rem 1rem 1rem;
+            color: #555;
+        }
+
+        #contact {
+            text-align: center;
+        }
+
+        #contact h2 {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        #contact p {
+            font-size: 1.1rem;
+            color: #555;
+        }
+
+        #contact a {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.75rem 1.5rem;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        #contact a:hover {
+            background-color: #2980b9;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1rem 0;
+            background-color: #333;
+            color: white;
+        }
+       #self-reflection {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 20px;
+            margin-bottom: 20px;
+            color: #fff; /* Adjust text color for better visibility */
+            text-align: left;
+        }
+
+        #self-reflection h2 {
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        #self-reflection p {
+            margin: 5px 0;
+        }
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            #about {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            #about img {
+                margin-bottom: 1rem;
+                margin-right: 0;
+            }
+
+            header h1 {
+                font-size: 2rem;
+            }
+
+            nav a {
+                padding: 0.5rem;
+            }
+
+            section {
+                padding: 2rem 1rem;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <header class="glassmorphic">
+        <h1>Jane Doe</h1>
+        <nav>
+            <a href="#about">About</a>
+            <a href="#projects">Projects</a>
+            <a href="#contact">Contact</a>
+        </nav>
+    </header>
+
+    <section id="about" class="glassmorphic">
+        <img src="placeholder-profile.jpg" alt="Jane Doe Profile" style="border-radius: 50%;">
+        <div>
+            <h2>About Me</h2>
+            <p>
+               I'm Jane Doe, a passionate UI/UX designer and front-end developer dedicated to crafting intuitive and visually appealing digital experiences. My expertise lies in understanding user needs and translating them into elegant and functional designs. I am proficient in HTML, CSS, JavaScript, and various design tools. I strive to create websites and applications that are not only aesthetically pleasing but also highly accessible and user-friendly.
+            </p>
+            <p>
+              When I'm not designing or coding, I enjoy exploring new technologies, contributing to open-source projects, and staying up-to-date with the latest industry trends.  I am always eager to collaborate on innovative projects and contribute to a team's success.
+            </p>
+        </div>
+    </section>
+
+    <section id="projects" class="glassmorphic">
+        <h2>Projects</h2>
+        <div class="project-grid">
+            <div class="project-item">
+                <img src="project1.jpg" alt="Project 1">
+                <h3>E-commerce Website Redesign</h3>
+                <p>Redesigned the user interface for a leading e-commerce platform, resulting in a 20% increase in conversion rates.</p>
+            </div>
+            <div class="project-item">
+                <img src="project2.jpg" alt="Project 2">
+                <h3>Mobile App Development</h3>
+                <p>Developed a mobile application for a local charity, providing a seamless experience for users to donate and volunteer.</p>
+            </div>
+             <div class="project-item">
+                <img src="project3.jpg" alt="Project 3">
+                <h3>Portfolio Website Design</h3>
+                <p>Designed and developed a personal portfolio website for a freelance photographer, showcasing their best work in an engaging way.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="glassmorphic">
+        <h2>Contact</h2>
+        <p>Feel free to reach out to me for collaborations or to discuss exciting new projects!</p>
+        <p>Email: jane.doe@email.com</p>
+        <p>Phone: (123) 456-7890</p>
+        <a href="mailto:jane.doe@email.com">Get in Touch</a>
+    </section>
+    <section id="self-reflection" class="glassmorphic">
+        <h2>Self-Reflection</h2>
+        <p><strong>Issues Found:</strong> Needs images, more detailed project descriptions, and potentially a skills section.</p>
+        <p><strong>Fixes Applied:</strong> Added basic structure and placeholder content. Glassmorphic styles applied.</p>
+        <p><strong>Remaining Risks:</strong> Responsiveness across devices needs thorough testing. Content SEO optimization is pending.</p>
+        <p><strong>Confidence Score:</strong> 0.8</p>
+    </section>
+
+    <footer class="glassmorphic">
+        <p>&copy; 2024 Jane Doe</p>
+    </footer>
+</body>
+</html>

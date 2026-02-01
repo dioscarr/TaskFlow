@@ -1,81 +1,23 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Launch Microsite</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-        }
-        header {
-            background-color: #333;
-            color: white;
-            padding: 1em 0;
-            text-align: center;
-        }
-        .hero {
-            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://placehold.co/1200x400');
-            background-size: cover;
-            color: white;
-            text-align: center;
-            padding: 5em 0;
-        }
-        .features {
-            padding: 2em;
-            display: flex;
-            justify-content: space-around;
-            flex-wrap: wrap;
-        }
-        .feature {
-            width: 30%;
-            margin-bottom: 1em;
-            padding: 1em;
-            background-color: white;
-            border: 1px solid #ddd;
-            box-sizing: border-box;
-        }
-        footer {
-            background-color: #333;
-            color: white;
-            text-align: center;
-            padding: 1em 0;
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <h1>Product Launch</h1>
-    </header>
-
-    <div class="hero">
-        <h2>Revolutionary Product</h2>
-        <p>Launching soon!</p>
+<div class="flex items-center justify-center min-h-screen bg-gray-900">
+  <div class="relative w-full max-w-md bg-clip-padding backdrop-filter backdrop-blur-md bg-opacity-10 border border-gray-700 rounded-xl shadow-lg p-6 text-white font-inter">
+    <div class="absolute -top-10 left-1/2 transform -translate-x-1/2">
+      <img class="h-20 w-20 rounded-full object-cover border-4 border-purple-500" src="https://source.unsplash.com/100x100/?portrait" alt="User Avatar">
     </div>
-
-    <div class="features">
-        <div class="feature">
-            <h3>Feature 1</h3>
-            <p>Description of feature 1.</p>
-        </div>
-        <div class="feature">
-            <h3>Feature 2</h3>
-            <p>Description of feature 2.</p>
-        </div>
-        <div class="feature">
-            <h3>Feature 3</h3>
-            <p>Description of feature 3.</p>
-        </div>
+    <div class="mt-12 text-center">
+      <h2 class="text-2xl font-semibold">John Doe</h2>
+      <p class="text-gray-400">UI/UX Designer</p>
     </div>
+    <div class="mt-4">
+      <p class="text-gray-300">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+      </p>
+    </div>
+    <div class="mt-6 flex justify-around">
+      <a href="#" class="text-purple-400 hover:text-purple-300"><i class="fab fa-twitter fa-2x"></i></a>
+      <a href="#" class="text-purple-400 hover:text-purple-300"><i class="fab fa-linkedin fa-2x"></i></a>
+      <a href="#" class="text-purple-400 hover:text-purple-300"><i class="fab fa-github fa-2x"></i></a>
+    </div>
+  </div>
+</div>
 
-    <footer>
-        &copy; 2024
-    </footer>
-</body>
-</html>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />

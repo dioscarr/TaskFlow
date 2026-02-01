@@ -30,7 +30,7 @@ export type WorkerOutput = z.infer<typeof WorkerOutputSchema>;
 export const ReviewSchema = z.object({
     status: z.enum(["PASS", "FAIL"]),
     feedback: z.string().optional(),
-    errorCategory: z.enum(["logic", "formatting", "accuracy", "none"]),
+    errorCategory: z.enum(["logic", "formatting", "accuracy", "none", "inconsistency", "completeness", "safety", "deviation"]),
     nextAction: z.enum(["continue", "revision", "human_review"]).optional()
 });
 

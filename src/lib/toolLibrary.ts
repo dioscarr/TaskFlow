@@ -802,6 +802,65 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
                 required: ['objective']
             }
         }
+    },
+    generate_blueprint: {
+        id: 'generate_blueprint',
+        name: 'Generate Application Blueprint',
+        description: 'Scan the codebase and generate a comprehensive application blueprint that can be used for context, documentation, and recreation. This blueprint includes architecture, dependencies, features, APIs, components, and HTML projects.',
+        category: 'workspace',
+        icon: 'FileCode',
+        schema: {
+            name: 'generate_blueprint',
+            description: 'Generate a complete blueprint of the application including all architecture, components, and dependencies',
+            parameters: {
+                type: 'object',
+                properties: {
+                    format: {
+                        type: 'string',
+                        enum: ['json', 'markdown'],
+                        description: 'Output format: json for full blueprint, markdown for human-readable summary',
+                        default: 'markdown'
+                    }
+                }
+            }
+        }
+    },
+    get_blueprint: {
+        id: 'get_blueprint',
+        name: 'Get Application Blueprint',
+        description: 'Retrieve the current application blueprint to provide context about the application architecture, features, and structure.',
+        category: 'workspace',
+        icon: 'FileJson',
+        schema: {
+            name: 'get_blueprint',
+            description: 'Get the current application blueprint for context',
+            parameters: {
+                type: 'object',
+                properties: {
+                    format: {
+                        type: 'string',
+                        enum: ['json', 'markdown'],
+                        description: 'Output format',
+                        default: 'markdown'
+                    }
+                }
+            }
+        }
+    },
+    export_blueprint: {
+        id: 'export_blueprint',
+        name: 'Export Blueprint for Recreation',
+        description: 'Export the full blueprint with recreation scripts and instructions that can be used to recreate the application from scratch.',
+        category: 'workspace',
+        icon: 'Download',
+        schema: {
+            name: 'export_blueprint',
+            description: 'Export blueprint with recreation scripts',
+            parameters: {
+                type: 'object',
+                properties: {}
+            }
+        }
     }
 };
 
@@ -873,5 +932,9 @@ export const DEFAULT_TOOLS = [
     'set_file_tags',
     'synthesize_documents',
     'run_agent_symphony',
-    'get_agent_activity'
+    'get_agent_activity',
+    'generate_blueprint',
+    'get_blueprint',
+    'export_blueprint',
+    'execute_command'
 ];

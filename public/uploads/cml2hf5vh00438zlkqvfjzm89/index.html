@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Content Generator</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-brain"></i>
+                <h1>AI Content Generator</h1>
+            </div>
+            <p class="tagline">Unleash the power of AI for effortless content creation.</p>
+        </header>
+
+        <main>
+            <section id="content-creation">
+                <h2><i class="fas fa-magic"></i> Create Content</h2>
+
+                <div class="step">
+                    <h3><i class="fas fa-list-ul"></i> Content Type</h3>
+                    <p>Choose the type of content you need:</p>
+                    <select id="content-type">
+                        <option value="blog-post">Blog Post</option>
+                        <option value="social-media-post">Social Media Post</option>
+                        <option value="email">Email</option>
+                        <option value="ad-copy">Ad Copy</option>
+                    </select>
+                </div>
+
+                <div class="step">
+                    <h3><i class="fas fa-key"></i> Topic & Keywords</h3>
+                    <p>Enter your topic and associated keywords:</p>
+                    <input type="text" id="topic" placeholder="Topic (e.g., 'Digital Marketing Trends')">
+                    <input type="text" id="keywords" placeholder="Keywords (e.g., 'SEO, PPC, Social Media')">
+                </div>
+
+                <div class="step">
+                    <h3><i class="fas fa-users"></i> Target Audience</h3>
+                    <p>Describe your ideal audience:</p>
+                    <textarea id="target-audience" placeholder="Who are you trying to reach? (e.g., 'Small business owners interested in online advertising')"></textarea>
+                </div>
+
+                <div class="step">
+                    <h3><i class="fas fa-palette"></i> Tone & Style</h3>
+                    <p>Select the desired tone:</p>
+                    <select id="tone">
+                        <option value="formal">Formal</option>
+                        <option value="informal">Informal</option>
+                        <option value="persuasive">Persuasive</option>
+                        <option value="informative">Informative</option>
+                        <option value="humorous">Humorous</option>
+                    </select>
+                </div>
+
+                <button id="generate-content"><i class="fas fa-rocket"></i> Generate Content</button>
+            </section>
+
+            <section id="content-review" style="display: none;">
+                <h2><i class="fas fa-edit"></i> Review & Edit</h2>
+                <div id="content-variations">
+                    <!-- Content variations will be displayed here -->
+                </div>
+
+                <div id="editor-controls">
+                    <button id="rewrite-button"><i class="fas fa-sync-alt"></i> Rewrite</button>
+                    <button id="shorten-button"><i class="fas fa-cut"></i> Shorten</button>
+                    <button id="add-section-button"><i class="fas fa-plus"></i> Add Section</button>
+                    <button id="remove-section-button"><i class="fas fa-minus"></i> Remove Section</button>
+                    <button id="seo-optimize-button"><i class="fas fa-search"></i> SEO Optimize</button>
+                </div>
+
+                <button id="save-content"><i class="fas fa-save"></i> Save Content</button>
+            </section>
+
+            <section id="scheduling-publishing" style="display: none;">
+                <h2><i class="fas fa-calendar-alt"></i> Schedule & Publish</h2>
+                <p>Plan your content distribution:</p>
+
+                <div class="form-group">
+                    <label for="platform"><i class="fas fa-share-alt"></i> Platform:</label>
+                    <select id="platform">
+                        <option value="facebook">Facebook</option>
+                        <option value="twitter">Twitter</option>
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="instagram">Instagram</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="publish-date"><i class="fas fa-clock"></i> Publish Date:</label>
+                    <input type="datetime-local" id="publish-date">
+                </div>
+
+                <button id="schedule-publish"><i class="fas fa-upload"></i> Schedule</button>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 AI Content Generator</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

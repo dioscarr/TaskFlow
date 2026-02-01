@@ -14,7 +14,8 @@ export async function POST(request: Request) {
         history,
         currentFolder,
         currentFolderId,
-        sessionId
+        sessionId,
+        verbosity
     } = body || {};
 
     const encoder = new TextEncoder();
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
                     Array.isArray(history) ? history : [],
                     currentFolder,
                     currentFolderId,
-                    { sessionId, allowToolExecution: false }
+                    { sessionId, allowToolExecution: false, verbosity }
                 );
 
                 if (!res?.success) {

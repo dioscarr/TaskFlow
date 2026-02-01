@@ -27,9 +27,11 @@ interface SuggestionsLibraryModalProps {
     isOpen: boolean;
     onClose: () => void;
     onApply: (suggestion: Suggestion) => void;
+    workflowContext?: any; // JSON context from the original request/plan
+    workflowType?: string; // Type of workflow (e.g., 'content-generation', 'task-planning', 'code-editing')
 }
 
-export default function SuggestionsLibraryModal({ isOpen, onClose, onApply }: SuggestionsLibraryModalProps) {
+export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, workflowContext, workflowType }: SuggestionsLibraryModalProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -37,15 +39,23 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply }: Su
 
     const handleSearch = async (e?: React.FormEvent) => {
         e?.preventDefault();
+        // Allow empty search to reset/show defaults if desired, or keep specific validation
         if (!searchQuery.trim()) {
-            toast.error("Please enter a research theme or industry");
-            return;
+            // Optional: could just show all defaults
         }
 
         setIsLoading(true);
         try {
-            const res = await generateSuggestions(searchQuery);
+            // Include workflow context and type in the search
+            const contextPayload = workflowContext ? JSON.stringify(workflowContext) : undefined;
+            const res = await generateSuggestions(
+                searchQuery,
+                workflowType,
+                contextPayload
+            );
             if (res.success && res.suggestions) {
+                // Keep the static suggestion if it matches the theme or just append it
+                // For now, let's just replace results but we could merge.
                 setSuggestions(res.suggestions);
                 setSelectedSuggestion(null);
                 toast.success(`Found ${res.suggestions.length} high-quality task flows`);
@@ -59,11 +69,35 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply }: Su
         }
     };
 
+    const STATIC_SUGGESTIONS: Suggestion[] = [
+        {
+            id: 'project-planner-001',
+            title: 'Project Planning Assistant',
+            category: 'Productivity',
+            description: 'Turn your conversation history into a structured launch plan with action items and owners.',
+            flow: [
+                { step: 1, task: 'Context Analysis', description: 'Analyze conversation history for goals and key decisions.' },
+                { step: 2, task: 'Task Extraction', description: 'Identify action items and assign owners.' },
+                { step: 3, task: 'Plan Generation', description: 'Create a structured project plan with timelines.' }
+            ],
+            agentInstructions: `You are an expert Project Manager. Your goal is to convert the ongoing conversation into a clear, actionable project plan.
+1. **Analyze Context**: Read the entire conversation history to understand the project goals, requirements, and decisions made.
+2. **Extract Tasks**: Identify every specific action item. If a person is mentioned in context of a task, assign it to them.
+3. **Structure the Plan**: Group tasks by phase (e.g., Planning, Execution, Verification) or by Feature.
+4. **Format Output**:
+   - Use Markdown.
+   - Create a table for "Action Items" (Task, Owner, Status, Priority).
+   - Create a "Timeline" section if dates were mentioned.
+   - Use the \`create_task\` tool for each identified task if you are able to.
+   - If missing details, list them as "Open Questions".`
+        }
+    ];
+
     // Pre-populate with some default ideas
     useEffect(() => {
         if (isOpen && suggestions.length === 0) {
-            setSearchQuery('Premium SaaS and Fintech Solutions');
-            // We don't auto-search to let user see empty state or they can search themselves
+            // setSearchQuery('Premium SaaS and Fintech Solutions'); // Don't auto-fill search query to allow seeing static defaults
+            setSuggestions(STATIC_SUGGESTIONS);
         }
     }, [isOpen]);
 
@@ -98,6 +132,19 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply }: Su
 
                         {/* Search Bar */}
                         <div className="px-8 py-6 bg-white/[0.01] border-b border-white/5">
+                            {/* Workflow Type Indicator */}
+                            {workflowType && (
+                                <div className="mb-4 flex items-center gap-2">
+                                    <span className="px-3 py-1 bg-blue-600/10 text-blue-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-500/10">
+                                        {workflowType.replace(/-/g, ' ')}
+                                    </span>
+                                    {workflowContext && (
+                                        <span className="text-[9px] text-white/30 uppercase tracking-wider font-bold">
+                                            Context Attached
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                             <form onSubmit={handleSearch} className="relative group">
                                 <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-blue-400 transition-colors" size={20} />
                                 <input

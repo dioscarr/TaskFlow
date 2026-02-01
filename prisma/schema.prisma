@@ -26,6 +26,9 @@ model User {
   agentJobs    AgentJob[]
   protoData     PrototypeData[]
   skills        Skill[]
+  processes     ProcessRegistry[]
+  toolConfigs   ToolConfiguration[]
+  appDeployments AppDeployment[]
  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -144,6 +147,7 @@ model WorkspaceFile {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   alegraBill AlegraBill?
+  appDeployments AppDeployment[]
 
   tags      String[] @default([])
   storagePath String?
@@ -151,6 +155,25 @@ model WorkspaceFile {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AppDeployment {
+  id             String   @id @default(cuid())
+  appId          String
+  app            WorkspaceFile @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  internalDomain String
+  port           Int
+  containerName  String
+  imageName      String
+  status         String   @default("running") // running, failed, stopped
+  logs           String?  @db.Text
+
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model AIPromptSet {
@@ -347,3 +370,71 @@ model Skill {
   @@index([userId, enabled])
   @@index([category])
 }
+
+// Process Manager & Health Monitoring
+
+model ProcessRegistry {
+  id              String    @id @default(cuid())
+  name            String
+  type            String    // "dev-server", "background-job", "external-tool"
+  port            Int?
+  pid             Int?
+  path            String    // Working directory
+  command         String    // Command that started it
+  status          String    // "running", "stopped", "error", "healthy", "unhealthy"
+  healthUrl       String?   // URL to check health (e.g., http://localhost:3000/api/health)
+  healthCheckType String?   // "http", "port", "process", "script"
+  healthInterval  Int?      // Health check interval in ms
+  
+  startedAt       DateTime  @default(now())
+  stoppedAt       DateTime?
+  lastHealthCheck DateTime?
+  healthStatus    String?   // "healthy", "unhealthy", "unknown"
+  responseTime    Int?      // Last health check response time in ms
+  errorCount      Int       @default(0)
+  
+  metadata        Json?     // Additional data (env vars, config, etc.)
+  
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId, status])
+  @@index([port])
+}
+
+model ToolConfiguration {
+  id              String    @id @default(cuid())
+  name            String    @unique // "firebase-cli", "vercel-cli", etc.
+  displayName     String    // "Firebase CLI"
+  type            String    // "cli", "api", "service"
+  enabled         Boolean   @default(true)
+  
+  // Installation & Path
+  path            String?   // Executable path
+  version         String?   // Detected version
+  
+  // Configuration
+  config          Json      // Tool-specific configuration
+  
+  // Health Check
+  healthCheck     Json?     // { command, expectedOutput, interval }
+  lastHealthCheck DateTime?
+  healthStatus    String?   // "healthy", "unhealthy", "not-installed"
+  
+  // Metadata
+  description     String?
+  icon            String?   @default("Tool")
+  category        String?   // "deployment", "database", "ci-cd", "custom"
+  
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId, enabled])
+}
+

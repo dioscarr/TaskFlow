@@ -1,8 +1,15 @@
 
+import { exec } from 'child_process';
+import { promisify } from 'util';
+const execAsync = promisify(exec);
+
 import { AgentModel, SymphonyOptions, Logger } from './symphony/types';
 import { PlanSchema, ReviewSchema, Plan, ReviewResult, WorkerOutputSchema } from './symphony/schemas';
 import { callAgentWithEscalation } from './symphony/utils';
-import { SOFTWARE_ARCHITECT_PROMPT, ORCHESTRATOR_AGENT_PROMPT, WORKER_AGENT_PROMPT } from './prompts';
+import { memory } from './symphony/memory';
+import { SOFTWARE_ARCHITECT_PROMPT, ORCHESTRATOR_AGENT_PROMPT, WORKER_AGENT_PROMPT, RESEARCHER_PROMPT, DEVELOPER_PROMPT, REVIEWER_PROMPT } from './prompts';
+
+
 
 export type AgentRole = 'researcher' | 'analyst' | 'writer' | 'critic' | 'orchestrator' | 'developer' | 'qa' | 'generic';
 
@@ -39,7 +46,7 @@ export class AgentSymphony {
         }
     }
 
-    async run(objective: string, preferredStrategy?: string): Promise<SymphonyState> {
+    async run(objective: string, preferredStrategy?: string, jobId?: string): Promise<SymphonyState> {
         const state: SymphonyState = {
             objective,
             plan: null,
@@ -77,6 +84,28 @@ export class AgentSymphony {
                 if (review.status === 'PASS') {
                     state.status = 'completed';
                     state.finalOutput = await this.synthesizeFinal(objective, state.workerResults);
+
+                    // AUTO-SUMMARY for Memory
+                    if (jobId) {
+                        try {
+                            const summaryPrompt = `
+                            [SYSTEM TASK]
+                            Summarize the OUTCOME of this job ID ${jobId} in one technically dense sentence.
+                            Focus on files created, bugs fixed, or key decisions.
+                            Format as a checklist item.
+                            No chatter.
+                            
+                            OBJECTIVE: ${objective}
+                            RESULTS: ${JSON.stringify(state.workerResults)}
+                            `.trim();
+                            const summary = await this.orchestrator.complete(summaryPrompt);
+                            await memory.addJobSummary(jobId, summary);
+                            this.log(`🎼 Symphony: Stored job summary in memory.`, 'info');
+                        } catch (e) {
+                            this.log(`[Memory] Failed to summarize: ${e}`, 'error');
+                        }
+                    }
+
                     return state;
                 }
 
@@ -105,7 +134,10 @@ export class AgentSymphony {
             preferredStrategy ? `STRATEGY DIRECTION: ${preferredStrategy}` : '',
             'Create a detailed execution plan breaking this objective into sub-tasks for specialized agents.',
             'Available Agents: ' + Object.keys(this.workers).join(', '),
-            'IMPORTANT: Think step-by-step inside <thinking> tags to explain your reasoning before generating the JSON plan.'
+            'IMPORTANT: Start with a <thinking> block to explain your reasoning.',
+            'THEN: Output the plan as a SINGLE valid JSON object wrapped in ```json code blocks.',
+            'The JSON must match this structure: { tasks: [{ id (string), agentType (enum), description (string), priority (number 1-5), dependencies? (string[]) }], reasoning (string) }',
+            'Examples: priority: 5 (NOT "5" or "High"), agentType: "developer" (NOT "Developer").'
         ].join('\n');
 
         if (feedback) {
@@ -173,8 +205,14 @@ export class AgentSymphony {
 
                 this.log(`🎼 Symphony: Delegating task "${task.description}" to ${worker.name}...`, 'info');
 
+                let basePrompt = WORKER_AGENT_PROMPT;
+                if (task.agentType === 'researcher') basePrompt = RESEARCHER_PROMPT;
+                if (task.agentType === 'developer') basePrompt = DEVELOPER_PROMPT;
+                if (task.agentType === 'critic' || task.agentType === 'qa') basePrompt = REVIEWER_PROMPT;
+
                 const workerPrompt = `
-${WORKER_AGENT_PROMPT}
+${basePrompt}
+${memory.getContext()}
 
 ═══════════════════════════════════════════════════════════════════
 ASSIGNED TASK
@@ -193,7 +231,39 @@ OUTPUT REQUIREMENTS:
                 `.trim();
 
                 try {
-                    const output = await worker.complete(workerPrompt);
+                    let currentPrompt = workerPrompt;
+                    let output = '';
+                    let iterations = 0;
+
+                    // Execution Loop (Allows agent to run commands)
+                    while (iterations < 5) {
+                        output = await worker.complete(currentPrompt);
+
+                        const execMatch = output.match(/<execute>([\s\S]*?)<\/execute>/);
+                        if (execMatch) {
+                            let cmd = execMatch[1].trim();
+                            // Sanitize: start/end backticks or code blocks
+                            cmd = cmd.replace(/^```\w*\s*/, '').replace(/```$/, '').replace(/^`/, '').replace(/`$/, '').trim();
+
+                            this.log(`[${worker.name}] Executing: ${cmd}`, 'info');
+                            try {
+                                const { stdout, stderr } = await execAsync(cmd);
+                                const result = (stdout + stderr).trim() || "(No output)";
+                                this.log(`[${worker.name}] Result: ${result.substring(0, 100)}...`, 'info');
+                                await memory.recordCommandResult(cmd, true);
+
+                                currentPrompt += `\n\n[SYSTEM] COMMAND EXECUTION RESULT:\n${result}\n\nContinue with your task.`;
+                                iterations++;
+                            } catch (e: any) {
+                                this.log(`[${worker.name}] Command Error: ${e.message}`, 'error');
+                                await memory.recordCommandResult(cmd, false);
+                                currentPrompt += `\n\n[SYSTEM] COMMAND FAILED:\n${e.message}\n\nTry a different command or proceed.`;
+                                iterations++;
+                            }
+                        } else {
+                            break; // Done
+                        }
+                    }
 
                     // Extract and log thinking from worker
                     const thinkingMatch = output.match(/<thinking>([\s\S]*?)<\/thinking>/);
@@ -245,12 +315,17 @@ OUTPUT REQUIREMENTS:
     private async reviewResults(objective: string, results: Record<string, unknown>): Promise<ReviewResult> {
         const prompt = `
     You are the Compliance and Logic Reviewer.
-OBJECTIVE: ${objective}
-WORKER RESULTS: ${JSON.stringify(results)}
+    OBJECTIVE: ${objective}
+    WORKER RESULTS: ${JSON.stringify(results, null, 2)}
 
     Review the results for accuracy, completeness, and alignment with the objective.
     If there are errors or missing information, fail the review and provide constructive feedback.
-Think critically inside <thinking> tags before rendering your verdict.
+    
+    CRITICAL OUTPUT REQUIREMENTS:
+    1. First, think critically inside <thinking> tags to explain your analysis.
+    2. Then, output the JSON review OBJECT inside \`\`\`json code blocks.
+    3. The JSON must strictly follow the schema: { status: "PASS" | "FAIL", feedback: string, errorCategory: string }
+    Do not add any text outside the JSON block and Thinking block.
         `.trim();
 
         return await callAgentWithEscalation(

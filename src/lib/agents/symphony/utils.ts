@@ -29,6 +29,7 @@ export async function callAgentWithRetry<T>(
             // Attempt to parse JSON from the response (handling potentially wrapped markdown code blocks)
             const cleanJson = extractJson(rawResponse);
             if (!cleanJson) {
+                console.log('📝 RAW RESPONSE (No JSON found):\n', rawResponse);
                 throw new Error("No JSON found in response");
             }
 
@@ -42,6 +43,7 @@ export async function callAgentWithRetry<T>(
             // Validation failed
             const errorMessage = fromZodError(result.error as any).message;
             console.warn(`⚠️ Agent ${agent.name} validation failed (Attempt ${attempts + 1}/${maxRetries + 1}): ${errorMessage}`);
+            console.log('📝 RAW RESPONSE:\n', rawResponse); // DEBUGGING: Show me what you got
 
             attempts++;
             currentPrompt = `
@@ -75,10 +77,10 @@ Return ONLY valid JSON.
  * Helper to extract JSON from potentially Markdown-wrapped text
  */
 function extractJson(text: string): string | null {
-    text = text.trim();
-    if (text.startsWith('{') && text.endsWith('}')) return text;
+    // Remove <thinking> blocks first to avoid confusion
+    text = text.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
 
-    // Look for ```json blocks
+    // Look for ```json blocks first (most reliable)
     const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
     if (jsonBlockMatch) return jsonBlockMatch[1];
 
@@ -86,11 +88,32 @@ function extractJson(text: string): string | null {
     const blockMatch = text.match(/```\s*([\s\S]*?)\s*```/);
     if (blockMatch) return blockMatch[1];
 
-    // Attempt to find the first { and last }
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-    if (start !== -1 && end !== -1 && end > start) {
-        return text.substring(start, end + 1);
+    // Attempt to find the outermost { and }
+    // This handles cases where the model validates "Here is the JSON: { ... }" without code blocks
+    let start = -1;
+    let end = -1;
+    let braceCount = 0;
+
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '{') {
+            if (braceCount === 0) start = i;
+            braceCount++;
+        } else if (text[i] === '}') {
+            braceCount--;
+            if (braceCount === 0) {
+                end = i;
+                // If we found a complete object, return it. 
+                // We assume the first valid full object is the response.
+                return text.substring(start, end + 1);
+            }
+        }
+    }
+
+    // Fallback: simple index lookup if the counting failed (e.g. malformed)
+    const simpleStart = text.indexOf('{');
+    const simpleEnd = text.lastIndexOf('}');
+    if (simpleStart !== -1 && simpleEnd !== -1 && simpleEnd > simpleStart) {
+        return text.substring(simpleStart, simpleEnd + 1);
     }
 
     return null;

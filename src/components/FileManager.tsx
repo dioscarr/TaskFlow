@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Folder, FileText, Image as ImageIcon, UploadCloud, MoreVertical, Users, X, ChevronLeft, Maximize2, Edit2, Share2, Move, Trash2, Search, LayoutGrid, List, Bot, AlignLeft, Edit, FolderTree, Sparkles, LayoutPanelLeft, Tag, Wand2, ExternalLink } from 'lucide-react';
 import type { WorkspaceFile } from '@prisma/client';
-import { deleteFile, createFile, uploadFile, moveFile, renameFile, toggleFileShare, reorderFiles, getFileContent, convertFolderToApp, unpromoteApp } from '@/app/actions';
+import { deleteFile, createFile, uploadFile, moveFile, renameFile, toggleFileShare, reorderFiles, getFileContent, convertFolderToApp, unpromoteApp, installDynamicApp, listRepoAppEntries, getRepoAppFileContent, saveRepoAppFileContent, installRepoApp } from '@/app/actions';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -16,6 +16,32 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 interface FileManagerProps {
     files: WorkspaceFile[];
 }
+
+type ChatContextMessage = {
+    role: 'user' | 'ai';
+    content: string;
+};
+
+type RepoEntry = {
+    name: string;
+    path: string;
+    type: string;
+    size: number | null;
+};
+
+const fileManagerStateCache = {
+    currentFolderId: null as string | null,
+    viewMode: 'grid' as 'grid' | 'list',
+    selectedFileIds: [] as string[],
+    lastSelectedId: null as string | null,
+    editorMode: 'edit' as 'edit' | 'preview',
+    editingFileId: null as string | null,
+    editorContent: '',
+    editorContentFileId: null as string | null,
+    searchQuery: '',
+    explorerMode: 'workspace' as 'workspace' | 'repo',
+    repoCurrentPath: null as string | null
+};
 
 // Helper Component for Lazy Previews
 const FilePreview = ({ file }: { file: WorkspaceFile }) => {
@@ -72,18 +98,20 @@ export default function FileManager({ files }: FileManagerProps) {
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
-    const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
-    const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
-    const [editorMode, setEditorMode] = useState<'edit' | 'preview'>('edit');
+    const [currentFolderId, setCurrentFolderId] = useState<string | null>(fileManagerStateCache.currentFolderId);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>(fileManagerStateCache.viewMode);
+    const [explorerMode, setExplorerMode] = useState<'workspace' | 'repo'>(fileManagerStateCache.explorerMode);
+    const [repoCurrentPath, setRepoCurrentPath] = useState<string | null>(fileManagerStateCache.repoCurrentPath);
+    const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(() => new Set(fileManagerStateCache.selectedFileIds));
+    const [lastSelectedId, setLastSelectedId] = useState<string | null>(fileManagerStateCache.lastSelectedId);
+    const [editorMode, setEditorMode] = useState<'edit' | 'preview'>(fileManagerStateCache.editorMode);
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [movingFiles, setMovingFiles] = useState<WorkspaceFile[] | null>(null);
     const [renamingFile, setRenamingFile] = useState<WorkspaceFile | null>(null);
     const [newFolderName, setNewFolderName] = useState('');
     const [newNameValue, setNewNameValue] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState(fileManagerStateCache.searchQuery);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [deletingId, setDeletingId] = useState<string | string[] | null>(null);
@@ -98,12 +126,81 @@ export default function FileManager({ files }: FileManagerProps) {
     const [groupingData, setGroupingData] = useState<{ sourceIds: string[]; targetId: string } | null>(null);
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
     const [previewContent, setPreviewContent] = useState<string | null>(null);
+    const [chatContext, setChatContext] = useState<ChatContextMessage[]>([]);
+    const [repoEntries, setRepoEntries] = useState<RepoEntry[]>([]);
+    const [isRepoLoading, setIsRepoLoading] = useState(false);
+    const [repoEditingFile, setRepoEditingFile] = useState<RepoEntry | null>(null);
+    const [repoEditorContent, setRepoEditorContent] = useState('');
+    const [repoEditorPath, setRepoEditorPath] = useState<string | null>(null);
+    const [isRepoSaving, setIsRepoSaving] = useState(false);
 
     // Code Editor State
-    const [editingFile, setEditingFile] = useState<WorkspaceFile | null>(null);
-    const [editorContent, setEditorContent] = useState('');
-    const [editorContentFileId, setEditorContentFileId] = useState<string | null>(null);
+    const [editingFile, setEditingFile] = useState<WorkspaceFile | null>(() => {
+        const cachedId = fileManagerStateCache.editingFileId;
+        return cachedId ? files.find(file => file.id === cachedId) || null : null;
+    });
+    const [editorContent, setEditorContent] = useState(fileManagerStateCache.editorContent);
+    const [editorContentFileId, setEditorContentFileId] = useState<string | null>(fileManagerStateCache.editorContentFileId);
     const [isSavingStart, setIsSavingStart] = useState(false);
+
+    useEffect(() => {
+        fileManagerStateCache.explorerMode = explorerMode;
+    }, [explorerMode]);
+
+    useEffect(() => {
+        fileManagerStateCache.repoCurrentPath = repoCurrentPath;
+    }, [repoCurrentPath]);
+
+    useEffect(() => {
+        fileManagerStateCache.currentFolderId = currentFolderId;
+    }, [currentFolderId]);
+
+    useEffect(() => {
+        fileManagerStateCache.viewMode = viewMode;
+    }, [viewMode]);
+
+    useEffect(() => {
+        fileManagerStateCache.selectedFileIds = Array.from(selectedFileIds);
+    }, [selectedFileIds]);
+
+    useEffect(() => {
+        fileManagerStateCache.lastSelectedId = lastSelectedId;
+    }, [lastSelectedId]);
+
+    useEffect(() => {
+        fileManagerStateCache.editorMode = editorMode;
+    }, [editorMode]);
+
+    useEffect(() => {
+        fileManagerStateCache.editingFileId = editingFile?.id || null;
+    }, [editingFile]);
+
+    useEffect(() => {
+        fileManagerStateCache.editorContent = editorContent;
+    }, [editorContent]);
+
+    useEffect(() => {
+        fileManagerStateCache.editorContentFileId = editorContentFileId;
+    }, [editorContentFileId]);
+
+    useEffect(() => {
+        fileManagerStateCache.searchQuery = searchQuery;
+    }, [searchQuery]);
+
+    useEffect(() => {
+        if (!editingFile && fileManagerStateCache.editingFileId) {
+            const cachedFile = files.find(file => file.id === fileManagerStateCache.editingFileId) || null;
+            if (cachedFile) {
+                setEditingFile(cachedFile);
+            }
+        }
+    }, [files, editingFile]);
+
+    useEffect(() => {
+        if (currentFolderId && !files.some(file => file.id === currentFolderId)) {
+            setCurrentFolderId(null);
+        }
+    }, [files, currentFolderId]);
 
     useEffect(() => {
         if (editingFile && editorMode === 'preview' && (editingFile.name.endsWith('.md') || editingFile.type === 'md' || editingFile.type === 'markdown')) {
@@ -115,6 +212,18 @@ export default function FileManager({ files }: FileManagerProps) {
             setPreviewContent(null);
         }
     }, [editingFile, editorMode]);
+
+    useEffect(() => {
+        const handleChatContextUpdated = (e: any) => {
+            const incoming = e?.detail?.messages;
+            if (Array.isArray(incoming)) {
+                setChatContext(incoming);
+            }
+        };
+
+        window.addEventListener('chat-context-updated', handleChatContextUpdated);
+        return () => window.removeEventListener('chat-context-updated', handleChatContextUpdated);
+    }, []);
 
     // Broadcast current folder to AI Chat and other components
     useEffect(() => {
@@ -163,6 +272,51 @@ export default function FileManager({ files }: FileManagerProps) {
             window.removeEventListener('focus-workspace-item', handleFocus);
         };
     }, [router, currentFolderId]);
+
+    const loadRepoEntries = async (path?: string | null) => {
+        setIsRepoLoading(true);
+        const result = await listRepoAppEntries(path || '');
+        if (result.success && result.entries) {
+            setRepoEntries(result.entries as RepoEntry[]);
+        } else {
+            setRepoEntries([]);
+        }
+        setIsRepoLoading(false);
+    };
+
+    useEffect(() => {
+        if (explorerMode !== 'repo') return;
+        loadRepoEntries(repoCurrentPath);
+    }, [explorerMode, repoCurrentPath]);
+
+    const handleRepoEntryOpen = async (entry: RepoEntry) => {
+        if (entry.type === 'folder') {
+            setRepoCurrentPath(entry.path);
+            return;
+        }
+
+        const res = await getRepoAppFileContent(entry.path);
+        if (res.success && typeof res.content === 'string') {
+            setRepoEditingFile(entry);
+            setRepoEditorContent(res.content);
+            setRepoEditorPath(entry.path);
+        } else {
+            toast.error('Failed to open repo file');
+        }
+    };
+
+    const handleRepoSave = async (content: string) => {
+        if (!repoEditorPath) return;
+        setIsRepoSaving(true);
+        const res = await saveRepoAppFileContent(repoEditorPath, content);
+        if (res.success) {
+            toast.success('File saved successfully');
+            setRepoEditorContent(content);
+        } else {
+            toast.error('Failed to save file');
+        }
+        setIsRepoSaving(false);
+    };
 
     const handleDragStart = (e: React.DragEvent, file: WorkspaceFile) => {
         e.dataTransfer.setData('fileId', file.id);
@@ -719,6 +873,40 @@ export default function FileManager({ files }: FileManagerProps) {
         }
     };
 
+    const handleInstallApp = async (folderId: string) => {
+        const loadingToast = toast.loading('Installing app...');
+        try {
+            const res = await installDynamicApp(folderId);
+            if (res.success) {
+                toast.success(`App installed at ${res.internalDomain}`, { id: loadingToast });
+                if (res.dnsInstructions) {
+                    toast.info(res.dnsInstructions);
+                }
+            } else {
+                toast.error(res.error || 'Failed to install app', { id: loadingToast });
+            }
+        } catch (error) {
+            toast.error('Failed to install app', { id: loadingToast });
+        }
+    };
+
+    const handleInstallRepoApp = async (repoPath: string) => {
+        const loadingToast = toast.loading('Installing repo app...');
+        try {
+            const res = await installRepoApp(repoPath);
+            if (res.success) {
+                toast.success(`App installed at ${res.internalDomain}`, { id: loadingToast });
+                if (res.dnsInstructions) {
+                    toast.info(res.dnsInstructions);
+                }
+            } else {
+                toast.error(res.error || 'Failed to install app', { id: loadingToast });
+            }
+        } catch (error) {
+            toast.error('Failed to install app', { id: loadingToast });
+        }
+    };
+
     const filteredFiles = (searchQuery
         ? files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
         : files.filter(f => f.parentId === currentFolderId)
@@ -838,6 +1026,84 @@ export default function FileManager({ files }: FileManagerProps) {
             onClick={handleBackgroundClick}
         >
             {/* Global Drop Overlay - Purely Visual */}
+            {explorerMode === 'repo' && (
+                <>
+                    <div className="flex items-center gap-2 text-sm text-white/50 overflow-x-auto pb-2">
+                        <button
+                            onClick={() => setRepoCurrentPath(null)}
+                            className={cn(
+                                "hover:text-white transition-colors flex items-center gap-1",
+                                !repoCurrentPath && "text-white font-medium"
+                            )}
+                        >
+                            <Folder size={14} />
+                            <span>Repo Apps</span>
+                        </button>
+                        {repoCurrentPath && repoCurrentPath.split('/').map((segment, index, parts) => {
+                            const path = parts.slice(0, index + 1).join('/');
+                            return (
+                                <React.Fragment key={path}>
+                                    <ChevronLeft size={12} className="rotate-180" />
+                                    <button
+                                        onClick={() => setRepoCurrentPath(path)}
+                                        className="text-white font-medium hover:text-white/80 transition-colors"
+                                    >
+                                        {segment}
+                                    </button>
+                                </React.Fragment>
+                            );
+                        })}
+                    </div>
+
+                    {isRepoLoading ? (
+                        <div className="flex items-center justify-center py-20 text-white/40">
+                            Loading repo apps...
+                        </div>
+                    ) : (
+                        <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col space-y-2"}>
+                            {repoEntries.map((entry) => (
+                                <div
+                                    key={entry.path}
+                                    onClick={() => handleRepoEntryOpen(entry)}
+                                    className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all cursor-pointer"
+                                >
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="p-2 rounded-lg bg-white/5 text-blue-300">
+                                                {entry.type === 'folder' ? <Folder size={18} /> : <FileText size={18} />}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="text-sm font-semibold text-white truncate">{entry.name}</div>
+                                                <div className="text-[10px] text-white/40 truncate">
+                                                    {entry.type === 'folder' ? 'Folder' : entry.type.toUpperCase()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {entry.type === 'folder' && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleInstallRepoApp(entry.path);
+                                                }}
+                                                className="px-2.5 py-1 text-[10px] font-semibold text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg transition-colors"
+                                                title="Install App (Docker)"
+                                            >
+                                                Install
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                            {repoEntries.length === 0 && (
+                                <div className="col-span-full text-center text-white/40 py-10">
+                                    No repo apps found.
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </>
+            )}
+
             <AnimatePresence>
                 {isGlobalDragActive && (
                     <motion.div
@@ -899,6 +1165,25 @@ export default function FileManager({ files }: FileManagerProps) {
                     onModeChange={handleEditorModeChange}
                     previewFile={editingFile}
                     previewContent={previewContent}
+                    chatContext={chatContext}
+                />
+            )}
+            {repoEditingFile && (
+                <CodeEditorModal
+                    isOpen={!!repoEditingFile}
+                    onClose={() => {
+                        setRepoEditingFile(null);
+                        setRepoEditorContent('');
+                        setRepoEditorPath(null);
+                    }}
+                    fileName={repoEditingFile.name}
+                    initialContent={repoEditorContent}
+                    onSave={handleRepoSave}
+                    isSaving={isRepoSaving}
+                    mode="edit"
+                    previewFile={null}
+                    previewContent={null}
+                    chatContext={chatContext}
                 />
             )}
             <div className="flex items-center justify-between">
@@ -912,174 +1197,212 @@ export default function FileManager({ files }: FileManagerProps) {
                         </button>
                     )}
                     <h1 className="text-3xl font-bold text-white">
-                        {searchQuery ? 'Search Results' : (currentFolderId ? currentFolder?.name : 'Files')}
+                        {explorerMode === 'repo'
+                            ? 'Repo Apps'
+                            : (searchQuery ? 'Search Results' : (currentFolderId ? currentFolder?.name : 'Files'))}
                     </h1>
                 </div>
 
-                <div className="flex-1 max-w-md mx-8 hidden lg:block">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                        <input
-                            ref={searchInputRef}
-                            type="text"
-                            placeholder="Search your files... (Ctrl+K)"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20"
-                        />
+                {explorerMode === 'workspace' && (
+                    <div className="flex-1 max-w-md mx-8 hidden lg:block">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                placeholder="Search your files... (Ctrl+K)"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20"
+                            />
+                        </div>
                     </div>
-                </div>
+                )}
 
                 <div className="flex gap-2">
-                    <button
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors text-sm font-medium border border-white/10"
-                    >
-                        <Folder size={16} />
-                        <span>New Folder</span>
-                    </button>
-                    <button
-                        onClick={triggerUpload}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-blue-500/20"
-                    >
-                        <UploadCloud size={16} />
-                        <span>Upload File</span>
-                    </button>
+                    {explorerMode === 'workspace' && (
+                        <>
+                            <button
+                                onClick={() => setIsCreateModalOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors text-sm font-medium border border-white/10"
+                            >
+                                <Folder size={16} />
+                                <span>New Folder</span>
+                            </button>
+                            <button
+                                onClick={triggerUpload}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-blue-500/20"
+                            >
+                                <UploadCloud size={16} />
+                                <span>Upload File</span>
+                            </button>
+                        </>
+                    )}
 
                     <div className="flex items-center bg-white/5 rounded-lg border border-white/10 p-1 ml-2">
                         <button
-                            onClick={() => setViewMode('grid')}
+                            onClick={() => setExplorerMode('workspace')}
                             className={cn(
-                                "p-1.5 rounded-md transition-all",
-                                viewMode === 'grid' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
+                                "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
+                                explorerMode === 'workspace' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
                             )}
-                            title="Grid View"
+                            title="Workspace Files"
                         >
-                            <LayoutGrid size={18} />
+                            Workspace
                         </button>
                         <button
-                            onClick={() => setViewMode('list')}
+                            onClick={() => setExplorerMode('repo')}
                             className={cn(
-                                "p-1.5 rounded-md transition-all",
-                                viewMode === 'list' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
+                                "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
+                                explorerMode === 'repo' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
                             )}
-                            title="List View"
+                            title="Repo Apps"
                         >
-                            <List size={18} />
+                            Repo Apps
                         </button>
                     </div>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        className="hidden"
-                    />
-                </div>
-            </div>
 
-            {/* Drag Drop Zone (Keep it as explicit button/zone too) */}
-            <div
-                onClick={triggerUpload}
-                onDragOver={handleGlobalDragOver}
-                onDrop={handleGlobalDrop}
-                className="w-full h-32 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group"
-            >
-                <div className="p-3 rounded-full bg-white/5 group-hover:scale-110 transition-transform mb-2">
-                    <UploadCloud className="text-white/50" />
-                </div>
-                <p className="text-sm text-white/50">Drag and drop files here to upload to {currentFolderId ? currentFolder?.name : 'root'}</p>
-            </div>
-
-            {/* Mobile Search */}
-            <div className="lg:hidden relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                <input
-                    type="text"
-                    placeholder="Search your files..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20"
-                />
-            </div>
-
-            {/* Selection Info & Path Breadcrumbs */}
-            <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-sm text-white/50 overflow-x-auto pb-2">
-                    <div className="flex items-center gap-2 mr-4">
-                        <input
-                            type="checkbox"
-                            checked={filteredFiles.length > 0 && selectedFileIds.size === filteredFiles.length}
-                            onChange={(e) => {
-                                if (e.target.checked) {
-                                    setSelectedFileIds(new Set(filteredFiles.map(f => f.id)));
-                                } else {
-                                    setSelectedFileIds(new Set());
-                                }
-                            }}
-                            className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-500/50"
-                        />
-                    </div>
-                    <button
-                        onClick={() => setCurrentFolderId(null)}
-                        className={cn(
-                            "hover:text-white transition-colors flex items-center gap-1",
-                            !currentFolderId && "text-white font-medium"
-                        )}
-                    >
-                        <Folder size={14} />
-                        <span>Home</span>
-                    </button>
-                    {currentFolderId && (
-                        <>
-                            <ChevronLeft size={12} className="rotate-180" />
-                            <span className="text-white font-medium">{currentFolder?.name}</span>
-                        </>
-                    )}
-                </div>
-
-                {selectedFileIds.size > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-4 px-4 py-2 bg-blue-600/20 border border-blue-500/30 rounded-xl"
-                    >
-                        <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">
-                            {selectedFileIds.size} Selected
-                        </span>
-                        <div className="h-4 w-px bg-blue-500/30" />
-                        <div className="flex items-center gap-2">
+                    {explorerMode === 'workspace' && (
+                        <div className="flex items-center bg-white/5 rounded-lg border border-white/10 p-1 ml-2">
                             <button
-                                onClick={() => {
-                                    const selectedFiles = files.filter(f => selectedFileIds.has(f.id));
-                                    setMovingFiles(selectedFiles);
-                                }}
-                                className="p-1.5 hover:bg-white/10 rounded-md text-blue-400 transition-colors"
-                                title="Move Selection"
+                                onClick={() => setViewMode('grid')}
+                                className={cn(
+                                    "p-1.5 rounded-md transition-all",
+                                    viewMode === 'grid' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
+                                )}
+                                title="Grid View"
                             >
-                                <Move size={16} />
+                                <LayoutGrid size={18} />
                             </button>
                             <button
-                                onClick={() => handleDeleteRequest(Array.from(selectedFileIds))}
-                                className="p-1.5 hover:bg-red-500/20 rounded-md text-red-400 transition-colors"
-                                title="Delete Selection"
+                                onClick={() => setViewMode('list')}
+                                className={cn(
+                                    "p-1.5 rounded-md transition-all",
+                                    viewMode === 'list' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
+                                )}
+                                title="List View"
                             >
-                                <Trash2 size={16} />
-                            </button>
-                            <button
-                                onClick={() => setSelectedFileIds(new Set())}
-                                className="p-1.5 hover:bg-white/10 rounded-md text-white/50 hover:text-white transition-colors"
-                                title="Clear Selection"
-                            >
-                                <X size={16} />
+                                <List size={18} />
                             </button>
                         </div>
-                    </motion.div>
-                )}
+                    )}
+                    {explorerMode === 'workspace' && (
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                        />
+                    )}
+                </div>
             </div>
+
+            {explorerMode === 'workspace' && (
+                <div
+                    onClick={triggerUpload}
+                    onDragOver={handleGlobalDragOver}
+                    onDrop={handleGlobalDrop}
+                    className="w-full h-32 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group"
+                >
+                    <div className="p-3 rounded-full bg-white/5 group-hover:scale-110 transition-transform mb-2">
+                        <UploadCloud className="text-white/50" />
+                    </div>
+                    <p className="text-sm text-white/50">Drag and drop files here to upload to {currentFolderId ? currentFolder?.name : 'root'}</p>
+                </div>
+            )}
+
+            {explorerMode === 'workspace' && (
+                <div className="lg:hidden relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                    <input
+                        type="text"
+                        placeholder="Search your files..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20"
+                    />
+                </div>
+            )}
+
+            {explorerMode === 'workspace' && (
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-sm text-white/50 overflow-x-auto pb-2">
+                        <div className="flex items-center gap-2 mr-4">
+                            <input
+                                type="checkbox"
+                                checked={filteredFiles.length > 0 && selectedFileIds.size === filteredFiles.length}
+                                onChange={(e) => {
+                                    if (e.target.checked) {
+                                        setSelectedFileIds(new Set(filteredFiles.map(f => f.id)));
+                                    } else {
+                                        setSelectedFileIds(new Set());
+                                    }
+                                }}
+                                className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-500/50"
+                            />
+                        </div>
+                        <button
+                            onClick={() => setCurrentFolderId(null)}
+                            className={cn(
+                                "hover:text-white transition-colors flex items-center gap-1",
+                                !currentFolderId && "text-white font-medium"
+                            )}
+                        >
+                            <Folder size={14} />
+                            <span>Home</span>
+                        </button>
+                        {currentFolderId && (
+                            <>
+                                <ChevronLeft size={12} className="rotate-180" />
+                                <span className="text-white font-medium">{currentFolder?.name}</span>
+                            </>
+                        )}
+                    </div>
+
+                    {selectedFileIds.size > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="flex items-center gap-4 px-4 py-2 bg-blue-600/20 border border-blue-500/30 rounded-xl"
+                        >
+                            <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">
+                                {selectedFileIds.size} Selected
+                            </span>
+                            <div className="h-4 w-px bg-blue-500/30" />
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => {
+                                        const selectedFiles = files.filter(f => selectedFileIds.has(f.id));
+                                        setMovingFiles(selectedFiles);
+                                    }}
+                                    className="p-1.5 hover:bg-white/10 rounded-md text-blue-400 transition-colors"
+                                    title="Move Selection"
+                                >
+                                    <Move size={16} />
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteRequest(Array.from(selectedFileIds))}
+                                    className="p-1.5 hover:bg-red-500/20 rounded-md text-red-400 transition-colors"
+                                    title="Delete Selection"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                                <button
+                                    onClick={() => setSelectedFileIds(new Set())}
+                                    className="p-1.5 hover:bg-white/10 rounded-md text-white/50 hover:text-white transition-colors"
+                                    title="Clear Selection"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+            )}
 
             {/* File Grid */}
             {/* File Container */}
-            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col space-y-2"}>
+            <div className={cn(viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col space-y-2", explorerMode !== 'workspace' && "hidden")}>
                 {filteredFiles.map((file, index) => {
                     const highlightStyles = {
                         backgroundColor: file.highlightBgColor || undefined,
@@ -1638,6 +1961,11 @@ export default function FileManager({ files }: FileManagerProps) {
                                         toast.error('No entry file (index.html) found in this app folder.');
                                     }
                                 }
+                            }] : []),
+                            ...(contextMenu.file.tags?.includes('app_root') ? [{
+                                label: 'Install App (Docker)',
+                                icon: <Wand2 size={16} className="text-purple-400" />,
+                                onClick: () => handleInstallApp(contextMenu.file.id)
                             }] : []),
                             // Add "Convert to App" for regular folders
                             ...(contextMenu.file.type === 'folder' && !contextMenu.file.tags?.includes('app_root') ? [{

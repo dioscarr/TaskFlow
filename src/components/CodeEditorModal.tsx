@@ -1,13 +1,23 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Loader2, Code2, Maximize2, Minimize2, Copy, FileText, Sparkles } from 'lucide-react';
+import { X, Save, Loader2, Code2, Maximize2, Minimize2, Copy, FileText, Sparkles, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import SuggestionsLibraryModal from './SuggestionsLibraryModal';
+import CodeMirror from '@uiw/react-codemirror';
+import { EditorView, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
+import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
+import { javascript } from '@codemirror/lang-javascript';
+import { html } from '@codemirror/lang-html';
+import { css } from '@codemirror/lang-css';
+import { json } from '@codemirror/lang-json';
+import { markdown } from '@codemirror/lang-markdown';
 
 type PreviewFile = {
     name: string;
@@ -26,7 +36,17 @@ interface CodeEditorModalProps {
     onModeChange?: (mode: 'edit' | 'preview') => void;
     previewFile?: PreviewFile | null;
     previewContent?: string | null;
+    chatContext?: { role: 'user' | 'ai'; content: string }[];
 }
+
+type IdeaSuggestion = {
+    id: string;
+    title: string;
+    category: string;
+    description: string;
+    flow: { step: number; task: string; description: string }[];
+    agentInstructions: string;
+};
 
 export default function CodeEditorModal({
     isOpen,
@@ -38,7 +58,8 @@ export default function CodeEditorModal({
     mode = 'edit',
     onModeChange,
     previewFile,
-    previewContent
+    previewContent,
+    chatContext
 }: CodeEditorModalProps) {
     const [content, setContent] = useState(initialContent);
     const [isMaximized, setIsMaximized] = useState(false);
@@ -48,8 +69,9 @@ export default function CodeEditorModal({
     const [magicResult, setMagicResult] = useState<string | null>(null);
     const [isMagicGenerating, setIsMagicGenerating] = useState(false);
     const [isMagicApplying, setIsMagicApplying] = useState(false);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const lineNumbersRef = useRef<HTMLDivElement>(null);
+    const [magicSuggestions, setMagicSuggestions] = useState<string[]>([]);
+    const [isMagicSuggesting, setIsMagicSuggesting] = useState(false);
+    const [isIdeasOpen, setIsIdeasOpen] = useState(false);
 
     useEffect(() => {
         setContent(initialContent);
@@ -66,15 +88,12 @@ export default function CodeEditorModal({
             setMagicResult(null);
             setIsMagicGenerating(false);
             setIsMagicApplying(false);
+            setMagicSuggestions([]);
+            setIsMagicSuggesting(false);
+            setIsIdeasOpen(false);
         }
     }, [isOpen]);
 
-    // Sync scroll
-    const handleScroll = () => {
-        if (textareaRef.current && lineNumbersRef.current) {
-            lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;
-        }
-    };
 
     const handleSave = async () => {
         await onSave(content);
@@ -101,7 +120,8 @@ export default function CodeEditorModal({
             const res = await generateMagicContent({
                 fileName,
                 content,
-                goal: magicGoal.trim()
+                goal: magicGoal.trim(),
+                chatContext: chatContext && chatContext.length > 0 ? chatContext : undefined
             });
             if (res.success && typeof res.text === 'string') {
                 setMagicResult(res.text);
@@ -112,6 +132,30 @@ export default function CodeEditorModal({
             toast.error('Magic generation failed');
         } finally {
             setIsMagicGenerating(false);
+        }
+    };
+
+    const handleGenerateSuggestions = async () => {
+        if (!magicGoal.trim()) {
+            toast.error('Add a description to generate suggestions');
+            return;
+        }
+        setIsMagicSuggesting(true);
+        try {
+            const { generateMagicSuggestions } = await import('@/app/actions');
+            const res = await generateMagicSuggestions({
+                fileName,
+                description: magicGoal.trim()
+            });
+            if (res.success && Array.isArray(res.suggestions)) {
+                setMagicSuggestions(res.suggestions.slice(0, 5));
+            } else {
+                toast.error('Failed to generate suggestions');
+            }
+        } catch (error) {
+            toast.error('Suggestion generation failed');
+        } finally {
+            setIsMagicSuggesting(false);
         }
     };
 
@@ -127,11 +171,18 @@ export default function CodeEditorModal({
             setIsMagicOpen(false);
             setMagicResult(null);
             setMagicGoal('');
+            setMagicSuggestions([]);
         } catch (error) {
             toast.error('Failed to apply content');
         } finally {
             setIsMagicApplying(false);
         }
+    };
+
+    const handleApplyIdea = (suggestion: IdeaSuggestion) => {
+        setMagicGoal(suggestion.agentInstructions || suggestion.description || suggestion.title);
+        setIsIdeasOpen(false);
+        toast.success('Idea loaded into Magic Content');
     };
 
     const lines = content.split('\n').length;
@@ -140,6 +191,69 @@ export default function CodeEditorModal({
     const isMarkdown = previewFile && (previewFile.name.endsWith('.md') || previewFile.type === 'md' || previewFile.type === 'markdown');
     const isImage = previewFile && (previewFile.type === 'image' || ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(previewFile.type));
     const isHtml = previewFile && (previewFile.name.endsWith('.html') || previewFile.type === 'html');
+
+    const codeTheme = useMemo(() => EditorView.theme({
+        '&': {
+            backgroundColor: 'var(--background)',
+            color: 'var(--foreground)',
+            height: '100%'
+        },
+        '.cm-content': {
+            caretColor: 'var(--primary)',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+            fontSize: '0.875rem'
+        },
+        '.cm-gutters': {
+            backgroundColor: 'var(--muted)',
+            color: 'var(--muted-foreground)',
+            borderRight: '1px solid var(--border)'
+        },
+        '.cm-activeLine': {
+            backgroundColor: 'var(--accent)'
+        },
+        '.cm-activeLineGutter': {
+            backgroundColor: 'var(--accent)'
+        },
+        '.cm-selectionBackground': {
+            backgroundColor: 'var(--ring)'
+        },
+        '.cm-cursor': {
+            borderLeftColor: 'var(--primary)'
+        }
+    }, { dark: true }), []);
+
+    const codeHighlight = useMemo(() => HighlightStyle.define([
+        { tag: tags.keyword, color: '#569cd6' }, // Blue for keywords
+        { tag: [tags.string, tags.special(tags.string)], color: '#ce9178' }, // Orange for strings
+        { tag: [tags.number, tags.bool, tags.null], color: '#b5cea8' }, // Light green for numbers/booleans
+        { tag: [tags.comment, tags.lineComment], color: '#6a9955', fontStyle: 'italic' }, // Green for comments
+        { tag: tags.function(tags.variableName), color: '#dcdcaa' }, // Yellow for functions
+        { tag: tags.typeName, color: '#4ec9b0' }, // Cyan for types
+        { tag: tags.tagName, color: '#569cd6' }, // Blue for HTML tags
+        { tag: tags.attributeName, color: '#9cdcfe' }, // Light blue for attributes
+        { tag: tags.variableName, color: '#9cdcfe' }, // Light blue for variables
+        { tag: tags.propertyName, color: '#9cdcfe' } // Light blue for properties
+    ]), []);
+
+    const languageExtension = useMemo(() => {
+        const ext = fileName.split('.').pop()?.toLowerCase();
+        if (!ext) return [];
+        if (['js', 'jsx'].includes(ext)) return [javascript({ jsx: true })];
+        if (['ts', 'tsx'].includes(ext)) return [javascript({ jsx: true, typescript: true })];
+        if (ext === 'html') return [html()];
+        if (ext === 'css') return [css()];
+        if (ext === 'json') return [json()];
+        if (['md', 'markdown'].includes(ext)) return [markdown()];
+        return [];
+    }, [fileName]);
+
+    const baseExtensions = useMemo(() => [
+        lineNumbers(),
+        highlightActiveLineGutter(),
+        highlightActiveLine(),
+        codeTheme,
+        syntaxHighlighting(codeHighlight)
+    ], [codeTheme, codeHighlight]);
 
     if (!isOpen) return null;
 
@@ -260,27 +374,14 @@ export default function CodeEditorModal({
                     {activeMode === 'edit' ? (
                         <>
                             {/* Editor Area */}
-                            <div className="flex-1 relative flex overflow-hidden bg-[#1e1e1e]">
-                                {/* Line Numbers */}
-                                <div
-                                    ref={lineNumbersRef}
-                                    className="w-12 h-full bg-[#252526] border-r border-[#3e3e42] flex flex-col items-end py-4 pr-3 select-none text-[#858585] font-mono text-sm leading-6 overflow-hidden"
-                                >
-                                    {Array.from({ length: Math.max(lines, 1) }).map((_, i) => (
-                                        <span key={i} className="opacity-50">{i + 1}</span>
-                                    ))}
-                                </div>
-
-                                {/* Text Area */}
-                                <textarea
-                                    ref={textareaRef}
+                            <div className="flex-1 overflow-hidden bg-[#1e1e1e]">
+                                <CodeMirror
                                     value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    onScroll={handleScroll}
-                                    spellCheck={false}
+                                    onChange={(value) => setContent(value)}
+                                    height="100%"
+                                    className="h-full"
+                                    extensions={[...baseExtensions, ...languageExtension]}
                                     aria-label="Code editor"
-                                    title="Code editor"
-                                    className="flex-1 h-full bg-transparent text-[#d4d4d4] p-4 font-mono text-sm leading-6 resize-none focus:outline-none custom-scrollbar whitespace-pre tab-size-4"
                                 />
                             </div>
 
@@ -378,7 +479,7 @@ export default function CodeEditorModal({
 
                                     <div className="p-5 space-y-4">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold uppercase tracking-wider text-white/50">Goal</label>
+                                            <label className="text-xs font-bold uppercase tracking-wider text-white/50">Description</label>
                                             <textarea
                                                 value={magicGoal}
                                                 onChange={(e) => setMagicGoal(e.target.value)}
@@ -386,9 +487,35 @@ export default function CodeEditorModal({
                                                 className="w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm text-white/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 custom-scrollbar"
                                                 aria-label="Magic content goal"
                                             />
+                                            {chatContext && chatContext.length > 0 && (
+                                                <p className="text-[10px] text-white/40">
+                                                    Using last {Math.min(chatContext.length, 5)} chat messages as context.
+                                                </p>
+                                            )}
                                         </div>
 
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <button
+                                                onClick={() => setIsIdeasOpen(true)}
+                                                className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all bg-white/10 hover:bg-white/20 text-white"
+                                            >
+                                                <span className="flex items-center gap-2">
+                                                    <Lightbulb size={12} />
+                                                    Ideas Library
+                                                </span>
+                                            </button>
+                                            <button
+                                                onClick={handleGenerateSuggestions}
+                                                disabled={isMagicSuggesting}
+                                                className={cn(
+                                                    "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all",
+                                                    isMagicSuggesting
+                                                        ? "bg-white/10 text-white/40 cursor-wait"
+                                                        : "bg-white/10 hover:bg-white/20 text-white"
+                                                )}
+                                            >
+                                                {isMagicSuggesting ? 'Suggesting...' : 'Get 5 Suggestions'}
+                                            </button>
                                             <button
                                                 onClick={handleGenerateMagic}
                                                 disabled={isMagicGenerating}
@@ -401,8 +528,27 @@ export default function CodeEditorModal({
                                             >
                                                 {isMagicGenerating ? 'Generating...' : 'Generate'}
                                             </button>
-                                            <span className="text-[11px] text-white/40">Uses current editor content</span>
                                         </div>
+
+                                        {magicSuggestions.length > 0 && (
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-bold uppercase tracking-wider text-white/50">Suggestions</label>
+                                                <div className="grid gap-2">
+                                                    {magicSuggestions.map((suggestion, index) => (
+                                                        <button
+                                                            key={`${suggestion}-${index}`}
+                                                            onClick={async () => {
+                                                                setMagicGoal(suggestion);
+                                                                await handleGenerateMagic();
+                                                            }}
+                                                            className="text-left w-full rounded-xl border border-white/10 bg-black/30 hover:bg-white/5 px-4 py-3 text-xs text-white/70 hover:text-white transition-colors"
+                                                        >
+                                                            {suggestion}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {magicResult && (
                                             <div className="space-y-2">
@@ -440,6 +586,19 @@ export default function CodeEditorModal({
                             </motion.div>
                         )}
                     </AnimatePresence>
+
+                    <SuggestionsLibraryModal
+                        isOpen={isIdeasOpen}
+                        onClose={() => setIsIdeasOpen(false)}
+                        onApply={handleApplyIdea}
+                        workflowContext={{
+                            fileName,
+                            currentContent: content,
+                            magicGoal: magicGoal,
+                            chatContext: chatContext && chatContext.length > 0 ? chatContext.slice(-5) : undefined
+                        }}
+                        workflowType="content-generation"
+                    />
                 </motion.div>
             </motion.div>
         </AnimatePresence>
