@@ -1,0 +1,1 @@
+Document the project's architecture, data model (categories, content types, metadata), API endpoints, and UI component breakdown.

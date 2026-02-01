@@ -82,6 +82,34 @@ export const DEFAULT_WORKFLOWS: WorkflowDefinition[] = [
                 }
             }
         ]
+    },
+    {
+        id: 'vite_app_scaffold',
+        name: 'Vite App Scaffold',
+        triggerKeywords: [
+            '/vite',
+            '/viteapp',
+            '/scaffolde-vite',
+            'vite app scaffold'
+        ],
+        steps: [
+            {
+                id: 'step-1-vite-scaffold',
+                action: 'execute_command',
+                params: {
+                    command: 'powershell -ExecutionPolicy Bypass -File scripts\\scaffold-vite.ps1 -AppName <project-name>',
+                    reason: 'Scaffold a Vite React TS app.'
+                }
+            },
+            {
+                id: 'step-2-install-helmet',
+                action: 'execute_command',
+                params: {
+                    command: 'powershell -Command "Set-Location apps/<project-name>; npm install react-helmet-async --legacy-peer-deps"',
+                    reason: 'Install react-helmet-async with legacy peer deps.'
+                }
+            }
+        ]
     }
 ];
 

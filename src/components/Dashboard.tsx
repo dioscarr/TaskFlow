@@ -130,7 +130,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
 
                 <iframe
                     src={`/uploads/${previewContent.storagePath || previewContent.name}`}
-                    className="w-full flex-1 border-none bg-white"
+                    className="w-full flex-1 border-none bg-[#1e1e1e]"
                     title="Preview"
                 />
             </div>

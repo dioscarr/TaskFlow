@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { TOOL_LIBRARY } from '../toolLibrary';
+import { ensureAgentWorkerAvailable } from '@/lib/agentWorkerBootstrap';
 
 const prisma = new PrismaClient() as any;
 
@@ -123,6 +124,8 @@ export class FeedbackLoopEngine {
                 requiresReview: parentJob.autonomyLevel === 'manual'
             }
         });
+
+        ensureAgentWorkerAvailable().catch(err => console.error('Worker bootstrap failed:', err));
 
         return nextJob;
     }

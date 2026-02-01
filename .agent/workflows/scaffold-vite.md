@@ -16,55 +16,46 @@ This workflow creates a production-ready Vite + React + TypeScript application w
 // turbo-all
 
 ## ⚠️ CRITICAL AGENT RULES
+- **LOCATION**: Create repo apps under `apps/<project-name>`. The `apps/` folder is a required system folder and must never be deleted.
 - **ENVIRONMENT**: You are running on Windows (PowerShell/CMD). Use `mkdir` (not `mkdir -p`), `;` (not `&&`), and standard Windows `copy`.
 - **DEPENDENCIES**: React 19 has peer dependency conflicts with `react-helmet-async`. ALWAYS use `npm install --legacy-peer-deps`.
-- **FILE CREATION**: Prefer using the `write_to_file` or `create_file` tools instead of complex terminal redirections like `cat <<EOF`.
 - **DOCKER**: The app is served via Nginx. The health check should target the mapped port on `localhost`.
 
 ## Prerequisites
 
-Make sure you're in the main project directory:
-```bash
-cd c:\Users\Drod\Source\a
-```
+1.  **Choose a Project Name**: Use a short, kebab-case name (e.g., `marketing-app`).
+2.  **Target Directory**: Your project root will be `apps/<project-name>`.
+3.  **Slash Command Input**: If triggered via `/scaffold-vite <project-name>`, use that name for all steps.
 
 ## Steps
 
-### 1. Get Project Name
+### 1. Run Scaffold Script
 
-Ask the user for the project name (use kebab-case, e.g., "my-awesome-app").
-
-### 2. Create Project Directory
-
-```bash
-mkdir apps\<project-name>
-cd apps\<project-name>
+Run the predefined PowerShell script to create the app folder and scaffold Vite:
+```
+<execute>
+powershell -ExecutionPolicy Bypass -File scripts\scaffold-vite.ps1 -AppName <project-name>
+</execute>
 ```
 
-### 3. Initialize Vite Project
-
-```bash
-npx -y create-vite@latest ./ --template react-ts
-```
-
-### 4. Install Additional Dependencies
+### 2. Install Additional Dependencies
 
 ```bash
 npm install react-helmet-async --legacy-peer-deps
 ```
 
-### 5. Copy Design System
+### 3. Copy Design System
 
 Copy the design system CSS from templates:
 ```bash
 mkdir src\styles
-copy ..\..\.agent\workflows\templates\design-system.css src\styles\design-system.css
+copy ..\..\..\.agent\workflows\templates\design-system.css src\styles\design-system.css
 ```
 
-### 6. Copy SEO Config
+### 4. Copy SEO Config
 
 ```bash
-copy ..\..\.agent\workflows\templates\seo-config.ts src\lib\seo-config.ts
+copy ..\..\..\.agent\workflows\templates\seo-config.ts src\lib\seo-config.ts
 ```
 
 Note: Create `src\lib` directory if it doesn't exist:
@@ -72,14 +63,14 @@ Note: Create `src\lib` directory if it doesn't exist:
 mkdir src\lib
 ```
 
-### 7. Set Up Component Structure
+### 5. Set Up Component Structure
 
 ```bash
 mkdir src\components
-copy ..\..\.agent\workflows\templates\component-template.tsx src\components\Button.tsx
+copy ..\..\..\.agent\workflows\templates\component-template.tsx src\components\Button.tsx
 ```
 
-### 8. Update Main App File
+### 6. Update Main App File
 
 Update `src/App.tsx` to import the design system and use react-helmet-async:
 
@@ -106,16 +97,16 @@ function App() {
 export default App;
 ```
 
-### 9. Initialize Git
+### 7. Initialize Git
 
 ```bash
 git init
-copy ..\..\.agent\workflows\templates\app-gitignore .gitignore
+copy ..\..\..\.agent\workflows\templates\app-gitignore .gitignore
 git add .
 git commit -m "Initial Vite + React scaffold with design system and SEO"
 ```
 
-### 10. Set Up GitHub Actions
+### 8. Set Up GitHub Actions
 
 ```bash
 mkdir .github\workflows
@@ -125,7 +116,7 @@ git add .github
 git commit -m "Add GitHub Actions CI/CD workflows"
 ```
 
-### 11. Install Dependencies and Test
+### 9. Install Dependencies and Test
 
 ```bash
 npm install --legacy-peer-deps
@@ -134,16 +125,16 @@ npm run dev
 
 Verify the app runs at http://localhost:5173
 
-### 13. Dockerize the Application
+### 10. Dockerize the Application
 
 We will containerize the application to make it deployable and manageable by the Process Manager.
 
 ```bash
-copy ..\..\.agent\workflows\templates\Dockerfile.vite Dockerfile
-copy ..\..\.agent\workflows\templates\nginx-spa.conf nginx.conf
+copy ..\..\..\.agent\workflows\templates\Dockerfile.vite Dockerfile
+copy ..\..\..\.agent\workflows\templates\nginx-spa.conf nginx.conf
 ```
 
-### 14. Build and Run Container
+### 11. Build and Run Container
 
 Build the Docker image and run it. The container name MUST start with `taskflow-repo-app-` for the Process Manager to auto-discover it.
 
@@ -154,7 +145,7 @@ docker build -t taskflow-repo-app-<project-name> .
 docker run -d --name taskflow-repo-app-<project-name> -p <port>:80 taskflow-repo-app-<project-name>
 ```
 
-### 15. Verify Deployment
+### 12. Verify Deployment
 
 1. Check the Process Manager in the main app (http://localhost:3000/processes).
 2. Click "Discover" if the app doesn't appear immediately.

@@ -30,6 +30,8 @@ Ask the user for the project name (use kebab-case, e.g., "my-remix-site").
 
 ### 2. Create Project Directory
 
+Note: `apps/` is a required system folder and must not be deleted.
+
 ```bash
 mkdir apps\<project-name>
 cd apps\<project-name>

@@ -5,7 +5,7 @@ import { motion, Reorder, AnimatePresence } from 'framer-motion';
 import { Plus, GripVertical, Trash2, Settings2, Play, ChevronRight, Zap, MessageSquare, X, List, Edit3, Save } from 'lucide-react';
 import { getAllActions, ActionDefinition } from '@/lib/actionRegistry';
 import { cn } from '@/lib/utils';
-import { WorkflowStep, IntentRuleDefinition, IntentAction, WorkflowDefinition } from '@/lib/intentLibrary';
+import { WorkflowStep, IntentRuleDefinition, IntentAction, WorkflowDefinition, DEFAULT_WORKFLOWS } from '@/lib/intentLibrary';
 
 interface WorkflowDesignerProps {
     workflows: WorkflowDefinition[];
@@ -22,6 +22,24 @@ export default function WorkflowDesigner({
     const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
     const [isAddingStep, setIsAddingStep] = useState(false);
     const [keywordInput, setKeywordInput] = useState('');
+    const templates = DEFAULT_WORKFLOWS;
+
+    const createId = () => Math.random().toString(36).substr(2, 9);
+
+    const addTemplateWorkflow = (template: WorkflowDefinition) => {
+        const cloned: WorkflowDefinition = {
+            ...template,
+            id: createId(),
+            triggerKeywords: [...template.triggerKeywords],
+            steps: template.steps.map(step => ({
+                ...step,
+                id: createId(),
+                params: step.params ? { ...step.params } : undefined
+            }))
+        };
+        onChange([...workflows, cloned]);
+        setActiveWorkflowId(cloned.id);
+    };
 
     const normalizeWorkflows = (input: WorkflowDefinition[]) => {
         let didChange = false;
@@ -169,6 +187,23 @@ export default function WorkflowDesigner({
                 </div>
 
                 <div className="flex flex-col gap-1 overflow-y-auto max-h-[600px] pr-2">
+                    {templates.length > 0 && (
+                        <div className="mb-4">
+                            <div className="text-[10px] font-black uppercase tracking-widest text-white/30 mb-2">Templates</div>
+                            <div className="flex flex-col gap-1">
+                                {templates.map(template => (
+                                    <button
+                                        key={template.id}
+                                        onClick={() => addTemplateWorkflow(template)}
+                                        className="w-full flex items-center gap-3 p-3 rounded-2xl border border-white/5 text-left bg-white/5 text-white/40 hover:bg-white/10 hover:border-white/10 transition-all"
+                                    >
+                                        <Zap size={14} className="text-yellow-400" />
+                                        <span className="text-xs font-bold truncate">{template.name}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     {workflows.map(w => (
                         <div key={w.id} className="relative group">
                             <button

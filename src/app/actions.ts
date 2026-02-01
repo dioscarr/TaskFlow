@@ -10,6 +10,7 @@ import { createServer } from 'net';
 import prisma from '@/lib/prisma';
 import { revalidatePath as nextRevalidatePath } from 'next/cache';
 import { memory } from '@/lib/agents/symphony/memory';
+import { ensureAgentWorkerAvailable } from '@/lib/agentWorkerBootstrap';
 
 /**
  * Safe wrapper for revalidatePath that doesn't crash in background/CLI contexts
@@ -30,8 +31,7 @@ import { executeSkill } from '@/lib/skillsExecution';
 import { DEFAULT_INTENT_RULES, DEFAULT_WORKFLOWS, WorkflowStep } from '@/lib/intentLibrary';
 import { TOOL_LIBRARY } from '@/lib/toolLibrary';
 import { addChatMessage } from '@/app/chatActions';
-import { SOFTWARE_ARCHITECT_PROMPT } from '@/lib/agents/prompts';
-import { AGENT_ROLES } from '@/lib/agents/prompts';
+import { SOFTWARE_ARCHITECT_PROMPT, AGENT_ROLES, ORCHESTRATOR_AGENT_PROMPT, WORKER_AGENT_PROMPT } from '@/lib/agents/prompts';
 import { AgentSymphony } from '@/lib/agents/AgentSymphony';
 import { GeminiAgentAdapter } from '@/lib/agents/symphony/adapters';
 import { SymphonyOptions } from '@/lib/agents/symphony/types';
@@ -152,9 +152,9 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
 
         const genAI = new GoogleGenerativeAI(apiKey);
         // Using 3.0 Pro Preview for orchestrator/critic for speed + reasoning
-        const orchestratorModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+        const orchestratorModel = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
         // Using 3.0 Flash Preview for workers for cost efficiency
-        const workerModel = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+        const workerModel = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
 
         const symphony = new AgentSymphony({
             orchestrator: new GeminiAgentAdapter("Orchestrator", orchestratorModel),
@@ -549,6 +549,22 @@ export async function executeWorkflow(steps: WorkflowStep[], initialContext: any
 </body>
 </html>`;
                 }
+            }
+        }
+
+        if (step.action === 'execute_command' && typeof args.command === 'string' && args.command.includes('<project-name>')) {
+            if (context.scaffoldViteAppName) {
+                args.command = args.command.replace(/<project-name>/g, context.scaffoldViteAppName);
+            } else {
+                results.push({
+                    step: step.action,
+                    success: false,
+                    result: {
+                        success: false,
+                        message: 'Missing project name for Vite scaffold command. Use "/vite <name>".'
+                    }
+                });
+                break;
             }
         }
         const result = await executeAction(step.action, args);
@@ -2090,6 +2106,56 @@ export async function createHtmlFile(data: {
         // e.g., 'folderId/index.html'
         const relativeStoragePath = `${directoryName}/${diskFileName}`;
 
+        
+        const cssLinkMatch = data.content.match(/<link[^>]+href=["']([^"']+\.css)["'][^>]*>/i);
+        if (cssLinkMatch) {
+            const cssHref = cssLinkMatch[1];
+            if (!/^(https?:)?\/\//i.test(cssHref)) {
+                const cssFileName = cssHref.split('/').pop();
+                if (cssFileName) {
+                    const cssPath = join(uploadsDir, cssFileName);
+                    try {
+                        await stat(cssPath);
+                    } catch {
+                        const cssContent = `:root {\n  color-scheme: light;\n}\n\nbody {\n  margin: 0;\n  font-family: Arial, sans-serif;\n  color: #111;\n  background: #ffffff;\n}\n`;
+                        await writeFile(cssPath, cssContent);
+
+                        const cssStoragePath = `${directoryName}/${cssFileName}`;
+                        const existingCss = await prisma.workspaceFile.findFirst({
+                            where: {
+                                userId: user.id,
+                                name: cssFileName,
+                                parentId: resolvedFolderId || null,
+                                type: 'css'
+                            }
+                        });
+
+                        if (existingCss) {
+                            await prisma.workspaceFile.update({
+                                where: { id: existingCss.id },
+                                data: {
+                                    size: `${Buffer.byteLength(cssContent)} bytes`,
+                                    storagePath: cssStoragePath,
+                                    updatedAt: new Date()
+                                }
+                            });
+                        } else {
+                            await prisma.workspaceFile.create({
+                                data: {
+                                    name: cssFileName,
+                                    type: 'css',
+                                    size: `${Buffer.byteLength(cssContent)} bytes`,
+                                    userId: user.id,
+                                    parentId: resolvedFolderId || null,
+                                    storagePath: cssStoragePath
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
         const existingFile = await prisma.workspaceFile.findFirst({
             where: {
                 userId: user.id,
@@ -3129,6 +3195,8 @@ export async function enqueueAgentJob(data: {
             }
         });
 
+        ensureAgentWorkerAvailable().catch(err => console.error('Worker bootstrap failed:', err));
+
         if (data.sessionId) {
             await prisma.chatSession.update({
                 where: { id: data.sessionId },
@@ -3158,23 +3226,49 @@ async function processAgentJob(jobId: string) {
             where: { id: jobId },
             data: { status: 'running', startedAt: new Date() }
         });
-
         // Initialize Gemini
         const apiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
         const genAI = new GoogleGenerativeAI(apiKey);
-        const flashModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const proModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
-        // Initialize Agents
-        const orchestrator = new GeminiAgentAdapter(AGENT_ROLES.orchestrator.name, proModel);
-        const critic = new GeminiAgentAdapter("Critic", proModel);
+        // Initialize Skills and Tools for background agents
+        const payload = job.payload as any;
+        const enabledSkills = payload?.proposedTools || DEFAULT_SKILLS;
+        const skillDecls = getSkillSchemas(enabledSkills)[0]?.functionDeclarations || [];
+        const toolDecls = getToolSchemas(enabledSkills);
+        const allDecls = [...skillDecls, ...toolDecls].filter((v, i, a) => a.findIndex(t => t.name === v.name) === i);
+        const tools = allDecls.length > 0 ? [{ functionDeclarations: allDecls }] : undefined;
 
-        const workers = {
-            researcher: new GeminiAgentAdapter(AGENT_ROLES.researcher.name, flashModel),
-            developer: new GeminiAgentAdapter(AGENT_ROLES.developer.name, flashModel),
-            designer: new GeminiAgentAdapter(AGENT_ROLES.designer.name, flashModel),
-            writer: new GeminiAgentAdapter("Technical Writer", flashModel)
+        // Shared context for tool execution
+        const skillContext = {
+            userId: job.userId,
+            sessionId: job.sessionId || undefined,
+            fileIds: payload?.fileIds || [],
+            query: payload?.query || ''
         };
+
+        const skillExecutor = async (name: string, args: any) => {
+            // First try specialized skills
+            const result = await executeSkill(name, args, skillContext);
+            if (result.success !== false || result.error !== `Unknown skill: ${name}`) {
+                return result;
+            }
+
+            // Fallback: If it's an atomic tool, we can potentially add a tool-to-skill bridge here
+            // For now, most things are covered by skills or are already in the skillExecution router.
+            return { success: false, error: `Tool ${name} not yet implemented in Symphony bridge.` };
+        };
+
+        // Initialize Gemini Models with System Instructions and Tools
+        const orchestratorModel = genAI.getGenerativeModel({
+            model: "gemini-1.0-pro",
+            systemInstruction: ORCHESTRATOR_AGENT_PROMPT,
+            tools
+        });
+        const workerModel = genAI.getGenerativeModel({
+            model: "gemini-1.0-pro",
+            systemInstruction: WORKER_AGENT_PROMPT,
+            tools
+        });
 
         const logger = async (msg: string, type: 'info' | 'thinking' | 'error' = 'info') => {
             const logEntry = `[${new Date().toISOString()}] [Job ${jobId}] [${type.toUpperCase()}] ${msg}\n`;
@@ -3198,6 +3292,18 @@ async function processAgentJob(jobId: string) {
                 });
             }
         };
+
+        // Initialize Agents with Skill execution capabilities and logger
+        const orchestrator = new GeminiAgentAdapter(AGENT_ROLES.orchestrator.name, orchestratorModel, skillContext, skillExecutor, logger);
+        const critic = new GeminiAgentAdapter("Critic", orchestratorModel, skillContext, skillExecutor, logger);
+
+        const workers = {
+            researcher: new GeminiAgentAdapter(AGENT_ROLES.researcher.name, workerModel, skillContext, skillExecutor, logger),
+            developer: new GeminiAgentAdapter(AGENT_ROLES.developer.name, workerModel, skillContext, skillExecutor, logger),
+            designer: new GeminiAgentAdapter(AGENT_ROLES.designer.name, workerModel, skillContext, skillExecutor, logger),
+            writer: new GeminiAgentAdapter("Technical Writer", workerModel, skillContext, skillExecutor, logger)
+        };
+
 
         const symphony = new AgentSymphony({
             orchestrator,
@@ -3271,6 +3377,8 @@ export async function approveLatestAgentJob(sessionId: string) {
             where: { id: job.id },
             data: { approved: true, approvedAt: new Date() }
         });
+
+        ensureAgentWorkerAvailable().catch(err => console.error('Worker bootstrap failed:', err));
 
         // Trigger execution
         processAgentJob(job.id).catch(err => console.error('Background job trigger failed:', err));
@@ -3856,6 +3964,24 @@ export async function chatWithAI(
             return /\bresearch|investigate|find sources|look up|search\b/.test(normalized);
         };
 
+        const parseScaffoldViteAppName = (text: string) => {
+            const trimmed = text.trim();
+            const stopWords = new Set([
+                'create', 'a', 'an', 'vite', 'react', 'ts', 'typescript', 'app', 'application', 'web', 'site', 'named'
+            ]);
+
+            const directMatch = trimmed.match(/^\/(scaffold-vite|viteapp|vite|scaffolde-vite)\s+([a-z0-9-]+)/i);
+            if (directMatch) {
+                const candidate = directMatch[2].toLowerCase();
+                if (!stopWords.has(candidate)) return candidate;
+            }
+
+            const namedMatch = trimmed.match(/\bnamed\s+([a-z0-9-]+)/i);
+            if (namedMatch) return namedMatch[1].toLowerCase();
+
+            return undefined;
+        };
+
         let workflowInstructions = '';
 
         if (demoUser) {
@@ -3890,7 +4016,7 @@ export async function chatWithAI(
             const fsWorkflows = await loadFileSystemWorkflows();
             workflows = [...DEFAULT_WORKFLOWS, ...workflows, ...fsWorkflows];
 
-            const matchedWorkflow = workflows
+            const keywordCandidates = workflows
                 .flatMap(wf => {
                     const rawKeywords = Array.isArray(wf.triggerKeywords) ? wf.triggerKeywords : [];
                     const keywords = rawKeywords.length > 0
@@ -3901,14 +4027,40 @@ export async function chatWithAI(
                         .map((keyword: string) => ({
                             workflow: wf,
                             keyword,
-                            match: scoreKeywordMatch(query, keyword)
+                            normalized: normalizeKeyword(keyword)
                         }));
-                })
-                .filter(match => match.match)
-                .sort((a, b) => {
-                    if (b.match!.score !== a.match!.score) return b.match!.score - a.match!.score;
-                    return (b.keyword?.length || 0) - (a.keyword?.length || 0);
-                })[0];
+                });
+
+            const slashTokenMatch = query.trim().match(/^\/(\S+)/);
+            const slashToken = slashTokenMatch ? `/${slashTokenMatch[1].toLowerCase()}` : undefined;
+            let matchedWorkflow: { workflow: any; keyword: string; match: { score: number; matched: string; reason: 'slash' } } | undefined;
+
+            if (slashToken) {
+                const candidate = keywordCandidates.find(item => item.normalized === slashToken);
+                if (candidate) {
+                    matchedWorkflow = {
+                        workflow: candidate.workflow,
+                        keyword: candidate.keyword,
+                        match: { score: 200, matched: candidate.keyword, reason: 'slash' as const }
+                    };
+                } else {
+                    console.warn(`⚠️ Slash command not matched: ${slashToken}`);
+                }
+            }
+
+            if (!matchedWorkflow) {
+                matchedWorkflow = keywordCandidates
+                    .map(candidate => ({
+                        workflow: candidate.workflow,
+                        keyword: candidate.keyword,
+                        match: scoreKeywordMatch(query, candidate.keyword)
+                    }))
+                    .filter(match => match.match)
+                    .sort((a, b) => {
+                        if (b.match!.score !== a.match!.score) return b.match!.score - a.match!.score;
+                        return (b.keyword?.length || 0) - (a.keyword?.length || 0);
+                    })[0];
+            }
 
             const matchedWorkflowValue = matchedWorkflow?.workflow;
 
@@ -3926,8 +4078,18 @@ export async function chatWithAI(
                 const folderName = getAutoFolderName({ autoFolder: 'auto' });
 
                 if (matchedWorkflowValue.content) {
+                    const scaffoldViteName = matchedWorkflowValue.name === '/scaffold-vite'
+                        ? parseScaffoldViteAppName(query)
+                        : undefined;
+                    let workflowContent = matchedWorkflowValue.content;
+
+                    if (scaffoldViteName) {
+                        workflowContent = workflowContent.replace(/<project-name>/g, scaffoldViteName);
+                        workflowContent = `\nNOTE: Use project name "${scaffoldViteName}" for all steps.\n` + workflowContent;
+                    }
+
                     // File-based workflow: Inject content directly as system instructions
-                    workflowInstructions = `\n\n═══════════════════════════════════════════════════════════════════\nSYSTEM OVERRIDE: ACTIVE WORKFLOW: ${matchedWorkflowValue.name}\n═══════════════════════════════════════════════════════════════════\n${matchedWorkflowValue.content}\n\nFOLLOW THESE INSTRUCTIONS EXACTLY TO COMPLETE THE WORKFLOW.`;
+                    workflowInstructions = `\n\n═══════════════════════════════════════════════════════════════════\nSYSTEM OVERRIDE: ACTIVE WORKFLOW: ${matchedWorkflowValue.name}\n═══════════════════════════════════════════════════════════════════\n${workflowContent}\n\nFOLLOW THESE INSTRUCTIONS EXACTLY TO COMPLETE THE WORKFLOW.`;
 
                     // Also log activity
                     if (demoUser) {
@@ -3940,13 +4102,15 @@ export async function chatWithAI(
                         });
                     }
                 } else {
+                    const scaffoldViteAppName = parseScaffoldViteAppName(query);
                     const res = await executeWorkflow(matchedWorkflowValue.steps as WorkflowStep[], {
                         content,
                         query,
                         lastResponse: lastAssistantText,
                         filename,
                         folderName,
-                        fileIds
+                        fileIds,
+                        scaffoldViteAppName
                     });
 
                     if (res.success) {
@@ -4868,9 +5032,16 @@ export async function approveAgentJob(jobId: string) {
                 status: 'queued' // Ensure it's ready for pickup
             }
         });
+        ensureAgentWorkerAvailable().catch(err => console.error('Worker bootstrap failed:', err));
         return { success: true };
     } catch (error) {
         console.error('Failed to approve job:', error);
         return { success: false, message: 'Failed to approve job' };
     }
 }
+
+
+
+
+
+

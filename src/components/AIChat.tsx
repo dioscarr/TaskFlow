@@ -596,6 +596,8 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
     const [sessionActivities, setSessionActivities] = useState<any[]>([]);
     const [manualStop, setManualStop] = useState(false);
     const [verbosity, setVerbosity] = useState<'concise' | 'normal' | 'verbose'>('concise');
+    const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
+    const [activeCommandIndex, setActiveCommandIndex] = useState(0);
 
     // Force open if embedded
     useEffect(() => {
@@ -1662,6 +1664,61 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
         create_task: 'Create a task from this request'
     };
 
+    const slashCommands = useMemo(() => ([
+        {
+            command: '/scaffold-vite',
+            label: 'Scaffold Vite app',
+            description: 'Create a new Vite React app template.',
+            template: '/scaffold-vite\nLocation: apps/<project-name> (system folder). Do not use public/uploads.'
+        },
+        {
+            command: '/vite',
+            label: 'Scaffold Vite app (alias)',
+            description: 'Alias for creating a new Vite React app template.',
+            template: '/vite '
+        },
+        {
+            command: '/viteapp',
+            label: 'Scaffold Vite app (alias)',
+            description: 'Alias for creating a new Vite React app template.',
+            template: '/viteapp '
+        },
+        {
+            command: '/scaffolde-vite',
+            label: 'Scaffold Vite app (alias)',
+            description: 'Alias for creating a new Vite React app template.',
+            template: '/scaffolde-vite '
+        },
+        {
+            command: '/install-docker',
+            label: 'Install to Docker',
+            description: 'Build and run the app in a Docker container.'
+        },
+        {
+            command: '/open-processes',
+            label: 'Open Processes',
+            description: 'Show running processes and deployments.'
+        }
+    ]), []);
+
+    const commandQuery = input.startsWith('/') ? input.slice(1).toLowerCase() : '';
+    const filteredCommands = useMemo(() => {
+        if (!input.startsWith('/')) return [];
+        if (!commandQuery) return slashCommands;
+        return slashCommands.filter(cmd =>
+            cmd.command.toLowerCase().includes(commandQuery) ||
+            cmd.label.toLowerCase().includes(commandQuery)
+        );
+    }, [commandQuery, input, slashCommands]);
+
+    useEffect(() => {
+        const shouldOpen = input.startsWith('/');
+        setIsCommandMenuOpen(shouldOpen);
+        if (shouldOpen) {
+            setActiveCommandIndex(0);
+        }
+    }, [input]);
+
     const quickTips = useMemo(() => {
         const defaultTips = [
             { text: 'Organize these files into a clean structure', icon: '🗂️' },
@@ -1694,6 +1751,64 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
 
         return pool.slice(0, 3);
     }, [activePrompt?.name]);
+
+    const applyCommand = (command: string) => {
+        const matched = slashCommands.find(cmd => cmd.command === command);
+        const nextValue = matched?.template || `${command} `;
+        setInput(nextValue);
+        setIsCommandMenuOpen(false);
+        setActiveCommandIndex(0);
+    };
+
+    const handleInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (isCommandMenuOpen && filteredCommands.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setActiveCommandIndex((prev) => (prev + 1) % filteredCommands.length);
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setActiveCommandIndex((prev) => (prev - 1 + filteredCommands.length) % filteredCommands.length);
+                return;
+            }
+            if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                const selected = filteredCommands[activeCommandIndex];
+                if (selected) applyCommand(selected.command);
+                return;
+            }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setIsCommandMenuOpen(false);
+                return;
+            }
+        }
+
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend(e);
+        }
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const nextIndex = historyIndex + 1;
+            if (nextIndex < promptHistory.length) {
+                setHistoryIndex(nextIndex);
+                setInput(promptHistory[nextIndex]);
+            }
+        }
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const prevIndex = historyIndex - 1;
+            if (prevIndex >= 0) {
+                setHistoryIndex(prevIndex);
+                setInput(promptHistory[prevIndex]);
+            } else {
+                setHistoryIndex(-1);
+                setInput('');
+            }
+        }
+    };
 
     // Listen for emoji celebration events
     useEffect(() => {
@@ -1978,54 +2093,6 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                     <div className="relative p-6 border-t border-white/10 bg-gradient-to-b from-black/20 to-black/60 backdrop-blur-xl">
                                         <div className={cn(embedded ? "max-w-3xl mx-auto" : "w-full")}>
                                             <div className="flex flex-col gap-3">
-                                                {(enabledToolIds.length > 0 || attachedFiles.length > 0) && (
-                                                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                                                        {enabledToolIds.map((toolId) => {
-                                                            const tool = TOOL_LIBRARY[toolId];
-                                                            if (!tool) return null;
-                                                            const isActive = activeTool === toolId;
-
-                                                            return (
-                                                                <button
-                                                                    key={toolId}
-                                                                    onClick={() => {
-                                                                        setActiveTool(isActive ? null : toolId);
-                                                                        setInput(isActive ? '' : (toolPromptById[toolId] || tool.description));
-                                                                    }}
-                                                                    className={cn(
-                                                                        "shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all duration-300 hover:scale-105 active:scale-95",
-                                                                        isActive
-                                                                            ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-blue-500/40 text-blue-300 shadow-lg shadow-blue-500/20"
-                                                                            : "bg-white/5 border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10"
-                                                                    )}
-                                                                >
-                                                                    {tool.name}
-                                                                </button>
-                                                            );
-                                                        })}
-
-                                                        {attachedFiles.length > 0 && (
-                                                            <>
-                                                                <div className="w-px h-4 bg-gradient-to-b from-transparent via-white/20 to-transparent shrink-0 mx-1" />
-                                                                {attachedFiles.map(f => (
-                                                                    <div key={f.id} className="relative shrink-0 group">
-                                                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-full text-[10px] text-blue-400/80 group-hover:text-blue-300 transition-all duration-300 cursor-default shadow-lg shadow-blue-500/10">
-                                                                            <Paperclip size={10} className="opacity-60" />
-                                                                            <span className="font-medium">{f.name}</span>
-                                                                            <button
-                                                                                onClick={() => removeFile(f.id)}
-                                                                                className="hover:text-red-400 transition-colors ml-1 hover:scale-110 active:scale-90"
-                                                                            >
-                                                                                <X size={10} />
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                )}
-
                                                 <form onSubmit={handleSend} className="relative group/input">
                                                     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-[1.25rem] opacity-0 group-focus-within/input:opacity-100 blur-xl transition-opacity duration-500" />
                                                     <div className="relative">
@@ -2033,36 +2100,35 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                             rows={1}
                                                             value={input}
                                                             onChange={(e) => setInput(e.target.value)}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter' && !e.shiftKey) {
-                                                                    e.preventDefault();
-                                                                    handleSend(e);
-                                                                }
-                                                                if (e.key === 'ArrowUp') {
-                                                                    e.preventDefault();
-                                                                    const nextIndex = historyIndex + 1;
-                                                                    if (nextIndex < promptHistory.length) {
-                                                                        setHistoryIndex(nextIndex);
-                                                                        setInput(promptHistory[nextIndex]);
-                                                                    }
-                                                                }
-                                                                if (e.key === 'ArrowDown') {
-                                                                    e.preventDefault();
-                                                                    const prevIndex = historyIndex - 1;
-                                                                    if (prevIndex >= 0) {
-                                                                        setHistoryIndex(prevIndex);
-                                                                        setInput(promptHistory[prevIndex]);
-                                                                    } else {
-                                                                        setHistoryIndex(-1);
-                                                                        setInput('');
-                                                                    }
-                                                                }
-                                                            }}
+                                                            onKeyDown={handleInputKeyDown}
                                                             disabled={isLoading}
                                                             placeholder={isBackgroundBusy ? "Background agent active. You can continue chatting..." : "Ask anything..."}
-                                                            className="w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 pr-14 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-black/20 font-medium"
+                                                            className="relative z-20 w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 pr-14 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-black/20 font-medium"
                                                             style={{ minHeight: '52px', maxHeight: '200px' }}
                                                         />
+                                                        {isCommandMenuOpen && filteredCommands.length > 0 && (
+                                                            <div className="absolute bottom-full mb-3 left-0 w-full z-10 bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+                                                                <div className="text-[10px] text-white/40 px-4 py-2 border-b border-white/5 uppercase tracking-widest">Commands</div>
+                                                                <div className="max-h-52 overflow-y-auto">
+                                                                    {filteredCommands.map((cmd, idx) => (
+                                                                        <button
+                                                                            key={cmd.command}
+                                                                            onClick={() => applyCommand(cmd.command)}
+                                                                            className={cn(
+                                                                                "w-full text-left px-4 py-2 flex items-center justify-between text-xs transition-colors",
+                                                                                idx === activeCommandIndex ? "bg-white/10 text-white" : "text-white/60 hover:text-white hover:bg-white/5"
+                                                                            )}
+                                                                        >
+                                                                            <div>
+                                                                                <div className="font-mono text-[11px]">{cmd.command}</div>
+                                                                                <div className="text-[10px] text-white/40">{cmd.description}</div>
+                                                                            </div>
+                                                                            <span className="text-[10px] text-white/30">{cmd.label}</span>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                         <button
                                                             type="submit"
                                                             disabled={isLoading || (!input.trim() && attachedFiles.length === 0)}
@@ -2463,54 +2529,6 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
 
                                                     <div className="flex flex-col gap-3">
-                                                        {(enabledToolIds.length > 0 || attachedFiles.length > 0) && (
-                                                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                                                                {enabledToolIds.map((toolId) => {
-                                                                    const tool = TOOL_LIBRARY[toolId];
-                                                                    if (!tool) return null;
-                                                                    const isActive = activeTool === toolId;
-
-                                                                    return (
-                                                                        <button
-                                                                            key={toolId}
-                                                                            onClick={() => {
-                                                                                setActiveTool(isActive ? null : toolId);
-                                                                                setInput(isActive ? '' : (toolPromptById[toolId] || tool.description));
-                                                                            }}
-                                                                            className={cn(
-                                                                                "shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all duration-300 hover:scale-105 active:scale-95",
-                                                                                isActive
-                                                                                    ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-blue-500/40 text-blue-300 shadow-lg shadow-blue-500/20"
-                                                                                    : "bg-white/5 border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10"
-                                                                            )}
-                                                                        >
-                                                                            {tool.name}
-                                                                        </button>
-                                                                    );
-                                                                })}
-
-                                                                {attachedFiles.length > 0 && (
-                                                                    <>
-                                                                        <div className="w-px h-4 bg-gradient-to-b from-transparent via-white/20 to-transparent shrink-0 mx-1" />
-                                                                        {attachedFiles.map(f => (
-                                                                            <div key={f.id} className="relative shrink-0 group">
-                                                                                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-full text-[10px] text-blue-400/80 group-hover:text-blue-300 transition-all duration-300 cursor-default shadow-lg shadow-blue-500/10">
-                                                                                    <Paperclip size={10} className="opacity-60" />
-                                                                                    <span className="font-medium">{f.name}</span>
-                                                                                    <button
-                                                                                        onClick={() => removeFile(f.id)}
-                                                                                        className="hover:text-red-400 transition-colors ml-1 hover:scale-110 active:scale-90"
-                                                                                    >
-                                                                                        <X size={10} />
-                                                                                    </button>
-                                                                                </div>
-                                                                            </div>
-                                                                        ))}
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        )}
-
                                                         <form onSubmit={handleSend} className="relative group/input">
                                                             {/* Glow effect on focus */}
                                                             <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-[1.25rem] opacity-0 group-focus-within/input:opacity-100 blur-xl transition-opacity duration-500" />
@@ -2520,40 +2538,38 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                                     rows={1}
                                                                     value={input}
                                                                     onChange={(e) => setInput(e.target.value)}
-                                                                    onKeyDown={(e) => {
-                                                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                                                            e.preventDefault();
-                                                                            handleSend(e);
-                                                                        }
-                                                                        // History Navigation
-                                                                        if (e.key === 'ArrowUp') {
-                                                                            e.preventDefault();
-                                                                            const nextIndex = historyIndex + 1;
-                                                                            if (nextIndex < promptHistory.length) {
-                                                                                setHistoryIndex(nextIndex);
-                                                                                setInput(promptHistory[nextIndex]);
-                                                                            }
-                                                                        }
-                                                                        if (e.key === 'ArrowDown') {
-                                                                            e.preventDefault();
-                                                                            const prevIndex = historyIndex - 1;
-                                                                            if (prevIndex >= 0) {
-                                                                                setHistoryIndex(prevIndex);
-                                                                                setInput(promptHistory[prevIndex]);
-                                                                            } else {
-                                                                                setHistoryIndex(-1);
-                                                                                setInput('');
-                                                                            }
-                                                                        }
-                                                                    }}
+                                                                    onKeyDown={handleInputKeyDown}
                                                                     disabled={isLoading}
                                                                     placeholder={isBackgroundBusy ? "Background agent active. You can continue chatting..." : "Ask anything..."}
-                                                                    className="w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 pr-14 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-black/20 font-medium"
+                                                                    className="relative z-20 w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 pr-14 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-black/20 font-medium"
                                                                     style={{
                                                                         minHeight: '52px',
                                                                         maxHeight: '200px'
                                                                     }}
                                                                 />
+                                                                {isCommandMenuOpen && filteredCommands.length > 0 && (
+                                                                    <div className="absolute bottom-full mb-3 left-0 w-full z-10 bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+                                                                        <div className="text-[10px] text-white/40 px-4 py-2 border-b border-white/5 uppercase tracking-widest">Commands</div>
+                                                                        <div className="max-h-52 overflow-y-auto">
+                                                                            {filteredCommands.map((cmd, idx) => (
+                                                                                <button
+                                                                                    key={cmd.command}
+                                                                                    onClick={() => applyCommand(cmd.command)}
+                                                                                    className={cn(
+                                                                                        "w-full text-left px-4 py-2 flex items-center justify-between text-xs transition-colors",
+                                                                                        idx === activeCommandIndex ? "bg-white/10 text-white" : "text-white/60 hover:text-white hover:bg-white/5"
+                                                                                    )}
+                                                                                >
+                                                                                    <div>
+                                                                                        <div className="font-mono text-[11px]">{cmd.command}</div>
+                                                                                        <div className="text-[10px] text-white/40">{cmd.description}</div>
+                                                                                    </div>
+                                                                                    <span className="text-[10px] text-white/30">{cmd.label}</span>
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                                 <button
                                                                     type="submit"
                                                                     disabled={isLoading || (!input.trim() && attachedFiles.length === 0)}

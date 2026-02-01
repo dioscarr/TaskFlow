@@ -14,8 +14,8 @@ async function runSymphonyTest() {
 
     // Initialize Gemini Models
     const genAI = new GoogleGenerativeAI(apiKey);
-    const orchestratorModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
-    const workerModel = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+    const orchestratorModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const workerModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     // Setup Symphony
     const symphony = new AgentSymphony({

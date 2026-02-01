@@ -4,26 +4,12 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('Resetting failed jobs...');
-    // Only reset last 50 failed jobs
-    const jobs = await prisma.agentJob.findMany({
-        where: { status: 'failed' },
-        take: 50,
-        orderBy: { updatedAt: 'desc' }
+    const statusesToEnd = ['pending', 'queued', 'running'];
+    console.log(`Deleting jobs with status: ${statusesToEnd.join(', ')}...`);
+    const result = await prisma.agentJob.deleteMany({
+        where: { status: { in: statusesToEnd } }
     });
-    
-    for (const job of jobs) {
-        await prisma.agentJob.update({
-            where: { id: job.id },
-            data: { 
-                status: 'queued', 
-                iteration: 0, 
-                attempts: 0,
-                error: null 
-            }
-        });
-    }
-    console.log(`Reset ${jobs.length} jobs.`);
+    console.log(`Deleted ${result.count} jobs.`);
 }
 
 main()

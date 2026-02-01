@@ -5,7 +5,7 @@ import path from 'path';
  * lifecycle manager for the agent worker cluster.
  * Launches multiple workers for parallelism and handles restarts.
  */
-const NUM_WORKERS = process.env.AGENT_CONCURRENCY ? parseInt(process.env.AGENT_CONCURRENCY) : 3;
+const NUM_WORKERS = process.env.AGENT_CONCURRENCY ? parseInt(process.env.AGENT_CONCURRENCY) : 1;
 
 function startWorker(workerIndex: number) {
     console.log(`🚀 Starting Agent Worker #${workerIndex + 1}...`);

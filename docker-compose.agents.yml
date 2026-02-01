@@ -6,10 +6,12 @@ services:
       context: .
       dockerfile: Dockerfile.agent
     deploy:
-      replicas: 3 # Scale this to set the number of parallel workers
+      replicas: 1 # Scale this to set the number of parallel workers
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - AGENT_WORKER_ID=docker-worker-{{.Task.Slot}}
+    env_file:
+      - .env
     restart: always
     volumes:
       - ./public/uploads:/app/public/uploads # Persist uploads

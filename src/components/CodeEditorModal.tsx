@@ -194,45 +194,49 @@ export default function CodeEditorModal({
 
     const codeTheme = useMemo(() => EditorView.theme({
         '&': {
-            backgroundColor: 'var(--background)',
-            color: 'var(--foreground)',
+            backgroundColor: '#050505', // Deep premium dark
+            color: '#f0f0f0', // High contrast white
             height: '100%'
         },
         '.cm-content': {
-            caretColor: 'var(--primary)',
+            caretColor: '#00c2ff', // Neon cyan
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-            fontSize: '0.875rem'
+            fontSize: '13px'
         },
         '.cm-gutters': {
-            backgroundColor: 'var(--muted)',
-            color: 'var(--muted-foreground)',
-            borderRight: '1px solid var(--border)'
+            backgroundColor: '#050505',
+            color: '#4a4a4a',
+            borderRight: '1px solid #1a1a1a'
         },
         '.cm-activeLine': {
-            backgroundColor: 'var(--accent)'
+            backgroundColor: 'rgba(255, 255, 255, 0.03)'
         },
         '.cm-activeLineGutter': {
-            backgroundColor: 'var(--accent)'
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            color: '#00c2ff'
         },
         '.cm-selectionBackground': {
-            backgroundColor: 'var(--ring)'
+            backgroundColor: 'rgba(0, 194, 255, 0.25) !important'
         },
         '.cm-cursor': {
-            borderLeftColor: 'var(--primary)'
+            borderLeftColor: '#00c2ff',
+            borderLeftWidth: '2px'
         }
     }, { dark: true }), []);
 
     const codeHighlight = useMemo(() => HighlightStyle.define([
-        { tag: tags.keyword, color: '#569cd6' }, // Blue for keywords
-        { tag: [tags.string, tags.special(tags.string)], color: '#ce9178' }, // Orange for strings
-        { tag: [tags.number, tags.bool, tags.null], color: '#b5cea8' }, // Light green for numbers/booleans
-        { tag: [tags.comment, tags.lineComment], color: '#6a9955', fontStyle: 'italic' }, // Green for comments
-        { tag: tags.function(tags.variableName), color: '#dcdcaa' }, // Yellow for functions
-        { tag: tags.typeName, color: '#4ec9b0' }, // Cyan for types
-        { tag: tags.tagName, color: '#569cd6' }, // Blue for HTML tags
-        { tag: tags.attributeName, color: '#9cdcfe' }, // Light blue for attributes
-        { tag: tags.variableName, color: '#9cdcfe' }, // Light blue for variables
-        { tag: tags.propertyName, color: '#9cdcfe' } // Light blue for properties
+        { tag: tags.keyword, color: '#ff007a', fontWeight: 'bold' }, // Neon Pink for keywords
+        { tag: [tags.string, tags.special(tags.string)], color: '#00ff9d' }, // Neon Green for strings
+        { tag: [tags.number, tags.bool, tags.null], color: '#ff9d00' }, // Neon Orange for constants
+        { tag: [tags.comment, tags.lineComment], color: '#666666', fontStyle: 'italic' }, // Muted gray for comments
+        { tag: tags.function(tags.variableName), color: '#00c2ff' }, // Neon Cyan for functions
+        { tag: tags.typeName, color: '#bd00ff' }, // Neon Purple for types
+        { tag: tags.tagName, color: '#ff007a' }, // Neon Pink for HTML tags
+        { tag: tags.attributeName, color: '#00c2ff' }, // Neon Cyan for attributes
+        { tag: tags.variableName, color: '#ffffff' }, // White for variables
+        { tag: tags.propertyName, color: '#00c2ff' }, // Neon Cyan for properties
+        { tag: tags.operator, color: '#ffffff' },
+        { tag: tags.className, color: '#00c2ff' }
     ]), []);
 
     const languageExtension = useMemo(() => {
@@ -277,13 +281,14 @@ export default function CodeEditorModal({
                         maxWidth: isMaximized ? 'none' : '64rem'
                     }}
                     exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                    className="bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl overflow-hidden flex flex-col relative"
+                    className="bg-[#050505] border border-white/10 rounded-xl shadow-[0_0_50px_rgba(0,194,255,0.1)] overflow-hidden flex flex-col relative"
                     onClick={e => e.stopPropagation()}
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d2d] border-b border-white/5 select-none">
-                        <div className="flex items-center gap-4">
-                            <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <div className="flex items-center justify-between px-4 py-3 bg-[#0a0a0a] border-b border-white/5 select-none relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-transparent pointer-events-none" />
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20 shadow-[0_0_15px_rgba(37,99,235,0.2)]">
                                 <Code2 className="text-blue-400" size={18} />
                             </div>
                             <div>
@@ -332,10 +337,10 @@ export default function CodeEditorModal({
                             )}
                             <button
                                 onClick={handleOpenMagic}
-                                className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors"
+                                className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors border border-white/5 hover:border-emerald-500/30 group"
                                 title="AI Magic Content"
                             >
-                                <Sparkles size={14} className="text-emerald-300" />
+                                <Sparkles size={14} className="text-emerald-400 group-hover:animate-pulse" />
                                 <span className="text-[10px] font-bold uppercase tracking-wider">Magic</span>
                             </button>
                             <button
@@ -374,7 +379,7 @@ export default function CodeEditorModal({
                     {activeMode === 'edit' ? (
                         <>
                             {/* Editor Area */}
-                            <div className="flex-1 overflow-hidden bg-[#1e1e1e]">
+                            <div className="flex-1 overflow-hidden bg-[#050505]">
                                 <CodeMirror
                                     value={content}
                                     onChange={(value) => setContent(value)}
@@ -386,16 +391,16 @@ export default function CodeEditorModal({
                             </div>
 
                             {/* Footer */}
-                            <div className="px-4 py-2 bg-[#007acc] text-white text-[10px] font-mono flex items-center justify-between pointer-events-none">
-                                <div className="flex gap-4">
+                            <div className="px-4 py-2 bg-[#00c2ff] text-black text-[10px] font-bold flex items-center justify-between pointer-events-none shadow-[0_-4px_20px_rgba(0,194,255,0.3)]">
+                                <div className="flex gap-4 uppercase tracking-tighter">
                                     <span>Ln {lines}, Col {content.length}</span>
                                     <span>UTF-8</span>
                                 </div>
-                                <span className="uppercase">{language}</span>
+                                <span className="uppercase tracking-widest">{language}</span>
                             </div>
                         </>
                     ) : (
-                        <div className="flex-1 p-6 bg-[#1e1e1e] overflow-hidden">
+                        <div className="flex-1 p-6 bg-[#050505] overflow-hidden">
                             <div className="w-full h-full rounded-xl border border-white/5 bg-black/20 overflow-hidden flex items-center justify-center">
                                 {isImage ? (
                                     <img
@@ -406,13 +411,13 @@ export default function CodeEditorModal({
                                 ) : previewFile?.type === 'pdf' ? (
                                     <iframe
                                         src={`/uploads/${previewPath}`}
-                                        className="w-full h-full border-0 bg-white"
+                                        className="w-full h-full border-0 bg-[#1e1e1e]"
                                         title={previewFile?.name || fileName}
                                     />
                                 ) : isHtml ? (
                                     <iframe
                                         src={`/uploads/${previewPath}`}
-                                        className="w-full h-full border-0 bg-white"
+                                        className="w-full h-full border-0 bg-[#1e1e1e]"
                                         title={previewFile?.name || fileName}
                                     />
                                 ) : isMarkdown ? (
@@ -455,10 +460,10 @@ export default function CodeEditorModal({
                                     initial={{ scale: 0.95, opacity: 0, y: 10 }}
                                     animate={{ scale: 1, opacity: 1, y: 0 }}
                                     exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                                    className="w-full max-w-2xl bg-[#1e1e1e] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                                    className="w-full max-w-2xl bg-[#050505] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <div className="flex items-center justify-between px-5 py-4 bg-[#2d2d2d] border-b border-white/5">
+                                    <div className="flex items-center justify-between px-5 py-4 bg-[#0a0a0a] border-b border-white/5">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-emerald-500/10 rounded-lg">
                                                 <Sparkles size={16} className="text-emerald-300" />
@@ -560,7 +565,7 @@ export default function CodeEditorModal({
                                         )}
                                     </div>
 
-                                    <div className="px-5 py-4 bg-[#2d2d2d] border-t border-white/5 flex items-center justify-between">
+                                    <div className="px-5 py-4 bg-[#0a0a0a] border-t border-white/5 flex items-center justify-between">
                                         <button
                                             onClick={() => setIsMagicOpen(false)}
                                             className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-white/50 hover:text-white transition-colors"

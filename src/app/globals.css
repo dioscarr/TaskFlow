@@ -69,6 +69,7 @@
 
 /* Base Styles */
 :root {
+  color-scheme: dark;
   --background: #0f172a;
   /* Slate 900 - Deep, rich background */
   --foreground: #f8fafc;
