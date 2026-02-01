@@ -12,6 +12,23 @@ import ConfirmationModal from './ConfirmationModal';
 import ContextMenu from './ContextMenu';
 import CodeEditorModal from './CodeEditorModal';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { listProcesses, stopProcess, restartProcess, reconfigureProcessPort } from '@/app/processActions';
+import { Play, Square, RefreshCw, Globe, Wrench } from 'lucide-react';
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.05
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 10, scale: 0.98 },
+    show: { opacity: 1, y: 0, scale: 1 }
+};
 
 interface FileManagerProps {
     files: WorkspaceFile[];
@@ -130,6 +147,8 @@ export default function FileManager({ files }: FileManagerProps) {
     const [repoEntries, setRepoEntries] = useState<RepoEntry[]>([]);
     const [isRepoLoading, setIsRepoLoading] = useState(false);
     const [repoEditingFile, setRepoEditingFile] = useState<RepoEntry | null>(null);
+    const [processes, setProcesses] = useState<any[]>([]);
+    const [processActionLoading, setProcessActionLoading] = useState<string | null>(null);
     const [repoEditorContent, setRepoEditorContent] = useState('');
     const [repoEditorPath, setRepoEditorPath] = useState<string | null>(null);
     const [isRepoSaving, setIsRepoSaving] = useState(false);
@@ -212,6 +231,25 @@ export default function FileManager({ files }: FileManagerProps) {
             setPreviewContent(null);
         }
     }, [editingFile, editorMode]);
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (explorerMode === 'repo') {
+            const fetchProcesses = async () => {
+                try {
+                    const res = await listProcesses();
+                    if (res.success && res.processes) {
+                        setProcesses(res.processes);
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch processes", e);
+                }
+            };
+            fetchProcesses();
+            interval = setInterval(fetchProcesses, 5000);
+        }
+        return () => clearInterval(interval);
+    }, [explorerMode]);
 
     useEffect(() => {
         const handleChatContextUpdated = (e: any) => {
@@ -907,6 +945,56 @@ export default function FileManager({ files }: FileManagerProps) {
         }
     };
 
+    const handleStopProcess = async (processId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setProcessActionLoading(processId);
+        try {
+            await stopProcess(processId);
+            const res = await listProcesses();
+            if (res.success && res.processes) setProcesses(res.processes);
+            toast.success('Process stopped');
+        } catch (error) {
+            toast.error('Failed to stop process');
+        } finally {
+            setProcessActionLoading(null);
+        }
+    };
+
+    const handleRestartProcess = async (processId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setProcessActionLoading(processId);
+        try {
+            await restartProcess(processId);
+            const res = await listProcesses();
+            if (res.success && res.processes) setProcesses(res.processes);
+            toast.success('Process restarted');
+        } catch (error) {
+            toast.error('Failed to restart process');
+        } finally {
+            setProcessActionLoading(null);
+        }
+    };
+
+    const handleAutoConfigure = async (processId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (processActionLoading) return;
+        setProcessActionLoading(processId);
+        try {
+            const res = await reconfigureProcessPort(processId);
+            if (res.success) {
+                const updatedList = await listProcesses();
+                if (updatedList.success && updatedList.processes) setProcesses(updatedList.processes);
+                toast.success(`Port configured: ${res.port}`);
+            } else {
+                toast.error(res.error || 'Failed to configure port');
+            }
+        } catch (error) {
+            toast.error('Failed to configure port');
+        } finally {
+            setProcessActionLoading(null);
+        }
+    };
+
     const filteredFiles = (searchQuery
         ? files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
         : files.filter(f => f.parentId === currentFolderId)
@@ -1060,49 +1148,160 @@ export default function FileManager({ files }: FileManagerProps) {
                             Loading repo apps...
                         </div>
                     ) : (
-                        <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col space-y-2"}>
-                            {repoEntries.map((entry) => (
-                                <div
-                                    key={entry.path}
-                                    onClick={() => handleRepoEntryOpen(entry)}
-                                    className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all cursor-pointer"
-                                >
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className="p-2 rounded-lg bg-white/5 text-blue-300">
-                                                {entry.type === 'folder' ? <Folder size={18} /> : <FileText size={18} />}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <div className="text-sm font-semibold text-white truncate">{entry.name}</div>
-                                                <div className="text-[10px] text-white/40 truncate">
-                                                    {entry.type === 'folder' ? 'Folder' : entry.type.toUpperCase()}
+                        <motion.div
+                            variants={containerVariants}
+                            initial="hidden"
+                            animate="show"
+                            className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col space-y-2"}
+                        >
+                            {repoEntries.map((entry) => {
+                                // Debug matching
+                                const norm = (p: string) => p?.replace(/\\/g, '/').toLowerCase();
+                                const entryPath = norm(entry.path);
+
+                                const process = processes.find(p => {
+                                    // Robust matching:
+                                    // 1. Name match (case-insensitive) is reliable for Repo Apps
+                                    if (p.name.toLowerCase() === entry.name.toLowerCase()) return true;
+
+                                    if (!p.path) return false;
+                                    const procPath = norm(p.path);
+                                    const metaPath = p.metadata?.appPath ? norm(p.metadata.appPath) : '';
+                                    return procPath === entryPath || metaPath === entryPath || procPath.endsWith(entryPath) || entryPath.endsWith(procPath);
+                                });
+
+                                if (explorerMode === 'repo' && !repoCurrentPath) {
+                                    // Console log occasionally or just once to debug
+                                    // console.log('Checking match:', { entry: entry.path, process: process?.path });
+                                }
+
+                                const isRunning = process?.status === 'running';
+                                const port = process?.port;
+                                const isLoading = processActionLoading === process?.id;
+                                const isRootView = !repoCurrentPath;
+
+                                return (
+                                    <motion.div
+                                        key={entry.path}
+                                        variants={itemVariants}
+                                        layout
+                                        whileHover={{ scale: 1.01, backgroundColor: "rgba(255,255,255,0.08)" }}
+                                        whileTap={{ scale: 0.99 }}
+                                        onClick={() => handleRepoEntryOpen(entry)}
+                                        className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all cursor-pointer group"
+                                    >
+                                        <div className="flex flex-col gap-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="p-2 rounded-lg bg-white/5 text-blue-300 relative">
+                                                        {entry.type === 'folder' ? <Folder size={18} /> : <FileText size={18} />}
+                                                        {process && (
+                                                            <div className={cn("absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border border-[#0A0A0A]", isRunning ? "bg-emerald-500" : "bg-red-500")} />
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="text-sm font-semibold text-white truncate flex items-center gap-2">
+                                                            {entry.name}
+                                                            {port && <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-white/60 font-mono">:{port}</span>}
+                                                        </div>
+                                                        <div className="text-[10px] text-white/40 truncate">
+                                                            {process ? (isRunning ? 'Running' : 'Stopped') : (entry.type === 'folder' ? 'Folder' : entry.type.toUpperCase())}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
+
+                                            {entry.type === 'folder' && isRootView && (
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    {process ? (
+                                                        <>
+                                                            {isRunning && port && (
+                                                                <motion.button
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        window.open(`http://localhost:${port}`, '_blank');
+                                                                    }}
+                                                                    className="px-3 py-1.5 text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg transition-colors flex items-center gap-2"
+                                                                    title="Open App"
+                                                                >
+                                                                    <Globe size={14} />
+                                                                    Open App
+                                                                </motion.button>
+                                                            )}
+
+                                                            {/* Auto Configure Button if Port Missing */}
+                                                            {(!port) && (
+                                                                <motion.button
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                    onClick={(e) => handleAutoConfigure(process.id, e)}
+                                                                    className="px-3 py-1.5 text-[10px] font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-lg transition-colors flex items-center gap-1.5"
+                                                                    title="Auto Configure Port"
+                                                                    disabled={isLoading}
+                                                                >
+                                                                    <Wand2 size={12} />
+                                                                    Auto Fix
+                                                                </motion.button>
+                                                            )}
+
+                                                            <motion.button
+                                                                whileHover={{ scale: 1.02 }}
+                                                                whileTap={{ scale: 0.98 }}
+                                                                onClick={(e) => isRunning ? handleStopProcess(process.id, e) : handleRestartProcess(process.id, e)}
+                                                                className={cn(
+                                                                    "px-2.5 py-1 text-[10px] font-semibold rounded-lg transition-colors flex-1 flex items-center justify-center gap-1.5",
+                                                                    isRunning
+                                                                        ? "text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20"
+                                                                        : "text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20"
+                                                                )}
+                                                                disabled={isLoading}
+                                                            >
+                                                                {isLoading ? <RefreshCw size={12} className="animate-spin" /> : (isRunning ? <Square size={12} className="fill-current" /> : <Play size={12} className="fill-current" />)}
+                                                                {isRunning ? 'Stop' : 'Start'}
+                                                            </motion.button>
+                                                            <motion.button
+                                                                whileHover={{ scale: 1.05 }}
+                                                                whileTap={{ scale: 0.95 }}
+                                                                onClick={(e) => handleRestartProcess(process.id, e)}
+                                                                className="p-1.5 text-zinc-400 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                                                                title="Restart"
+                                                                disabled={isLoading}
+                                                            >
+                                                                <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+                                                            </motion.button>
+                                                        </>
+                                                    ) : (
+                                                        <motion.button
+                                                            whileHover={{ scale: 1.02 }}
+                                                            whileTap={{ scale: 0.98 }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleInstallRepoApp(entry.path);
+                                                            }}
+                                                            className="px-2.5 py-1 text-[10px] font-semibold text-zinc-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors flex-1"
+                                                            title="Install App (Docker)"
+                                                        >
+                                                            Install
+                                                        </motion.button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
-                                        {entry.type === 'folder' && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleInstallRepoApp(entry.path);
-                                                }}
-                                                className="px-2.5 py-1 text-[10px] font-semibold text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg transition-colors"
-                                                title="Install App (Docker)"
-                                            >
-                                                Install
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                                    </motion.div>
+                                );
+                            })}
                             {repoEntries.length === 0 && (
                                 <div className="col-span-full text-center text-white/40 py-10">
                                     No repo apps found.
                                 </div>
                             )}
-                        </div>
+                        </motion.div>
                     )}
                 </>
-            )}
+            )
+            }
 
             <AnimatePresence>
                 {isGlobalDragActive && (
@@ -1125,12 +1324,14 @@ export default function FileManager({ files }: FileManagerProps) {
                 Actually we don't need a separate capture div if we use the parent div for Drop.
                 But we do need to detect 'leave' from the parent.
              */}
-            {isGlobalDragActive && (
-                <div
-                    className="absolute inset-0 z-0"
-                    onDragLeave={() => setIsGlobalDragActive(false)}
-                />
-            )}
+            {
+                isGlobalDragActive && (
+                    <div
+                        className="absolute inset-0 z-0"
+                        onDragLeave={() => setIsGlobalDragActive(false)}
+                    />
+                )
+            }
 
 
             <ConfirmationModal
@@ -1147,45 +1348,49 @@ export default function FileManager({ files }: FileManagerProps) {
                 isLoading={isDeleting}
             />
 
-            {editingFile && (
-                <CodeEditorModal
-                    isOpen={!!editingFile}
-                    onClose={() => {
-                        setEditingFile(null);
-                        setEditorMode('edit');
-                        setEditorContent('');
-                        setEditorContentFileId(null);
-                        setPreviewContent(null);
-                    }}
-                    fileName={editingFile.name}
-                    initialContent={editorContent}
-                    onSave={handleSaveFile}
-                    isSaving={isSavingStart}
-                    mode={editorMode}
-                    onModeChange={handleEditorModeChange}
-                    previewFile={editingFile}
-                    previewContent={previewContent}
-                    chatContext={chatContext}
-                />
-            )}
-            {repoEditingFile && (
-                <CodeEditorModal
-                    isOpen={!!repoEditingFile}
-                    onClose={() => {
-                        setRepoEditingFile(null);
-                        setRepoEditorContent('');
-                        setRepoEditorPath(null);
-                    }}
-                    fileName={repoEditingFile.name}
-                    initialContent={repoEditorContent}
-                    onSave={handleRepoSave}
-                    isSaving={isRepoSaving}
-                    mode="edit"
-                    previewFile={null}
-                    previewContent={null}
-                    chatContext={chatContext}
-                />
-            )}
+            {
+                editingFile && (
+                    <CodeEditorModal
+                        isOpen={!!editingFile}
+                        onClose={() => {
+                            setEditingFile(null);
+                            setEditorMode('edit');
+                            setEditorContent('');
+                            setEditorContentFileId(null);
+                            setPreviewContent(null);
+                        }}
+                        fileName={editingFile.name}
+                        initialContent={editorContent}
+                        onSave={handleSaveFile}
+                        isSaving={isSavingStart}
+                        mode={editorMode}
+                        onModeChange={handleEditorModeChange}
+                        previewFile={editingFile}
+                        previewContent={previewContent}
+                        chatContext={chatContext}
+                    />
+                )
+            }
+            {
+                repoEditingFile && (
+                    <CodeEditorModal
+                        isOpen={!!repoEditingFile}
+                        onClose={() => {
+                            setRepoEditingFile(null);
+                            setRepoEditorContent('');
+                            setRepoEditorPath(null);
+                        }}
+                        fileName={repoEditingFile.name}
+                        initialContent={repoEditorContent}
+                        onSave={handleRepoSave}
+                        isSaving={isRepoSaving}
+                        mode="edit"
+                        previewFile={null}
+                        previewContent={null}
+                        chatContext={chatContext}
+                    />
+                )
+            }
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     {currentFolderId && (
@@ -1222,25 +1427,31 @@ export default function FileManager({ files }: FileManagerProps) {
                 <div className="flex gap-2">
                     {explorerMode === 'workspace' && (
                         <>
-                            <button
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
                                 onClick={() => setIsCreateModalOpen(true)}
                                 className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors text-sm font-medium border border-white/10"
                             >
                                 <Folder size={16} />
                                 <span>New Folder</span>
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
                                 onClick={triggerUpload}
                                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-blue-500/20"
                             >
                                 <UploadCloud size={16} />
                                 <span>Upload File</span>
-                            </button>
+                            </motion.button>
                         </>
                     )}
 
                     <div className="flex items-center bg-white/5 rounded-lg border border-white/10 p-1 ml-2">
-                        <button
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => setExplorerMode('workspace')}
                             className={cn(
                                 "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
@@ -1249,8 +1460,10 @@ export default function FileManager({ files }: FileManagerProps) {
                             title="Workspace Files"
                         >
                             Workspace
-                        </button>
-                        <button
+                        </motion.button>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => setExplorerMode('repo')}
                             className={cn(
                                 "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
@@ -1259,12 +1472,14 @@ export default function FileManager({ files }: FileManagerProps) {
                             title="Repo Apps"
                         >
                             Repo Apps
-                        </button>
+                        </motion.button>
                     </div>
 
                     {explorerMode === 'workspace' && (
                         <div className="flex items-center bg-white/5 rounded-lg border border-white/10 p-1 ml-2">
-                            <button
+                            <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
                                 onClick={() => setViewMode('grid')}
                                 className={cn(
                                     "p-1.5 rounded-md transition-all",
@@ -1273,8 +1488,10 @@ export default function FileManager({ files }: FileManagerProps) {
                                 title="Grid View"
                             >
                                 <LayoutGrid size={18} />
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
                                 onClick={() => setViewMode('list')}
                                 className={cn(
                                     "p-1.5 rounded-md transition-all",
@@ -1283,7 +1500,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                 title="List View"
                             >
                                 <List size={18} />
-                            </button>
+                            </motion.button>
                         </div>
                     )}
                     {explorerMode === 'workspace' && (
@@ -1297,112 +1514,123 @@ export default function FileManager({ files }: FileManagerProps) {
                 </div>
             </div>
 
-            {explorerMode === 'workspace' && (
-                <div
-                    onClick={triggerUpload}
-                    onDragOver={handleGlobalDragOver}
-                    onDrop={handleGlobalDrop}
-                    className="w-full h-32 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group"
-                >
-                    <div className="p-3 rounded-full bg-white/5 group-hover:scale-110 transition-transform mb-2">
-                        <UploadCloud className="text-white/50" />
-                    </div>
-                    <p className="text-sm text-white/50">Drag and drop files here to upload to {currentFolderId ? currentFolder?.name : 'root'}</p>
-                </div>
-            )}
-
-            {explorerMode === 'workspace' && (
-                <div className="lg:hidden relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                    <input
-                        type="text"
-                        placeholder="Search your files..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20"
-                    />
-                </div>
-            )}
-
-            {explorerMode === 'workspace' && (
-                <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2 text-sm text-white/50 overflow-x-auto pb-2">
-                        <div className="flex items-center gap-2 mr-4">
-                            <input
-                                type="checkbox"
-                                checked={filteredFiles.length > 0 && selectedFileIds.size === filteredFiles.length}
-                                onChange={(e) => {
-                                    if (e.target.checked) {
-                                        setSelectedFileIds(new Set(filteredFiles.map(f => f.id)));
-                                    } else {
-                                        setSelectedFileIds(new Set());
-                                    }
-                                }}
-                                className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-500/50"
-                            />
+            {
+                explorerMode === 'workspace' && (
+                    <div
+                        onClick={triggerUpload}
+                        onDragOver={handleGlobalDragOver}
+                        onDrop={handleGlobalDrop}
+                        className="w-full h-32 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group"
+                    >
+                        <div className="p-3 rounded-full bg-white/5 group-hover:scale-110 transition-transform mb-2">
+                            <UploadCloud className="text-white/50" />
                         </div>
-                        <button
-                            onClick={() => setCurrentFolderId(null)}
-                            className={cn(
-                                "hover:text-white transition-colors flex items-center gap-1",
-                                !currentFolderId && "text-white font-medium"
+                        <p className="text-sm text-white/50">Drag and drop files here to upload to {currentFolderId ? currentFolder?.name : 'root'}</p>
+                    </div>
+                )
+            }
+
+            {
+                explorerMode === 'workspace' && (
+                    <div className="lg:hidden relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                        <input
+                            type="text"
+                            placeholder="Search your files..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20"
+                        />
+                    </div>
+                )
+            }
+
+            {
+                explorerMode === 'workspace' && (
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 text-sm text-white/50 overflow-x-auto pb-2">
+                            <div className="flex items-center gap-2 mr-4">
+                                <input
+                                    type="checkbox"
+                                    checked={filteredFiles.length > 0 && selectedFileIds.size === filteredFiles.length}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setSelectedFileIds(new Set(filteredFiles.map(f => f.id)));
+                                        } else {
+                                            setSelectedFileIds(new Set());
+                                        }
+                                    }}
+                                    className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-500/50"
+                                />
+                            </div>
+                            <button
+                                onClick={() => setCurrentFolderId(null)}
+                                className={cn(
+                                    "hover:text-white transition-colors flex items-center gap-1",
+                                    !currentFolderId && "text-white font-medium"
+                                )}
+                            >
+                                <Folder size={14} />
+                                <span>Home</span>
+                            </button>
+                            {currentFolderId && (
+                                <>
+                                    <ChevronLeft size={12} className="rotate-180" />
+                                    <span className="text-white font-medium">{currentFolder?.name}</span>
+                                </>
                             )}
-                        >
-                            <Folder size={14} />
-                            <span>Home</span>
-                        </button>
-                        {currentFolderId && (
-                            <>
-                                <ChevronLeft size={12} className="rotate-180" />
-                                <span className="text-white font-medium">{currentFolder?.name}</span>
-                            </>
+                        </div>
+
+                        {selectedFileIds.size > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="flex items-center gap-4 px-4 py-2 bg-blue-600/20 border border-blue-500/30 rounded-xl"
+                            >
+                                <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">
+                                    {selectedFileIds.size} Selected
+                                </span>
+                                <div className="h-4 w-px bg-blue-500/30" />
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => {
+                                            const selectedFiles = files.filter(f => selectedFileIds.has(f.id));
+                                            setMovingFiles(selectedFiles);
+                                        }}
+                                        className="p-1.5 hover:bg-white/10 rounded-md text-blue-400 transition-colors"
+                                        title="Move Selection"
+                                    >
+                                        <Move size={16} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteRequest(Array.from(selectedFileIds))}
+                                        className="p-1.5 hover:bg-red-500/20 rounded-md text-red-400 transition-colors"
+                                        title="Delete Selection"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedFileIds(new Set())}
+                                        className="p-1.5 hover:bg-white/10 rounded-md text-white/50 hover:text-white transition-colors"
+                                        title="Clear Selection"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            </motion.div>
                         )}
                     </div>
-
-                    {selectedFileIds.size > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="flex items-center gap-4 px-4 py-2 bg-blue-600/20 border border-blue-500/30 rounded-xl"
-                        >
-                            <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">
-                                {selectedFileIds.size} Selected
-                            </span>
-                            <div className="h-4 w-px bg-blue-500/30" />
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => {
-                                        const selectedFiles = files.filter(f => selectedFileIds.has(f.id));
-                                        setMovingFiles(selectedFiles);
-                                    }}
-                                    className="p-1.5 hover:bg-white/10 rounded-md text-blue-400 transition-colors"
-                                    title="Move Selection"
-                                >
-                                    <Move size={16} />
-                                </button>
-                                <button
-                                    onClick={() => handleDeleteRequest(Array.from(selectedFileIds))}
-                                    className="p-1.5 hover:bg-red-500/20 rounded-md text-red-400 transition-colors"
-                                    title="Delete Selection"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                                <button
-                                    onClick={() => setSelectedFileIds(new Set())}
-                                    className="p-1.5 hover:bg-white/10 rounded-md text-white/50 hover:text-white transition-colors"
-                                    title="Clear Selection"
-                                >
-                                    <X size={16} />
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-                </div>
-            )}
+                )
+            }
 
             {/* File Grid */}
             {/* File Container */}
-            <div className={cn(viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col space-y-2", explorerMode !== 'workspace' && "hidden")}>
+            <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+                className={cn(viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col space-y-2", explorerMode !== 'workspace' && "hidden")}
+            >
                 {filteredFiles.map((file, index) => {
                     const highlightStyles = {
                         backgroundColor: file.highlightBgColor || undefined,
@@ -1417,9 +1645,10 @@ export default function FileManager({ files }: FileManagerProps) {
                         <motion.div
                             key={file.id}
                             id={`file-${file.id}`}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
+                            variants={itemVariants}
+                            layout
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                             onContextMenu={(e) => handleContextMenu(e, file)}
                             draggable={true}
                             onDragStart={(e: any) => handleDragStart(e, file)}
@@ -1675,7 +1904,7 @@ export default function FileManager({ files }: FileManagerProps) {
                         )}
                     </div>
                 )}
-            </div>
+            </motion.div>
 
 
             {/* ... Modals (Create Folder, Move, Rename, Preview) ... */}
@@ -2217,6 +2446,6 @@ export default function FileManager({ files }: FileManagerProps) {
                     transition: all 0.3s ease;
                 }
             `}</style>
-        </div>
+        </div >
     );
 }

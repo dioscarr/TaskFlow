@@ -1367,6 +1367,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                     ...finalMeta
                 };
             } catch (streamError) {
+                console.warn('⚠️ Stream failed, falling back to direct API:', streamError);
                 usedStream = false;
                 res = await chatWithAI(
                     contextMsg,
@@ -1376,6 +1377,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                     currentFolderContext.id || undefined,
                     { sessionId: sessionId || undefined, allowToolExecution: false, verbosity: verbosity }
                 );
+                console.log('📥 Fallback chatWithAI response:', JSON.stringify(res, null, 2));
             }
             console.log('📥 AI Response:', JSON.stringify(res, null, 2));
             console.log('📥 AI Response Text:', res.text);
@@ -1509,9 +1511,10 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                     }
                 }
             } else {
-                console.error('❌ AI Error:', res.message);
-                toast.error(res.message || 'AI failed to respond');
-                setMessages(prev => [...prev, { role: 'ai', content: `Error: ${res.message || 'Something went wrong.'}` }]);
+                const errorMessage = res.message || res.text || 'AI failed to respond';
+                console.error('❌ AI Error:', { success: res.success, message: res.message, text: res.text, fullResponse: res });
+                toast.error(errorMessage);
+                setMessages(prev => [...prev, { role: 'ai', content: `Error: ${errorMessage}` }]);
             }
         } catch (error) {
             console.error('💥 Chat Error:', error);
@@ -2197,7 +2200,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                             type="submit"
                                                             disabled={isLoading || (!input.trim() && attachedFiles.length === 0)}
                                                             className={cn(
-                                                                "absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-xl transition-all duration-300 shadow-lg",
+                                                                "absolute right-2 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-xl transition-all duration-300 shadow-lg",
                                                                 input.trim() || attachedFiles.length > 0
                                                                     ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 hover:scale-110 active:scale-95 shadow-blue-500/50"
                                                                     : "bg-white/5 text-white/20 cursor-not-allowed"
@@ -2649,7 +2652,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                                     <button
                                                                         type="button"
                                                                         onClick={handleStopAgents}
-                                                                        className="absolute right-14 top-1/2 -translate-y-1/2 p-2.5 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-all duration-300 shadow-xl shadow-red-500/40 group/stop"
+                                                                        className="absolute right-14 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-all duration-300 shadow-xl shadow-red-500/40 group/stop"
                                                                         title="Stop all agent activity"
                                                                     >
                                                                         <Square size={14} fill="white" className="group-hover:scale-110 transition-transform" />
@@ -2659,7 +2662,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                                     type="submit"
                                                                     disabled={isLoading || (!input.trim() && attachedFiles.length === 0)}
                                                                     className={cn(
-                                                                        "absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-xl transition-all duration-300 shadow-lg",
+                                                                        "absolute right-2 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-xl transition-all duration-300 shadow-lg",
                                                                         input.trim() || attachedFiles.length > 0
                                                                             ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 hover:scale-110 active:scale-95 shadow-blue-500/50"
                                                                             : "bg-white/5 text-white/20 cursor-not-allowed"

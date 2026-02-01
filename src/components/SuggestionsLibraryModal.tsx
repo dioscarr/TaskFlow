@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Sparkles, Loader2, Plus, ArrowRight, Layout, Check, Globe, Wand2, Compass, Bookmark, Lightbulb } from 'lucide-react';
 import { generateSuggestions } from '@/app/actions';
@@ -32,6 +33,9 @@ interface SuggestionsLibraryModalProps {
 }
 
 export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, workflowContext, workflowType }: SuggestionsLibraryModalProps) {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+
     const [searchQuery, setSearchQuery] = useState('');
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -101,7 +105,9 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
         }
     }, [isOpen]);
 
-    return (
+    if (!mounted) return null;
+
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
                 <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/60 backdrop-blur-xl p-4 md:p-8">
@@ -300,7 +306,8 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                     </motion.div>
                 </div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }
 

@@ -274,7 +274,7 @@ CMD ["npm", "run", "${startScript}"]
                     await writeFile(dockerfilePath, dockerfile);
                 }
 
-                const port = process.port || await getAvailablePort();
+                const port = await getAvailablePort();
                 const dockerfilePath = join(appPath, dockerFileName);
 
                 try {
@@ -549,5 +549,75 @@ export async function getDockerLogs(id: string) {
     } catch (error: any) {
         console.error('Error getting docker logs:', error);
         return { success: false, message: error.message };
+    }
+}
+
+export async function reconfigureProcessPort(processId: string) {
+    try {
+        const user = await getDemoUser();
+        if (!user) return { success: false, error: 'User not found' };
+
+        const proc = await prisma.processRegistry.findUnique({ where: { id: processId } });
+        if (!proc) return { success: false, error: 'Process not found' };
+
+        // Determine container/image details
+        let containerName = proc.name.replace('Repo App ', '').trim();
+        let imageName = containerName;
+
+        if (proc.metadata && typeof proc.metadata === 'object' && !Array.isArray(proc.metadata)) {
+            const meta = proc.metadata as any;
+            if (meta.containerName) containerName = meta.containerName;
+            if (meta.imageName) imageName = meta.imageName;
+        }
+
+        // Determine internal port via inspection
+        let internalPort = '3000';
+        try {
+            // Inspect image configuration for exposed ports
+            const { stdout } = await execAsync(`docker inspect --format="{{json .Config.ExposedPorts}}" ${imageName}`);
+            const portsObj = JSON.parse(stdout.trim());
+            if (portsObj) {
+                const ports = Object.keys(portsObj);
+                if (ports.includes('80/tcp')) internalPort = '80';
+                else if (ports.includes('5173/tcp')) internalPort = '5173';
+                else if (ports.includes('3000/tcp')) internalPort = '3000';
+                else if (ports.length > 0) internalPort = ports[0].split('/')[0];
+            }
+        } catch (e) {
+            console.log('Failed to detect port via docker inspect, defaulting to 3000', e);
+        }
+
+        // Allocate new port
+        const port = await getAvailablePort();
+        console.log(`🔧 Reconfiguring port for ${proc.name}: New port ${port} -> ${internalPort}`);
+
+        // Stop/Remove old
+        try {
+            await execAsync(`docker stop ${containerName}`);
+            await execAsync(`docker rm ${containerName}`);
+        } catch (e) { }
+
+        // Construct new command
+        const newCommand = `docker run -d --name ${containerName} -p ${port}:${internalPort} ${imageName}`;
+
+        // Execute start
+        await execAsync(newCommand);
+
+        // Update Registry
+        await prisma.processRegistry.update({
+            where: { id: processId },
+            data: {
+                port,
+                command: newCommand,
+                status: 'running',
+                startedAt: new Date(),
+                stoppedAt: null
+            }
+        });
+
+        return { success: true, port };
+    } catch (error: any) {
+        console.error('Failed to reconfigure port:', error);
+        return { success: false, error: error?.message || 'Failed to reconfigure port' };
     }
 }

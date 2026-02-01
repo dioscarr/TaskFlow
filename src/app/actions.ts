@@ -13,6 +13,7 @@ import prisma from '@/lib/prisma';
 import { revalidatePath as nextRevalidatePath } from 'next/cache';
 import { memory } from '@/lib/agents/symphony/memory';
 import { ensureAgentWorkerAvailable } from '@/lib/agentWorkerBootstrap';
+import { getAvailablePort, isPortAvailable } from '@/lib/processActionsCore';
 
 /**
  * Safe wrapper for revalidatePath that doesn't crash in background/CLI contexts
@@ -90,22 +91,6 @@ const getWorkspaceFolderPath = (folderId: string) => {
 };
 
 const execAsync = promisify(exec);
-
-const isPortAvailable = (port: number) => new Promise<boolean>((resolve) => {
-    const server = createServer();
-    server.once('error', () => resolve(false));
-    server.once('listening', () => {
-        server.close(() => resolve(true));
-    });
-    server.listen(port, '127.0.0.1');
-});
-
-const getAvailablePort = async (start = 4100, end = 4999) => {
-    for (let port = start; port <= end; port += 1) {
-        if (await isPortAvailable(port)) return port;
-    }
-    throw new Error('No available ports found');
-};
 
 const writeProxyConfig = async (internalDomain: string, port: number) => {
     const proxyDir = join(process.cwd(), 'proxy-config', 'nginx');
@@ -1027,6 +1012,7 @@ CMD ["npm", "run", "${startScript}"]
         }
 
         const port = await getAvailablePort();
+        console.log(`🔌 Allocated port ${port} for ${containerName}`);
         const dockerfilePath = join(appPath, dockerFileName);
 
         try {
@@ -1035,7 +1021,9 @@ CMD ["npm", "run", "${startScript}"]
             // ignore if container doesn't exist
         }
 
+        console.log(`🐳 Building Docker image: ${imageName}`);
         await execAsync(`docker build -t ${imageName} -f "${dockerfilePath}" "${appPath}"`);
+        console.log(`🚀 Running Docker container: ${containerName} on port ${port}:${internalPort}`);
         await execAsync(`docker run -d --name ${containerName} -p ${port}:${internalPort} ${imageName}`);
 
         const proxyConfigPath = await writeProxyConfig(internalDomain, port);
@@ -1051,7 +1039,7 @@ CMD ["npm", "run", "${startScript}"]
             type: 'docker-app',
             port,
             path: appPath,
-            command: `docker run -d --name ${containerName} -p ${port}:3000 ${imageName}`,
+            command: `docker run -d --name ${containerName} -p ${port}:${internalPort} ${imageName}`,
             status: 'running',
             healthCheckType: 'port',
             healthInterval: 30000,
@@ -1515,7 +1503,7 @@ CMD ["npm", "run", "${startScript}"]
                     type: 'docker-app',
                     port,
                     path: appPath,
-                    command: `docker run -d --name ${containerName} -p ${port}:3000 ${imageName}`,
+                    command: `docker run -d --name ${containerName} -p ${port}:${internalPort} ${imageName}`,
                     status: 'running',
                     healthCheckType: 'port',
                     healthInterval: 30000,
@@ -1537,7 +1525,7 @@ CMD ["npm", "run", "${startScript}"]
                     type: 'docker-app',
                     port,
                     path: appPath,
-                    command: `docker run -d --name ${containerName} -p ${port}:3000 ${imageName}`,
+                    command: `docker run -d --name ${containerName} -p ${port}:${internalPort} ${imageName}`,
                     status: 'running',
                     healthCheckType: 'port',
                     healthInterval: 30000,
@@ -4369,12 +4357,14 @@ export async function chatWithAI(
                             };
                         }
 
+                        console.log(`🚀 Executing scaffold-vite for project: ${projectName}`);
                         // Execute the scaffold immediately
                         const result = await executeScaffoldVite({ projectName });
+                        console.log(`📦 Scaffold result:`, JSON.stringify(result, null, 2));
 
                         return {
                             success: result.success,
-                            text: result.message,
+                            text: result.message || (result.success ? '✅ Scaffold completed' : '❌ Scaffold failed'),
                             toolUsed: result.success ? `workflow:${matchedWorkflowValue.name}` : undefined
                         };
                     }

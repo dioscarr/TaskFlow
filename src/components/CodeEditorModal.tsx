@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Loader2, Code2, Maximize2, Minimize2, Copy, FileText, Sparkles, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -72,6 +73,11 @@ export default function CodeEditorModal({
     const [magicSuggestions, setMagicSuggestions] = useState<string[]>([]);
     const [isMagicSuggesting, setIsMagicSuggesting] = useState(false);
     const [isIdeasOpen, setIsIdeasOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
         setContent(initialContent);
@@ -259,15 +265,15 @@ export default function CodeEditorModal({
         syntaxHighlighting(codeHighlight)
     ], [codeTheme, codeHighlight]);
 
-    if (!isOpen) return null;
+    if (!isOpen || !mounted) return null;
 
-    return (
+    return createPortal(
         <AnimatePresence>
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+                className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
                 onClick={onClose}
             >
                 <motion.div
@@ -607,5 +613,5 @@ export default function CodeEditorModal({
                 </motion.div>
             </motion.div>
         </AnimatePresence>
-    );
+        , document.body);
 }
