@@ -1204,3 +1204,3529 @@ Next steps:
 
 Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
 [00:01:06.929] Browser LOG     ✅ Table structure preserved: false
+[00:01:09.632] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:01:09.632] Browser LOG     🔍 Has table pipes: false
+[00:01:09.632] Browser LOG     🔍 Has separator: false
+[00:01:09.632] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:01:09.632] Browser LOG     ✅ Table structure preserved: false
+[00:01:09.632] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:01:09.632] Browser LOG     🔍 Has table pipes: false
+[00:01:09.632] Browser LOG     🔍 Has separator: false
+[00:01:09.632] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:01:09.632] Browser LOG     ✅ Table structure preserved: false
+[00:01:09.632] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:01:09.632] Browser LOG     🔍 Has table pipes: false
+[00:01:09.632] Browser LOG     🔍 Has separator: false
+[00:01:09.632] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:01:09.632] Browser LOG     ✅ Table structure preserved: false
+[00:01:09.632] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:01:09.632] Browser LOG     🔍 Has table pipes: false
+[00:01:09.632] Browser LOG     🔍 Has separator: false
+[00:01:09.632] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:01:09.632] Browser LOG     ✅ Table structure preserved: false
+[00:01:13.870] Browser LOG     📂 Navigation: Current folder is now null
+[00:01:13.870] Browser LOG     📂 Navigation: Current folder is now null
+[00:01:42.309] Server  ERROR   Failed to install repo app: Error: Command failed: docker build -t taskflow-repo-app-my-restaurant-app -f "C:\Users\Drod\Source\a\apps\my-restaurant-app\Dockerfile" "C:\Users\Drod\Source\a\apps\my-restaurant-app"
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 377B 0.0s done
+#1 WARN: FromAsCasing: 'as' and 'FROM' keywords' casing do not match (line 2)
+#1 DONE 0.1s
+
+#2 [internal] load metadata for docker.io/library/nginx:alpine
+#2 ...
+
+#3 [auth] library/nginx:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#4 [auth] library/node:pull token for registry-1.docker.io
+#4 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/node:18-alpine
+#5 DONE 0.8s
+
+#2 [internal] load metadata for docker.io/library/nginx:alpine
+#2 DONE 0.8s
+
+#6 [internal] load .dockerignore
+#6 transferring context: 85B done
+#6 DONE 0.1s
+
+#7 [builder 1/6] FROM docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
+#7 DONE 0.0s
+
+#8 [stage-1 1/3] FROM docker.io/library/nginx:alpine@sha256:4870c12cd2ca986de501a804b4f506ad3875a0b1874940ba0a2c7f763f1855b2
+#8 DONE 0.0s
+
+#9 [internal] load build context
+#9 transferring context: 168.60kB 0.0s done
+#9 DONE 0.1s
+
+#10 [builder 2/6] WORKDIR /app
+#10 CACHED
+
+#11 [builder 3/6] COPY package*.json ./
+#11 DONE 0.1s
+
+#12 [builder 4/6] RUN npm install --legacy-peer-deps
+#12 2.587 npm warn EBADENGINE Unsupported engine {
+#12 2.587 npm warn EBADENGINE   package: '@vitejs/plugin-react@5.1.2',
+#12 2.587 npm warn EBADENGINE   required: { node: '^20.19.0 || >=22.12.0' },
+#12 2.587 npm warn EBADENGINE   current: { node: 'v18.20.8', npm: '10.8.2' }
+#12 2.587 npm warn EBADENGINE }
+#12 2.590 npm warn EBADENGINE Unsupported engine {
+#12 2.590 npm warn EBADENGINE   package: 'vite@7.3.1',
+#12 2.590 npm warn EBADENGINE   required: { node: '^20.19.0 || >=22.12.0' },
+#12 2.590 npm warn EBADENGINE   current: { node: 'v18.20.8', npm: '10.8.2' }
+#12 2.590 npm warn EBADENGINE }
+#12 11.18 
+#12 11.18 added 181 packages, and audited 182 packages in 10s
+#12 11.18 
+#12 11.18 45 packages are looking for funding
+#12 11.18   run `npm fund` for details
+#12 11.19 
+#12 11.19 found 0 vulnerabilities
+#12 11.19 npm notice
+#12 11.19 npm notice New major version of npm available! 10.8.2 -> 11.8.0
+#12 11.19 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.8.0
+#12 11.19 npm notice To update run: npm install -g npm@11.8.0
+#12 11.19 npm notice
+#12 DONE 11.6s
+
+#13 [builder 5/6] COPY . .
+#13 DONE 0.1s
+
+#14 [builder 6/6] RUN npm run build
+#14 0.966 
+#14 0.966 > my-restaurant-app@0.0.0 build
+#14 0.966 > tsc -b && vite build
+#14 0.966 
+#14 6.593 You are using Node.js 18.20.8. Vite requires Node.js version 20.19+ or 22.12+. Please upgrade your Node.js version.
+#14 6.929 vite v7.3.1 building client environment for production...
+#14 7.021 transforming...
+#14 7.079 ✓ 5 modules transformed.
+#14 7.084 ✗ Build failed in 117ms
+#14 7.084 error during build:
+#14 7.084 [vite:asset] Could not load /vite.svg (imported by src/App.tsx): crypto.hash is not a function
+#14 7.084     at getHash (file:///app/node_modules/vite/dist/node/chunks/config.js:2444:19)
+#14 7.084     at publicFileToBuiltUrl (file:///app/node_modules/vite/dist/node/chunks/config.js:8747:17)
+#14 7.084     at fileToBuiltUrl (file:///app/node_modules/vite/dist/node/chunks/config.js:8771:15)
+#14 7.084     at fileToUrl$1 (file:///app/node_modules/vite/dist/node/chunks/config.js:8718:14)
+#14 7.084     at Object.handler (file:///app/node_modules/vite/dist/node/chunks/config.js:8671:23)
+#14 7.084     at Object.handler (file:///app/node_modules/vite/dist/node/chunks/config.js:33718:13)
+#14 7.084     at file:///app/node_modules/rollup/dist/es/shared/node-entry.js:22548:40
+#14 7.084     at async PluginDriver.hookFirstAndGetPlugin (file:///app/node_modules/rollup/dist/es/shared/node-entry.js:22430:28)
+#14 7.084     at async file:///app/node_modules/rollup/dist/es/shared/node-entry.js:21422:33
+#14 7.084     at async Queue.work (file:///app/node_modules/rollup/dist/es/shared/node-entry.js:22658:32)
+#14 ERROR: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
+------
+ > [builder 6/6] RUN npm run build:
+7.084     at getHash (file:///app/node_modules/vite/dist/node/chunks/config.js:2444:19)
+7.084     at publicFileToBuiltUrl (file:///app/node_modules/vite/dist/node/chunks/config.js:8747:17)
+7.084     at fileToBuiltUrl (file:///app/node_modules/vite/dist/node/chunks/config.js:8771:15)
+7.084     at fileToUrl$1 (file:///app/node_modules/vite/dist/node/chunks/config.js:8718:14)
+7.084     at Object.handler (file:///app/node_modules/vite/dist/node/chunks/config.js:8671:23)
+7.084     at Object.handler (file:///app/node_modules/vite/dist/node/chunks/config.js:33718:13)
+7.084     at file:///app/node_modules/rollup/dist/es/shared/node-entry.js:22548:40
+7.084     at async PluginDriver.hookFirstAndGetPlugin (file:///app/node_modules/rollup/dist/es/shared/node-entry.js:22430:28)
+7.084     at async file:///app/node_modules/rollup/dist/es/shared/node-entry.js:21422:33
+7.084     at async Queue.work (file:///app/node_modules/rollup/dist/es/shared/node-entry.js:22658:32)
+------
+
+ 1 warning found (use docker --debug to expand):
+ - FromAsCasing: 'as' and 'FROM' keywords' casing do not match (line 2)
+Dockerfile:7
+--------------------
+   5 |     RUN npm install --legacy-peer-deps
+   6 |     COPY . .
+   7 | >>> RUN npm run build
+   8 |     
+   9 |     # Production Stage
+--------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/ye69wni3vrfy52fgozhf98fkz
+
+[00:02:27.178] Browser LOG     📂 Navigation: Current folder is now null
+[00:03:09.957] Browser LOG     📂 Navigation: Current folder is now null
+[00:04:30.786] Browser LOG     📂 Navigation: Current folder is now null
+[00:04:30.786] Browser LOG     📂 Navigation: Current folder is now null
+[00:04:30.786] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:04:30.786] Browser LOG     🔍 Has table pipes: false
+[00:04:30.786] Browser LOG     🔍 Has separator: false
+[00:04:30.786] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:04:30.786] Browser LOG     ✅ Table structure preserved: false
+[00:04:30.786] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:04:30.786] Browser LOG     🔍 Has table pipes: false
+[00:04:30.786] Browser LOG     🔍 Has separator: false
+[00:04:30.786] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:04:30.786] Browser LOG     ✅ Table structure preserved: false
+[00:04:30.786] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:04:30.786] Browser LOG     🔍 Has table pipes: false
+[00:04:30.786] Browser LOG     🔍 Has separator: false
+[00:04:30.786] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:04:30.786] Browser LOG     ✅ Table structure preserved: false
+[00:04:30.786] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:04:30.786] Browser LOG     🔍 Has table pipes: false
+[00:04:30.786] Browser LOG     🔍 Has separator: false
+[00:04:30.786] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:04:30.786] Browser LOG     ✅ Table structure preserved: false
+[00:04:32.787] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:04:32.788] Browser LOG     🔍 Has table pipes: false
+[00:04:32.788] Browser LOG     🔍 Has separator: false
+[00:04:32.788] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:04:32.788] Browser LOG     ✅ Table structure preserved: false
+[00:04:32.788] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:04:32.788] Browser LOG     🔍 Has table pipes: false
+[00:04:32.788] Browser LOG     🔍 Has separator: false
+[00:04:32.788] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:04:32.788] Browser LOG     ✅ Table structure preserved: false
+[00:04:32.788] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:04:32.788] Browser LOG     🔍 Has table pipes: false
+[00:04:32.788] Browser LOG     🔍 Has separator: false
+[00:04:32.788] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:04:32.788] Browser LOG     ✅ Table structure preserved: false
+[00:04:32.788] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:04:32.788] Browser LOG     🔍 Has table pipes: false
+[00:04:32.788] Browser LOG     🔍 Has separator: false
+[00:04:32.788] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:04:32.788] Browser LOG     ✅ Table structure preserved: false
+[00:04:36.911] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:04:36.911] Browser LOG     🔍 Has table pipes: false
+[00:04:36.911] Browser LOG     🔍 Has separator: false
+[00:04:36.911] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:04:36.912] Browser LOG     ✅ Table structure preserved: false
+[00:04:36.912] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:04:36.912] Browser LOG     🔍 Has table pipes: false
+[00:04:36.912] Browser LOG     🔍 Has separator: false
+[00:04:36.912] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:04:36.912] Browser LOG     ✅ Table structure preserved: false
+[00:04:36.912] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:04:36.912] Browser LOG     🔍 Has table pipes: false
+[00:04:36.912] Browser LOG     🔍 Has separator: false
+[00:04:36.912] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:04:36.912] Browser LOG     ✅ Table structure preserved: false
+[00:04:36.912] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:04:36.912] Browser LOG     🔍 Has table pipes: false
+[00:04:36.912] Browser LOG     🔍 Has separator: false
+[00:04:36.912] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:04:36.912] Browser LOG     ✅ Table structure preserved: false
+[00:04:39.592] Browser LOG     📂 Navigation: Current folder is now null
+[00:04:39.592] Browser LOG     📂 Navigation: Current folder is now null
+[00:05:00.932] Browser LOG     📂 Navigation: Current folder is now null
+[00:05:17.938] Browser LOG     📂 Navigation: Current folder is now null
+[00:05:32.157] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:32.157] Browser LOG     🔍 Has table pipes: false
+[00:05:32.157] Browser LOG     🔍 Has separator: false
+[00:05:32.157] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:32.157] Browser LOG     ✅ Table structure preserved: false
+[00:05:32.157] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:32.157] Browser LOG     🔍 Has table pipes: false
+[00:05:32.157] Browser LOG     🔍 Has separator: false
+[00:05:32.157] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:32.157] Browser LOG     ✅ Table structure preserved: false
+[00:05:32.157] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:32.157] Browser LOG     🔍 Has table pipes: false
+[00:05:32.157] Browser LOG     🔍 Has separator: false
+[00:05:32.157] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:32.157] Browser LOG     ✅ Table structure preserved: false
+[00:05:32.157] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:32.157] Browser LOG     🔍 Has table pipes: false
+[00:05:32.157] Browser LOG     🔍 Has separator: false
+[00:05:32.157] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:32.157] Browser LOG     ✅ Table structure preserved: false
+[00:05:34.968] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:34.968] Browser LOG     🔍 Has table pipes: false
+[00:05:34.968] Browser LOG     🔍 Has separator: false
+[00:05:34.968] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:34.968] Browser LOG     ✅ Table structure preserved: false
+[00:05:34.968] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:34.968] Browser LOG     🔍 Has table pipes: false
+[00:05:34.968] Browser LOG     🔍 Has separator: false
+[00:05:34.968] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:34.968] Browser LOG     ✅ Table structure preserved: false
+[00:05:34.968] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:34.968] Browser LOG     🔍 Has table pipes: false
+[00:05:34.968] Browser LOG     🔍 Has separator: false
+[00:05:34.968] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:34.968] Browser LOG     ✅ Table structure preserved: false
+[00:05:34.968] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:34.968] Browser LOG     🔍 Has table pipes: false
+[00:05:34.968] Browser LOG     🔍 Has separator: false
+[00:05:34.968] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:34.968] Browser LOG     ✅ Table structure preserved: false
+[00:05:36.345] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:36.345] Browser LOG     🔍 Has table pipes: false
+[00:05:36.345] Browser LOG     🔍 Has separator: false
+[00:05:36.345] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:36.345] Browser LOG     ✅ Table structure preserved: false
+[00:05:36.346] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:36.346] Browser LOG     🔍 Has table pipes: false
+[00:05:36.346] Browser LOG     🔍 Has separator: false
+[00:05:36.346] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:36.346] Browser LOG     ✅ Table structure preserved: false
+[00:05:36.346] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:36.346] Browser LOG     🔍 Has table pipes: false
+[00:05:36.346] Browser LOG     🔍 Has separator: false
+[00:05:36.346] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:36.346] Browser LOG     ✅ Table structure preserved: false
+[00:05:36.346] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:36.346] Browser LOG     🔍 Has table pipes: false
+[00:05:36.346] Browser LOG     🔍 Has separator: false
+[00:05:36.346] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:36.346] Browser LOG     ✅ Table structure preserved: false
+[00:05:37.084] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:37.084] Browser LOG     🔍 Has table pipes: false
+[00:05:37.084] Browser LOG     🔍 Has separator: false
+[00:05:37.084] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:37.084] Browser LOG     ✅ Table structure preserved: false
+[00:05:37.084] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:37.084] Browser LOG     🔍 Has table pipes: false
+[00:05:37.084] Browser LOG     🔍 Has separator: false
+[00:05:37.084] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:37.084] Browser LOG     ✅ Table structure preserved: false
+[00:05:37.084] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:37.084] Browser LOG     🔍 Has table pipes: false
+[00:05:37.084] Browser LOG     🔍 Has separator: false
+[00:05:37.084] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:37.084] Browser LOG     ✅ Table structure preserved: false
+[00:05:37.084] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:37.084] Browser LOG     🔍 Has table pipes: false
+[00:05:37.084] Browser LOG     🔍 Has separator: false
+[00:05:37.084] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:37.084] Browser LOG     ✅ Table structure preserved: false
+[00:05:38.667] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:38.667] Browser LOG     🔍 Has table pipes: false
+[00:05:38.667] Browser LOG     🔍 Has separator: false
+[00:05:38.667] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:38.667] Browser LOG     ✅ Table structure preserved: false
+[00:05:38.667] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:38.667] Browser LOG     🔍 Has table pipes: false
+[00:05:38.667] Browser LOG     🔍 Has separator: false
+[00:05:38.667] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:38.667] Browser LOG     ✅ Table structure preserved: false
+[00:05:38.667] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:38.667] Browser LOG     🔍 Has table pipes: false
+[00:05:38.667] Browser LOG     🔍 Has separator: false
+[00:05:38.667] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:38.667] Browser LOG     ✅ Table structure preserved: false
+[00:05:38.667] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:38.667] Browser LOG     🔍 Has table pipes: false
+[00:05:38.667] Browser LOG     🔍 Has separator: false
+[00:05:38.667] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:38.667] Browser LOG     ✅ Table structure preserved: false
+[00:05:41.667] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:41.667] Browser LOG     🔍 Has table pipes: false
+[00:05:41.667] Browser LOG     🔍 Has separator: false
+[00:05:41.667] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:41.667] Browser LOG     ✅ Table structure preserved: false
+[00:05:41.667] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:41.667] Browser LOG     🔍 Has table pipes: false
+[00:05:41.667] Browser LOG     🔍 Has separator: false
+[00:05:41.667] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:41.667] Browser LOG     ✅ Table structure preserved: false
+[00:05:41.667] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:41.667] Browser LOG     🔍 Has table pipes: false
+[00:05:41.667] Browser LOG     🔍 Has separator: false
+[00:05:41.667] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:41.667] Browser LOG     ✅ Table structure preserved: false
+[00:05:41.667] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:41.667] Browser LOG     🔍 Has table pipes: false
+[00:05:41.667] Browser LOG     🔍 Has separator: false
+[00:05:41.667] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:41.667] Browser LOG     ✅ Table structure preserved: false
+[00:05:45.050] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:45.050] Browser LOG     🔍 Has table pipes: false
+[00:05:45.050] Browser LOG     🔍 Has separator: false
+[00:05:45.050] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:45.050] Browser LOG     ✅ Table structure preserved: false
+[00:05:45.050] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:45.050] Browser LOG     🔍 Has table pipes: false
+[00:05:45.050] Browser LOG     🔍 Has separator: false
+[00:05:45.050] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:45.050] Browser LOG     ✅ Table structure preserved: false
+[00:05:45.050] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:45.050] Browser LOG     🔍 Has table pipes: false
+[00:05:45.050] Browser LOG     🔍 Has separator: false
+[00:05:45.050] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:45.050] Browser LOG     ✅ Table structure preserved: false
+[00:05:45.050] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:45.050] Browser LOG     🔍 Has table pipes: false
+[00:05:45.050] Browser LOG     🔍 Has separator: false
+[00:05:45.050] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:45.050] Browser LOG     ✅ Table structure preserved: false
+[00:05:45.392] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:45.393] Browser LOG     🔍 Has table pipes: false
+[00:05:45.393] Browser LOG     🔍 Has separator: false
+[00:05:45.393] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:45.393] Browser LOG     ✅ Table structure preserved: false
+[00:05:45.393] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:45.393] Browser LOG     🔍 Has table pipes: false
+[00:05:45.393] Browser LOG     🔍 Has separator: false
+[00:05:45.393] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:45.393] Browser LOG     ✅ Table structure preserved: false
+[00:05:45.393] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:45.393] Browser LOG     🔍 Has table pipes: false
+[00:05:45.393] Browser LOG     🔍 Has separator: false
+[00:05:45.393] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:45.393] Browser LOG     ✅ Table structure preserved: false
+[00:05:45.393] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:45.393] Browser LOG     🔍 Has table pipes: false
+[00:05:45.393] Browser LOG     🔍 Has separator: false
+[00:05:45.393] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:45.393] Browser LOG     ✅ Table structure preserved: false
+[00:05:45.393] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:45.393] Browser LOG     🔍 Has table pipes: false
+[00:05:45.393] Browser LOG     🔍 Has separator: false
+[00:05:45.393] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:45.393] Browser LOG     ✅ Table structure preserved: false
+[00:05:45.393] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:45.393] Browser LOG     🔍 Has table pipes: false
+[00:05:45.393] Browser LOG     🔍 Has separator: false
+[00:05:45.393] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:45.393] Browser LOG     ✅ Table structure preserved: false
+[00:05:45.393] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:45.393] Browser LOG     🔍 Has table pipes: false
+[00:05:45.393] Browser LOG     🔍 Has separator: false
+[00:05:45.393] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:45.393] Browser LOG     ✅ Table structure preserved: false
+[00:05:45.393] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:45.393] Browser LOG     🔍 Has table pipes: false
+[00:05:45.393] Browser LOG     🔍 Has separator: false
+[00:05:45.393] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:45.393] Browser LOG     ✅ Table structure preserved: false
+[00:05:47.998] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:47.999] Browser LOG     🔍 Has table pipes: false
+[00:05:47.999] Browser LOG     🔍 Has separator: false
+[00:05:47.999] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:47.999] Browser LOG     ✅ Table structure preserved: false
+[00:05:47.999] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:47.999] Browser LOG     🔍 Has table pipes: false
+[00:05:47.999] Browser LOG     🔍 Has separator: false
+[00:05:47.999] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:47.999] Browser LOG     ✅ Table structure preserved: false
+[00:05:47.999] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:47.999] Browser LOG     🔍 Has table pipes: false
+[00:05:47.999] Browser LOG     🔍 Has separator: false
+[00:05:47.999] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:47.999] Browser LOG     ✅ Table structure preserved: false
+[00:05:47.999] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:47.999] Browser LOG     🔍 Has table pipes: false
+[00:05:47.999] Browser LOG     🔍 Has separator: false
+[00:05:47.999] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:47.999] Browser LOG     ✅ Table structure preserved: false
+[00:05:47.999] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:47.999] Browser LOG     🔍 Has table pipes: false
+[00:05:47.999] Browser LOG     🔍 Has separator: false
+[00:05:47.999] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:47.999] Browser LOG     ✅ Table structure preserved: false
+[00:05:47.999] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:47.999] Browser LOG     🔍 Has table pipes: false
+[00:05:47.999] Browser LOG     🔍 Has separator: false
+[00:05:47.999] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:47.999] Browser LOG     ✅ Table structure preserved: false
+[00:05:47.999] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:47.999] Browser LOG     🔍 Has table pipes: false
+[00:05:47.999] Browser LOG     🔍 Has separator: false
+[00:05:47.999] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:47.999] Browser LOG     ✅ Table structure preserved: false
+[00:05:47.999] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:47.999] Browser LOG     🔍 Has table pipes: false
+[00:05:47.999] Browser LOG     🔍 Has separator: false
+[00:05:47.999] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:47.999] Browser LOG     ✅ Table structure preserved: false
+[00:05:49.413] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:49.413] Browser LOG     🔍 Has table pipes: false
+[00:05:49.413] Browser LOG     🔍 Has separator: false
+[00:05:49.413] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:49.413] Browser LOG     ✅ Table structure preserved: false
+[00:05:49.413] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:49.413] Browser LOG     🔍 Has table pipes: false
+[00:05:49.413] Browser LOG     🔍 Has separator: false
+[00:05:49.413] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:49.413] Browser LOG     ✅ Table structure preserved: false
+[00:05:49.413] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:49.413] Browser LOG     🔍 Has table pipes: false
+[00:05:49.413] Browser LOG     🔍 Has separator: false
+[00:05:49.413] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:49.413] Browser LOG     ✅ Table structure preserved: false
+[00:05:49.413] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:49.413] Browser LOG     🔍 Has table pipes: false
+[00:05:49.413] Browser LOG     🔍 Has separator: false
+[00:05:49.413] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:49.413] Browser LOG     ✅ Table structure preserved: false
+[00:05:49.413] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:49.413] Browser LOG     🔍 Has table pipes: false
+[00:05:49.413] Browser LOG     🔍 Has separator: false
+[00:05:49.413] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:49.413] Browser LOG     ✅ Table structure preserved: false
+[00:05:49.413] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:49.413] Browser LOG     🔍 Has table pipes: false
+[00:05:49.413] Browser LOG     🔍 Has separator: false
+[00:05:49.413] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:49.413] Browser LOG     ✅ Table structure preserved: false
+[00:05:49.413] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:49.413] Browser LOG     🔍 Has table pipes: false
+[00:05:49.413] Browser LOG     🔍 Has separator: false
+[00:05:49.413] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:49.413] Browser LOG     ✅ Table structure preserved: false
+[00:05:49.413] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:49.413] Browser LOG     🔍 Has table pipes: false
+[00:05:49.413] Browser LOG     🔍 Has separator: false
+[00:05:49.413] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:49.413] Browser LOG     ✅ Table structure preserved: false
+[00:05:50.841] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:50.841] Browser LOG     🔍 Has table pipes: false
+[00:05:50.841] Browser LOG     🔍 Has separator: false
+[00:05:50.841] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:50.841] Browser LOG     ✅ Table structure preserved: false
+[00:05:50.841] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:50.841] Browser LOG     🔍 Has table pipes: false
+[00:05:50.841] Browser LOG     🔍 Has separator: false
+[00:05:50.841] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:50.841] Browser LOG     ✅ Table structure preserved: false
+[00:05:50.841] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:50.841] Browser LOG     🔍 Has table pipes: false
+[00:05:50.841] Browser LOG     🔍 Has separator: false
+[00:05:50.841] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:50.841] Browser LOG     ✅ Table structure preserved: false
+[00:05:50.841] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:50.841] Browser LOG     🔍 Has table pipes: false
+[00:05:50.841] Browser LOG     🔍 Has separator: false
+[00:05:50.841] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:50.841] Browser LOG     ✅ Table structure preserved: false
+[00:05:53.897] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:53.897] Browser LOG     🔍 Has table pipes: false
+[00:05:53.897] Browser LOG     🔍 Has separator: false
+[00:05:53.897] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:53.897] Browser LOG     ✅ Table structure preserved: false
+[00:05:53.897] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:53.897] Browser LOG     🔍 Has table pipes: false
+[00:05:53.897] Browser LOG     🔍 Has separator: false
+[00:05:53.897] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:53.897] Browser LOG     ✅ Table structure preserved: false
+[00:05:53.897] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:53.897] Browser LOG     🔍 Has table pipes: false
+[00:05:53.897] Browser LOG     🔍 Has separator: false
+[00:05:53.897] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:53.897] Browser LOG     ✅ Table structure preserved: false
+[00:05:53.897] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:53.897] Browser LOG     🔍 Has table pipes: false
+[00:05:53.897] Browser LOG     🔍 Has separator: false
+[00:05:53.897] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:53.897] Browser LOG     ✅ Table structure preserved: false
+[00:05:56.664] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:56.664] Browser LOG     🔍 Has table pipes: false
+[00:05:56.664] Browser LOG     🔍 Has separator: false
+[00:05:56.664] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:56.664] Browser LOG     ✅ Table structure preserved: false
+[00:05:56.664] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:05:56.664] Browser LOG     🔍 Has table pipes: false
+[00:05:56.664] Browser LOG     🔍 Has separator: false
+[00:05:56.664] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:05:56.664] Browser LOG     ✅ Table structure preserved: false
+[00:05:56.664] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:56.664] Browser LOG     🔍 Has table pipes: false
+[00:05:56.664] Browser LOG     🔍 Has separator: false
+[00:05:56.664] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:56.664] Browser LOG     ✅ Table structure preserved: false
+[00:05:56.664] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:56.664] Browser LOG     🔍 Has table pipes: false
+[00:05:56.664] Browser LOG     🔍 Has separator: false
+[00:05:56.664] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:05:56.664] Browser LOG     ✅ Table structure preserved: false
+[00:06:00.930] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:00.930] Browser LOG     🔍 Has table pipes: false
+[00:06:00.930] Browser LOG     🔍 Has separator: false
+[00:06:00.930] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:00.930] Browser LOG     ✅ Table structure preserved: false
+[00:06:00.930] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:00.930] Browser LOG     🔍 Has table pipes: false
+[00:06:00.930] Browser LOG     🔍 Has separator: false
+[00:06:00.931] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:00.931] Browser LOG     ✅ Table structure preserved: false
+[00:06:00.931] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:00.931] Browser LOG     🔍 Has table pipes: false
+[00:06:00.931] Browser LOG     🔍 Has separator: false
+[00:06:00.931] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:00.931] Browser LOG     ✅ Table structure preserved: false
+[00:06:00.931] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:00.931] Browser LOG     🔍 Has table pipes: false
+[00:06:00.931] Browser LOG     🔍 Has separator: false
+[00:06:00.931] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:00.931] Browser LOG     ✅ Table structure preserved: false
+[00:06:03.931] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:03.931] Browser LOG     🔍 Has table pipes: false
+[00:06:03.931] Browser LOG     🔍 Has separator: false
+[00:06:03.931] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:03.931] Browser LOG     ✅ Table structure preserved: false
+[00:06:03.931] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:03.931] Browser LOG     🔍 Has table pipes: false
+[00:06:03.931] Browser LOG     🔍 Has separator: false
+[00:06:03.931] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:03.931] Browser LOG     ✅ Table structure preserved: false
+[00:06:03.931] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:03.931] Browser LOG     🔍 Has table pipes: false
+[00:06:03.931] Browser LOG     🔍 Has separator: false
+[00:06:03.931] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:03.931] Browser LOG     ✅ Table structure preserved: false
+[00:06:03.931] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:03.931] Browser LOG     🔍 Has table pipes: false
+[00:06:03.931] Browser LOG     🔍 Has separator: false
+[00:06:03.931] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:03.931] Browser LOG     ✅ Table structure preserved: false
+[00:06:06.928] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:06.928] Browser LOG     🔍 Has table pipes: false
+[00:06:06.928] Browser LOG     🔍 Has separator: false
+[00:06:06.928] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:06.928] Browser LOG     ✅ Table structure preserved: false
+[00:06:06.928] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:06.928] Browser LOG     🔍 Has table pipes: false
+[00:06:06.928] Browser LOG     🔍 Has separator: false
+[00:06:06.928] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:06.928] Browser LOG     ✅ Table structure preserved: false
+[00:06:06.928] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:06.928] Browser LOG     🔍 Has table pipes: false
+[00:06:06.928] Browser LOG     🔍 Has separator: false
+[00:06:06.928] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:06.928] Browser LOG     ✅ Table structure preserved: false
+[00:06:06.928] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:06.928] Browser LOG     🔍 Has table pipes: false
+[00:06:06.928] Browser LOG     🔍 Has separator: false
+[00:06:06.928] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:06.928] Browser LOG     ✅ Table structure preserved: false
+[00:06:09.927] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:09.927] Browser LOG     🔍 Has table pipes: false
+[00:06:09.927] Browser LOG     🔍 Has separator: false
+[00:06:09.927] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:09.927] Browser LOG     ✅ Table structure preserved: false
+[00:06:09.927] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:09.927] Browser LOG     🔍 Has table pipes: false
+[00:06:09.927] Browser LOG     🔍 Has separator: false
+[00:06:09.927] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:09.927] Browser LOG     ✅ Table structure preserved: false
+[00:06:09.927] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:09.927] Browser LOG     🔍 Has table pipes: false
+[00:06:09.927] Browser LOG     🔍 Has separator: false
+[00:06:09.927] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:09.927] Browser LOG     ✅ Table structure preserved: false
+[00:06:09.927] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:09.927] Browser LOG     🔍 Has table pipes: false
+[00:06:09.927] Browser LOG     🔍 Has separator: false
+[00:06:09.927] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:09.927] Browser LOG     ✅ Table structure preserved: false
+[00:06:12.936] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:12.936] Browser LOG     🔍 Has table pipes: false
+[00:06:12.936] Browser LOG     🔍 Has separator: false
+[00:06:12.936] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:12.936] Browser LOG     ✅ Table structure preserved: false
+[00:06:12.936] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:12.936] Browser LOG     🔍 Has table pipes: false
+[00:06:12.936] Browser LOG     🔍 Has separator: false
+[00:06:12.936] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:12.936] Browser LOG     ✅ Table structure preserved: false
+[00:06:12.936] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:12.936] Browser LOG     🔍 Has table pipes: false
+[00:06:12.936] Browser LOG     🔍 Has separator: false
+[00:06:12.936] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:12.936] Browser LOG     ✅ Table structure preserved: false
+[00:06:12.936] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:12.936] Browser LOG     🔍 Has table pipes: false
+[00:06:12.936] Browser LOG     🔍 Has separator: false
+[00:06:12.936] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:12.936] Browser LOG     ✅ Table structure preserved: false
+[00:06:15.785] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:15.785] Browser LOG     🔍 Has table pipes: false
+[00:06:15.785] Browser LOG     🔍 Has separator: false
+[00:06:15.785] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:15.785] Browser LOG     ✅ Table structure preserved: false
+[00:06:15.785] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:15.785] Browser LOG     🔍 Has table pipes: false
+[00:06:15.785] Browser LOG     🔍 Has separator: false
+[00:06:15.785] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:15.785] Browser LOG     ✅ Table structure preserved: false
+[00:06:15.785] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:15.785] Browser LOG     🔍 Has table pipes: false
+[00:06:15.785] Browser LOG     🔍 Has separator: false
+[00:06:15.785] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:15.785] Browser LOG     ✅ Table structure preserved: false
+[00:06:15.786] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:15.786] Browser LOG     🔍 Has table pipes: false
+[00:06:15.786] Browser LOG     🔍 Has separator: false
+[00:06:15.786] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:15.786] Browser LOG     ✅ Table structure preserved: false
+[00:06:15.786] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app_v2
+[00:06:15.786] Browser LOG     🔍 Has table pipes: false
+[00:06:15.786] Browser LOG     🔍 Has separator: false
+[00:06:15.786] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app_v2
+[00:06:15.786] Browser LOG     ✅ Table structure preserved: false
+[00:06:15.786] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app_v2
+[00:06:15.786] Browser LOG     🔍 Has table pipes: false
+[00:06:15.786] Browser LOG     🔍 Has separator: false
+[00:06:15.786] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app_v2
+[00:06:15.786] Browser LOG     ✅ Table structure preserved: false
+[00:06:15.786] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:15.787] Browser LOG     🔍 Has table pipes: false
+[00:06:15.787] Browser LOG     🔍 Has separator: false
+[00:06:15.787] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:15.787] Browser LOG     ✅ Table structure preserved: false
+[00:06:15.787] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:15.787] Browser LOG     🔍 Has table pipes: false
+[00:06:15.787] Browser LOG     🔍 Has separator: false
+[00:06:15.787] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:15.787] Browser LOG     ✅ Table structure preserved: false
+[00:06:15.787] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:15.787] Browser LOG     🔍 Has table pipes: false
+[00:06:15.787] Browser LOG     🔍 Has separator: false
+[00:06:15.787] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:15.788] Browser LOG     ✅ Table structure preserved: false
+[00:06:15.788] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:15.788] Browser LOG     🔍 Has table pipes: false
+[00:06:15.788] Browser LOG     🔍 Has separator: false
+[00:06:15.788] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:15.788] Browser LOG     ✅ Table structure preserved: false
+[00:06:15.788] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app_v2
+[00:06:15.788] Browser LOG     🔍 Has table pipes: false
+[00:06:15.788] Browser LOG     🔍 Has separator: false
+[00:06:15.788] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app_v2
+[00:06:15.788] Browser LOG     ✅ Table structure preserved: false
+[00:06:15.788] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app_v2
+[00:06:15.788] Browser LOG     🔍 Has table pipes: false
+[00:06:15.788] Browser LOG     🔍 Has separator: false
+[00:06:15.788] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app_v2
+[00:06:15.788] Browser LOG     ✅ Table structure preserved: false
+[00:06:22.003] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:22.003] Browser LOG     🔍 Has table pipes: false
+[00:06:22.003] Browser LOG     🔍 Has separator: false
+[00:06:22.003] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:22.003] Browser LOG     ✅ Table structure preserved: false
+[00:06:22.003] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app
+[00:06:22.003] Browser LOG     🔍 Has table pipes: false
+[00:06:22.003] Browser LOG     🔍 Has separator: false
+[00:06:22.003] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app
+[00:06:22.003] Browser LOG     ✅ Table structure preserved: false
+[00:06:22.003] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:22.003] Browser LOG     🔍 Has table pipes: false
+[00:06:22.003] Browser LOG     🔍 Has separator: false
+[00:06:22.003] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:22.003] Browser LOG     ✅ Table structure preserved: false
+[00:06:22.003] Browser LOG     🔍 Original markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:22.003] Browser LOG     🔍 Has table pipes: false
+[00:06:22.003] Browser LOG     🔍 Has separator: false
+[00:06:22.003] Browser LOG     ✅ Normalized markdown: 🎉 **VITE + REACT BOILERPLATE COMPLETE!**
+
+  ✅ Created folder: apps/my-restaurant-app
+  ℹ️ Folder is empty (or only node_modules). Recreating scaffold.
+  ✅ Vite + React + TypeScript scaffolded
+  ✅ Design system installed
+  ✅ SEO configuration installed
+  ✅ Sample components installed
+  ✅ react-helmet-async installed
+  ✅ Git initialized with initial commit
+  ✅ GitHub Actions CI/CD configured
+  ✅ Dependencies installed
+  ✅ Production build created
+  ✅ Docker configuration added
+
+**Project:** my-restaurant-app
+**Location:** `apps/my-restaurant-app`
+**Dev Server:** `npm run dev` (runs at localhost:5173)
+**Build:** `npm run build` (already completed for Docker)
+
+Next steps:
+1. Navigate to the project: `cd apps/my-restaurant-app`
+2. Run dev server: `npm run dev`
+3. Edit files in `src/` to customize
+
+Use separate `/` commands for domain-specific customization (colors, features, APIs, etc.).
+[00:06:22.003] Browser LOG     ✅ Table structure preserved: false
+[00:06:22.003] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app_v2
+[00:06:22.003] Browser LOG     🔍 Has table pipes: false
+[00:06:22.003] Browser LOG     🔍 Has separator: false
+[00:06:22.003] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app_v2
+[00:06:22.003] Browser LOG     ✅ Table structure preserved: false
+[00:06:22.003] Browser LOG     🔍 Original markdown: /scaffold-vite my-restaurant-app_v2
+[00:06:22.003] Browser LOG     🔍 Has table pipes: false
+[00:06:22.003] Browser LOG     🔍 Has separator: false
+[00:06:22.003] Browser LOG     ✅ Normalized markdown: /scaffold-vite my-restaurant-app_v2
+[00:06:22.003] Browser LOG     ✅ Table structure preserved: false
+[00:06:22.003] Browser LOG     📤 Sending to AI: /scaffold-vite my-restaurant-app_v2
+[00:06:22.003] Browser LOG     🧠 System Context: ["[SYSTEM GUIDANCE: If user says \"run the app\" or \"start the server\":\n1. First check if they mean a specific file they're previewing\n2. Common scenarios in this project:\n   - Main app runs via \"npm run dev\" on http://localhost:3000\n   - If they just scaffolded a new app in apps/ folder, that would be in a subdirectory\n3. If unsure which app, ask them to clarify OR check for package.json in their current folder\n4. NEVER just search for files - always provide actionable guidance or commands]"]
+[00:06:22.003] Browser LOG     📎 Files in context: []
+[00:06:22.003] Browser LOG     📂 Current Folder: Root null

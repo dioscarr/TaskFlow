@@ -217,8 +217,8 @@ export const syncRepoAppProcesses = async (userId: string) => {
         }
 
         const safeName = folderName.replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase();
-        const containerName = `taskflow-repo-app-${safeName}`;
-        const imageName = `taskflow-repo-app-${safeName}`;
+        const containerName = safeName;
+        const imageName = safeName;
         const processName = `Repo App ${folderName}`;
         const defaultInternalDomain = `repo-${safeName}.internal`;
 
@@ -242,7 +242,7 @@ export const syncRepoAppProcesses = async (userId: string) => {
             metadata: {
                 containerName,
                 imageName,
-                internalDomain: existing?.metadata?.internalDomain || defaultInternalDomain,
+                internalDomain: (existing?.metadata as any)?.internalDomain || defaultInternalDomain,
                 appName: folderName,
                 appPath,
                 source: 'repo-app'

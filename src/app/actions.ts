@@ -987,8 +987,8 @@ export async function installRepoApp(relativePath: string) {
 
         const safeName = folderName.replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase();
         const internalDomain = `repo-${safeName}.internal`;
-        const imageName = `taskflow-repo-app-${safeName}`;
-        const containerName = `taskflow-repo-app-${safeName}`;
+        const imageName = safeName;
+        const containerName = safeName;
 
         let internalPort = 3000;
         let dockerFileName = 'Dockerfile.taskflow';
