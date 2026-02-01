@@ -3,13 +3,14 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Bot, Command, Copy, CornerDownLeft, Eye, File, FileCode, FileText, Image, Layout, Loader2, MessageSquare, MoreHorizontal, Paperclip, Play, Plus, RefreshCw, Send, Settings, Sparkles, Terminal, Trash2, X, Maximize2, Minimize2, CheckCircle2, ChevronDown, List, FolderOpen, Folder, FileJson, Square, BrainCircuit, Image as ImageIcon, ExternalLink, Check, ChevronRight, Edit2, Pin, PinOff, Search, Receipt, DollarSign, Save, AlignLeft, Lightbulb, Compass, Activity, Zap, ArrowDown } from 'lucide-react';
-import { chatWithAI, chatWithAIStream, getPrompts, createPrompt, updatePrompt, setActivePrompt, deletePrompt, generateSystemPrompt, getIntentRules, getWorkspaceFiles, getChatSessionAgentStatus, approveLatestAgentJob, getAgentActivitiesForSession } from '@/app/actions';
+import { chatWithAI, chatWithAIStream, getPrompts, createPrompt, updatePrompt, setActivePrompt, deletePrompt, generateSystemPrompt, getIntentRules, getWorkspaceFiles, getChatSessionAgentStatus, approveLatestAgentJob, getAgentActivitiesForSession, cancelAllAgentJobs } from '@/app/actions';
 import { createChatSession, getChatSessions, getChatSession, addChatMessage, updateChatSessionTitle, deleteChatSession } from '@/app/chatActions';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { TOOL_LIBRARY, DEFAULT_TOOLS } from '@/lib/toolLibrary';
 import type { WorkspaceFile, AIPromptSet, IntentRule } from '@prisma/client';
 import PromptEditorModal from './PromptEditorModal';
+import QuestionWizard from './QuestionWizard';
 import SuggestionsLibraryModal from './SuggestionsLibraryModal';
 import ConfirmationModal from './ConfirmationModal';
 import ReactMarkdown from 'react-markdown';
@@ -24,6 +25,7 @@ export type SelectedFile = {
     name: string;
     type: string;
     parentId?: string | null;
+    storagePath?: string;
 };
 
 const aiChatStateCache = {
@@ -520,6 +522,24 @@ const MessageBubble = ({
                                     <span>Request Design Review</span>
                                 </button>
                             )}
+                        {/* Show as Table Button */}
+                        {(msg.content.toLowerCase().includes('need') ||
+                            msg.content.toLowerCase().includes('information') ||
+                            msg.content.toLowerCase().includes('proceed') ||
+                            msg.toolUsed === 'verify_dgii_rnc') &&
+                            !hasMarkdownTable(msg.content) && (
+                                <button
+                                    onClick={() => {
+                                        setInput("Display the extracted receipt data in a markdown table, including all fields (Date, Provider, RNC, NCF, Total Amount, ITBIS) and the business verification information from DGII.");
+                                        setActiveTool('extract');
+                                    }}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 rounded-xl text-[10px] text-purple-300 hover:text-white transition-all border border-purple-500/20 shadow-lg shadow-purple-500/5"
+                                >
+                                    <Receipt size={12} />
+                                    <span>Show as Table</span>
+                                </button>
+                            )}
+
                         {hasMarkdownTable(msg.content) && (
                             <button
                                 onClick={() => setInput("Export this table as a markdown file. Please ask me if I want a new folder first.")}
@@ -598,6 +618,31 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
     const [verbosity, setVerbosity] = useState<'concise' | 'normal' | 'verbose'>('concise');
     const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
     const [activeCommandIndex, setActiveCommandIndex] = useState(0);
+    const [dismissedQuestionId, setDismissedQuestionId] = useState<string | null>(null);
+
+    // Calculate active wizard state
+    const activeQuestions = useMemo(() => {
+        // Find the most recent message from AI
+        const lastAiMessage = [...messages].reverse().find(m => m.role === 'ai');
+
+        // Check if it used 'ask_questions'
+        if (lastAiMessage && lastAiMessage.toolUsed === 'ask_questions' && lastAiMessage.toolResult) {
+            // Check if user has already replied AFTER this message
+            const aiMsgIndex = messages.findIndex(m => m.id === lastAiMessage.id);
+            const subsequentUserMsg = messages.slice(aiMsgIndex + 1).find(m => m.role === 'user');
+
+            if (!subsequentUserMsg && lastAiMessage.id !== dismissedQuestionId) {
+                return (lastAiMessage.toolResult.questions || []) as string[];
+            }
+        }
+        return [];
+    }, [messages, dismissedQuestionId]);
+
+    const handleQuestionSubmit = async (answers: string[]) => {
+        // Format the answers into a single message
+        const responseText = `Here are the answers to your questions:\n\n${answers.map((ans, i) => `${i + 1}. ${ans}`).join('\n')}`;
+        await sendMessage(responseText);
+    };
 
     // Force open if embedded
     useEffect(() => {
@@ -934,6 +979,18 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
             setIsDeletingSession(false);
             setIsDeleteModalOpen(false);
             setPendingDeleteSessionId(null);
+        }
+    };
+
+    const handleStopAgents = async () => {
+        try {
+            await cancelAllAgentJobs();
+            setIsBackgroundBusy(false);
+            setBackgroundJobLabel(null);
+            setBackgroundJobMessage(null);
+            toast.success('All agent activities stopped.');
+        } catch (error) {
+            toast.error('Failed to stop agents');
         }
     };
 
@@ -2092,6 +2149,13 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
 
                                     <div className="relative p-6 border-t border-white/10 bg-gradient-to-b from-black/20 to-black/60 backdrop-blur-xl">
                                         <div className={cn(embedded ? "max-w-3xl mx-auto" : "w-full")}>
+                                            {activeQuestions.length > 0 && (
+                                                <QuestionWizard
+                                                    questions={activeQuestions}
+                                                    onSubmit={handleQuestionSubmit}
+                                                    onCancel={() => setDismissedQuestionId(messages[messages.length - 1]?.id || null)}
+                                                />
+                                            )}
                                             <div className="flex flex-col gap-3">
                                                 <form onSubmit={handleSend} className="relative group/input">
                                                     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-[1.25rem] opacity-0 group-focus-within/input:opacity-100 blur-xl transition-opacity duration-500" />
@@ -2528,6 +2592,14 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                     {/* Gradient accent line */}
                                                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
 
+                                                    {activeQuestions.length > 0 && (
+                                                        <QuestionWizard
+                                                            questions={activeQuestions}
+                                                            onSubmit={handleQuestionSubmit}
+                                                            onCancel={() => setDismissedQuestionId(messages[messages.length - 1]?.id || null)}
+                                                        />
+                                                    )}
+
                                                     <div className="flex flex-col gap-3">
                                                         <form onSubmit={handleSend} className="relative group/input">
                                                             {/* Glow effect on focus */}
@@ -2541,7 +2613,10 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                                     onKeyDown={handleInputKeyDown}
                                                                     disabled={isLoading}
                                                                     placeholder={isBackgroundBusy ? "Background agent active. You can continue chatting..." : "Ask anything..."}
-                                                                    className="relative z-20 w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 pr-14 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-black/20 font-medium"
+                                                                    className={cn(
+                                                                        "relative z-20 w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-black/20 font-medium",
+                                                                        isBackgroundBusy ? "pr-24" : "pr-14"
+                                                                    )}
                                                                     style={{
                                                                         minHeight: '52px',
                                                                         maxHeight: '200px'
@@ -2569,6 +2644,16 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                                             ))}
                                                                         </div>
                                                                     </div>
+                                                                )}
+                                                                {isBackgroundBusy && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={handleStopAgents}
+                                                                        className="absolute right-14 top-1/2 -translate-y-1/2 p-2.5 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-all duration-300 shadow-xl shadow-red-500/40 group/stop"
+                                                                        title="Stop all agent activity"
+                                                                    >
+                                                                        <Square size={14} fill="white" className="group-hover:scale-110 transition-transform" />
+                                                                    </button>
                                                                 )}
                                                                 <button
                                                                     type="submit"

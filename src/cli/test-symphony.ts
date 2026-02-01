@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AgentSymphony } from '../lib/agents/AgentSymphony';
 import { GeminiAgentAdapter } from '../lib/agents/symphony/adapters';
+import AI_CONFIG from '../lib/aiConfig';
 
 async function runSymphonyTest() {
     const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
@@ -14,8 +15,8 @@ async function runSymphonyTest() {
 
     // Initialize Gemini Models
     const genAI = new GoogleGenerativeAI(apiKey);
-    const orchestratorModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-    const workerModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const orchestratorModel = genAI.getGenerativeModel({ model: AI_CONFIG.smartModel });
+    const workerModel = genAI.getGenerativeModel({ model: AI_CONFIG.fastModel });
 
     // Setup Symphony
     const symphony = new AgentSymphony({

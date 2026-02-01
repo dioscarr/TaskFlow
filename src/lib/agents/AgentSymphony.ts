@@ -124,25 +124,44 @@ export class AgentSymphony {
     }
 
     private async createPlan(objective: string, feedback: ReviewResult | null, preferredStrategy?: string): Promise<Plan> {
-        let prompt = [
-            ORCHESTRATOR_AGENT_PROMPT,
-            '',
-            '═══════════════════════════════════════════════════════════════════',
-            'PLANNING TASK',
-            '═══════════════════════════════════════════════════════════════════',
-            `OBJECTIVE: ${objective}`,
-            preferredStrategy ? `STRATEGY DIRECTION: ${preferredStrategy}` : '',
-            'Create a detailed execution plan breaking this objective into sub-tasks for specialized agents.',
-            'Available Agents: ' + Object.keys(this.workers).join(', '),
-            'IMPORTANT: Start with a <thinking> block to explain your reasoning.',
-            'THEN: Output the plan as a SINGLE valid JSON object wrapped in ```json code blocks.',
-            'The JSON must match this structure: { tasks: [{ id (string), agentType (enum), description (string), priority (number 1-5), dependencies? (string[]) }], reasoning (string) }',
-            'Examples: priority: 5 (NOT "5" or "High"), agentType: "developer" (NOT "Developer").'
-        ].join('\n');
+        let prompt = `You are the Lead Orchestrator of a multi-agent development team.
 
-        if (feedback) {
-            prompt += `\n\nPREVIOUS PLAN FAILED REVIEW.\nCRITIC FEEDBACK: ${feedback.feedback}\nPlease revise the plan to address these issues.`;
-        }
+Your task is to create a detailed execution plan for the following objective:
+
+OBJECTIVE: ${objective}
+${preferredStrategy ? `STRATEGY DIRECTION: ${preferredStrategy}` : ''}
+
+Available Agent Types: ${Object.keys(this.workers).join(', ')}
+
+${feedback ? `PREVIOUS PLAN FAILED REVIEW.\nCRITIC FEEDBACK: ${feedback.feedback}\nPlease revise the plan to address these issues.\n` : ''}
+
+INSTRUCTIONS:
+1. Break the objective into 3-7 concrete sub-tasks.
+2. Assign each task to an appropriate agent type (e.g., developer, researcher, designer).
+3. Set priority levels (1=low to 5=high).
+4. Order tasks logically and specify dependencies between them.
+
+First, think through the approach inside <thinking> tags.
+
+Then, provide ONLY a valid JSON response (wrapped in \`\`\`json code block) matching this exact structure:
+{
+  "tasks": [
+    {
+      "id": "task_1",
+      "agentType": "developer",
+      "description": "Brief task description",
+      "priority": 3,
+      "dependencies": []
+    }
+  ],
+  "reasoning": "Why this plan will succeed"
+}
+
+CRITICAL: 
+- Do NOT include any text outside the thinking block and JSON block.
+- The JSON must be 100% valid (all strings quoted, numbers without quotes, arrays with brackets).
+- Priority must be a number (1-5), not a string.
+- agentType must be one of: ${Object.keys(this.workers).join(', ')}`;
 
         return await callAgentWithEscalation(
             this.orchestrator,
@@ -313,20 +332,31 @@ OUTPUT REQUIREMENTS:
     }
 
     private async reviewResults(objective: string, results: Record<string, unknown>): Promise<ReviewResult> {
-        const prompt = `
-    You are the Compliance and Logic Reviewer.
-    OBJECTIVE: ${objective}
-    WORKER RESULTS: ${JSON.stringify(results, null, 2)}
+        const prompt = `You are the Compliance and Logic Reviewer.
 
-    Review the results for accuracy, completeness, and alignment with the objective.
-    If there are errors or missing information, fail the review and provide constructive feedback.
-    
-    CRITICAL OUTPUT REQUIREMENTS:
-    1. First, think critically inside <thinking> tags to explain your analysis.
-    2. Then, output the JSON review OBJECT inside \`\`\`json code blocks.
-    3. The JSON must strictly follow the schema: { status: "PASS" | "FAIL", feedback: string, errorCategory: string }
-    Do not add any text outside the JSON block and Thinking block.
-        `.trim();
+OBJECTIVE: ${objective}
+
+WORKER RESULTS:
+${JSON.stringify(results, null, 2)}
+
+REVIEW TASK:
+Analyze the results for accuracy, completeness, and alignment with the objective.
+- If everything is correct and complete, output PASS status.
+- If there are errors, missing information, or quality issues, output FAIL status with constructive feedback.
+
+First, explain your reasoning inside <thinking> tags.
+
+Then, provide ONLY valid JSON (wrapped in \`\`\`json code block) matching this structure:
+{
+  "status": "PASS",
+  "feedback": "Detailed analysis of strengths and any issues.",
+  "errorCategory": "none" or describe the type of error if FAIL
+}
+
+CRITICAL:
+- status must be PASS or FAIL (strings, not booleans)
+- Do NOT include any text outside the thinking block and JSON block
+- JSON must be 100% valid`;
 
         return await callAgentWithEscalation(
             this.critic,
@@ -339,16 +369,22 @@ OUTPUT REQUIREMENTS:
     }
 
     private async synthesizeFinal(objective: string, results: Record<string, unknown>): Promise<string> {
-        const prompt = `
-You are the Lead Orchestrator.
-OBJECTIVE: ${objective}
-RESULTS: ${JSON.stringify(results)}
+        const prompt = `You are the Lead Orchestrator synthesizing the final report.
 
-Synthesize these findings into a concise, high-quality final report for the user.
-The report must be well-detailed for stakeholders, using paragraphs and bullet points where needed.
-Include a clear summary of what was done.
-Wrap your thought process in <thinking> tags before the final report.
-        `.trim();
+OBJECTIVE: ${objective}
+
+EXECUTION RESULTS:
+${JSON.stringify(results, null, 2)}
+
+TASK:
+Create a comprehensive, well-structured final report that:
+1. Summarizes what was accomplished
+2. Highlights key deliverables and outcomes
+3. Explains any challenges and how they were addressed
+4. Provides clear next steps or conclusions
+
+Use clear markdown formatting with headers, bullet points, and code blocks as needed.
+Format this as a professional stakeholder report.`;
 
         return await this.orchestrator.complete(prompt);
     }

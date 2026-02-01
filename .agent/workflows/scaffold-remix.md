@@ -51,7 +51,7 @@ When prompted:
 
 ```bash
 mkdir app\styles
-copy ..\..\..\.agent\workflows\templates\design-system.css app\styles\design-system.css
+Copy-Item -Force -Path ..\..\..\.agent\workflows\templates\design-system.css -Destination app\styles\design-system.css
 ```
 
 ### 5. Update Root Layout
@@ -144,7 +144,7 @@ export default function Index() {
 
 ```bash
 git init
-copy ..\..\..\.agent\workflows\templates\app-gitignore .gitignore
+Copy-Item -Force -Path ..\..\..\.agent\workflows\templates\app-gitignore -Destination .gitignore
 git add .
 git commit -m "Initial Remix + Vite scaffold with design system and SSR"
 ```
@@ -153,8 +153,8 @@ git commit -m "Initial Remix + Vite scaffold with design system and SSR"
 
 ```bash
 mkdir .github\workflows
-copy ..\..\..\.agent\workflows\templates\github-ci.yml .github\workflows\ci.yml
-copy ..\..\..\.agent\workflows\templates\github-deploy.yml .github\workflows\deploy.yml
+Copy-Item -Force -Path ..\..\..\.agent\workflows\templates\github-ci.yml -Destination .github\workflows\ci.yml
+Copy-Item -Force -Path ..\..\..\.agent\workflows\templates\github-deploy.yml -Destination .github\workflows\deploy.yml
 git add .github
 git commit -m "Add GitHub Actions CI/CD workflows"
 ```

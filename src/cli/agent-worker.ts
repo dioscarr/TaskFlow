@@ -33,6 +33,8 @@ type ChatResult = {
     text?: string;
     toolUsed?: string;
     message?: string;
+    toolResult?: any;
+    toolArgs?: any;
 };
 
 type ActivityType = 'info' | 'success' | 'warning' | 'error';
@@ -187,7 +189,9 @@ async function runJob(job: AgentJobRecord) {
                         sessionId: job.sessionId,
                         role: 'ai',
                         content: result.text || 'Background task completed.',
-                        toolUsed: result.toolUsed || undefined
+                        toolUsed: result.toolUsed || undefined,
+                        toolResult: result.toolResult || undefined,
+                        toolArgs: result.toolArgs || undefined
                     }
                 });
 

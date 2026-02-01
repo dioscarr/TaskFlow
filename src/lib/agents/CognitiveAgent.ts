@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { TOOL_LIBRARY } from '../toolLibrary';
 import { SOFTWARE_ARCHITECT_PROMPT } from './prompts';
+import AI_CONFIG from '../aiConfig';
 
 export interface ExecutionStep {
     phase: string;
@@ -54,7 +55,7 @@ export class CognitiveAgent {
         availableTools: string[]
     }): Promise<ExecutionPlan | null> {
         const model = this.genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash',
+            model: AI_CONFIG.smartModel,
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -271,7 +272,7 @@ start ${record.path}
      */
     async critiquePlan(plan: ExecutionPlan, query: string): Promise<string[]> {
         const model = this.genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash',
+            model: AI_CONFIG.smartModel,
         });
 
         const criticPrompt = `You are a "Constructive Reviewer" in a development team.

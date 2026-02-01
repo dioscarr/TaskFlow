@@ -3,6 +3,8 @@
 
 import { readdir, stat, unlink } from 'fs/promises';
 import { join, resolve } from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { createServer } from 'net';
@@ -29,12 +31,15 @@ import { DEFAULT_SKILLS } from '@/lib/skillsLibrary';
 import { getSkillSchemas } from '@/lib/skillsLibrary';
 import { executeSkill } from '@/lib/skillsExecution';
 import { DEFAULT_INTENT_RULES, DEFAULT_WORKFLOWS, WorkflowStep } from '@/lib/intentLibrary';
+import { parseMarkdownWorkflow } from '@/lib/workflowParser';
 import { TOOL_LIBRARY } from '@/lib/toolLibrary';
 import { addChatMessage } from '@/app/chatActions';
 import { SOFTWARE_ARCHITECT_PROMPT, AGENT_ROLES, ORCHESTRATOR_AGENT_PROMPT, WORKER_AGENT_PROMPT } from '@/lib/agents/prompts';
 import { AgentSymphony } from '@/lib/agents/AgentSymphony';
 import { GeminiAgentAdapter } from '@/lib/agents/symphony/adapters';
 import { SymphonyOptions } from '@/lib/agents/symphony/types';
+import AI_CONFIG from '@/lib/aiConfig';
+import { serializeValue, deepSerialize } from '@/lib/serialization';
 
 // import { CognitiveAgent } from '@/lib/agents/CognitiveAgent';
 // import { DesignAgent } from '@/lib/agents/DesignAgent';
@@ -134,6 +139,32 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
     if (actionId === 'extract_alegra_bill') return await createAlegraBill(args);
     if (actionId === 'record_alegra_payment') return await recordAlegraPayment(args);
     if (actionId === 'verify_dgii_rnc') return await verifyRNC(args.rnc);
+    if (actionId === 'restart_process') {
+        const { restartProcess } = await import('./processActions');
+        return await restartProcess(args.id);
+    }
+    if (actionId === 'rebuild_process') {
+        const { rebuildProcess } = await import('./processActions');
+        return await rebuildProcess(args.id);
+    }
+    if (actionId === 'get_docker_logs') {
+        const { getDockerLogs } = await import('./processActions');
+        return await getDockerLogs(args.id);
+    }
+    if (actionId === 'stop_process') {
+        const { stopProcess } = await import('./processActions');
+        return await stopProcess(args.id);
+    }
+    if (actionId === 'start_process') {
+        const { startProcess } = await import('./processActions');
+        return await startProcess(args.id);
+    }
+    if (actionId === 'delete_process') {
+        const { deleteProcess } = await import('./processActions');
+        return await deleteProcess(args.id);
+    }
+    if (actionId === 'cancel_all_jobs') return await cancelAllAgentJobs();
+    if (actionId === 'stop_all_agents') return await cancelAllAgentJobs();
     if (actionId === 'highlight_file') return await highlightWorkspaceFile(args);
     if (actionId === 'move_attachments_to_folder') return await moveFilesToFolder(args.fileIds || [], args.folderId, args.nameConflictStrategy);
     if (actionId === 'copy_attachments_to_folder') return await copyFilesToFolder(args.fileIds || [], args.folderId, args.nameConflictStrategy);
@@ -151,10 +182,10 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        // Using 3.0 Pro Preview for orchestrator/critic for speed + reasoning
-        const orchestratorModel = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
-        // Using 3.0 Flash Preview for workers for cost efficiency
-        const workerModel = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+        // Using 2.0 Flash for orchestrator/critic for speed + reasoning
+        const orchestratorModel = genAI.getGenerativeModel({ model: AI_CONFIG.smartModel });
+        // Using 2.0 Flash for workers for cost efficiency
+        const workerModel = genAI.getGenerativeModel({ model: AI_CONFIG.fastModel });
 
         const symphony = new AgentSymphony({
             orchestrator: new GeminiAgentAdapter("Orchestrator", orchestratorModel),
@@ -216,6 +247,7 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
     if (actionId === 'find_duplicate_files') return await findDuplicateFiles(args);
     if (actionId === 'search_web') return await searchWeb(args);
     if (actionId === 'focus_workspace_item') return await focusWorkspaceItem(args.itemId);
+    if (actionId === 'execute_scaffold_vite') return await executeScaffoldVite(args);
     if (actionId === 'enqueue_agent_job') return await enqueueAgentJob(args);
 
     // Tools from library
@@ -328,7 +360,7 @@ async function loadFileSystemWorkflows() {
                 name: command, // Use slash command as name for matching
                 description,
                 triggerKeywords: [command, name.replace(/-/g, ' ')],
-                steps: [], // No structured steps for file-based workflows
+                steps: parseMarkdownWorkflow(content),
                 content: content
             });
         }
@@ -957,21 +989,45 @@ export async function installRepoApp(relativePath: string) {
         const internalDomain = `repo-${safeName}.internal`;
         const imageName = `taskflow-repo-app-${safeName}`;
         const containerName = `taskflow-repo-app-${safeName}`;
-        const dockerfilePath = join(appPath, 'Dockerfile.taskflow');
-        const dockerfile = `FROM node:20-alpine
-    WORKDIR /app
-    COPY package*.json ./
-    RUN npm install --legacy-peer-deps
-    COPY . .
-    ENV NODE_ENV=production
-    ENV PORT=3000
-    RUN npm run build --if-present
-    EXPOSE 3000
-    CMD ["npm", "run", "${startScript}"]
-    `;
-        await writeFile(dockerfilePath, dockerfile);
+
+        let internalPort = 3000;
+        let dockerFileName = 'Dockerfile.taskflow';
+        let useExistingDockerfile = false;
+
+        // Check if a custom Dockerfile exists
+        try {
+            const existingDockerfileContent = await readFileFS(join(appPath, 'Dockerfile'), 'utf-8');
+            useExistingDockerfile = true;
+            dockerFileName = 'Dockerfile';
+
+            // Try to detect exposed port
+            const exposeMatch = existingDockerfileContent.match(/EXPOSE\s+(\d+)/);
+            if (exposeMatch) {
+                internalPort = parseInt(exposeMatch[1]);
+            } else if (existingDockerfileContent.includes('nginx')) {
+                internalPort = 80;
+            }
+        } catch {
+            // No existing Dockerfile, proceed with generation logic
+        }
+
+        if (!useExistingDockerfile) {
+            const dockerfile = `FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --legacy-peer-deps
+COPY . .
+ENV NODE_ENV=production
+ENV PORT=3000
+RUN npm run build --if-present
+EXPOSE 3000
+CMD ["npm", "run", "${startScript}"]
+`;
+            await writeFile(join(appPath, 'Dockerfile.taskflow'), dockerfile);
+        }
 
         const port = await getAvailablePort();
+        const dockerfilePath = join(appPath, dockerFileName);
 
         try {
             await execAsync(`docker rm -f ${containerName}`);
@@ -980,7 +1036,7 @@ export async function installRepoApp(relativePath: string) {
         }
 
         await execAsync(`docker build -t ${imageName} -f "${dockerfilePath}" "${appPath}"`);
-        await execAsync(`docker run -d --name ${containerName} -p ${port}:3000 ${imageName}`);
+        await execAsync(`docker run -d --name ${containerName} -p ${port}:${internalPort} ${imageName}`);
 
         const proxyConfigPath = await writeProxyConfig(internalDomain, port);
         const dnsInstructions = `Add a hosts/DNS entry for ${internalDomain} -> 127.0.0.1 and reload your reverse proxy.`;
@@ -1068,6 +1124,191 @@ export async function saveFileContent(fileName: string, content: string) {
         return { success: false, error: 'Failed to save file' };
     }
 }
+
+/**
+ * Execute Vite + React scaffold with user-provided details
+ */
+async function executeScaffoldVite(args: { projectName: string; description?: string; features?: string[] }) {
+    const { projectName, description, features } = args;
+
+    // Validate project name
+    if (!projectName || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(projectName)) {
+        return {
+            success: false,
+            message: 'Invalid project name. Use kebab-case (lowercase with hyphens), e.g., "my-app"'
+        };
+    }
+
+    const appPath = path.join(process.cwd(), 'apps', projectName);
+    const execAsync = promisify(exec);
+    let logs: string[] = [];
+
+    try {
+        // STEP 1: CREATE/REUSE FOLDER
+        const folderExists = fs.existsSync(appPath);
+        if (!folderExists) {
+            fs.mkdirSync(appPath, { recursive: true });
+            logs.push(`✅ Created folder: apps/${projectName}`);
+        } else {
+            logs.push(`ℹ️ Folder already exists: apps/${projectName}`);
+        }
+
+        // STEP 2: RUN VITE SCAFFOLD (idempotent handling)
+        const packageJsonPath = path.join(appPath, 'package.json');
+        const hasPackageJson = fs.existsSync(packageJsonPath);
+        const visibleEntries = fs.existsSync(appPath)
+            ? fs.readdirSync(appPath).filter(name => !name.startsWith('.'))
+            : [];
+
+        if (hasPackageJson) {
+            logs.push('ℹ️ Detected existing package.json, skipping scaffold step.');
+        } else if (visibleEntries.length === 0 || (visibleEntries.length === 1 && visibleEntries[0] === 'node_modules')) {
+            // Safe to recreate scaffold if folder is empty or only has node_modules
+            logs.push('ℹ️ Folder is empty (or only node_modules). Recreating scaffold.');
+
+            // Remove the folder entirely so the PowerShell script doesn't abort on existing dir
+            fs.rmSync(appPath, { recursive: true, force: true });
+            fs.mkdirSync(appPath, { recursive: true });
+
+            const scaffoldScript = path.join(process.cwd(), 'scripts', 'scaffold-vite.ps1');
+            const scaffoldCmd = `powershell -ExecutionPolicy Bypass -File "${scaffoldScript}" -AppName ${projectName}`;
+            console.log(`🔧 Running: ${scaffoldCmd}`);
+            const { stdout: scaffoldOut } = await execAsync(scaffoldCmd, {
+                cwd: process.cwd(),
+                maxBuffer: 10 * 1024 * 1024,
+                shell: 'powershell.exe'
+            });
+            logs.push(`✅ Vite + React + TypeScript scaffolded`);
+        } else {
+            throw new Error(`apps/${projectName} already exists and is not empty. Please choose a new app name or remove the folder.`);
+        }
+
+        // STEP 3: COPY DESIGN SYSTEM
+        const templatesPath = path.join(process.cwd(), '.agent', 'workflows', 'templates');
+        const designPath = path.join(appPath, 'src', 'styles');
+        fs.mkdirSync(designPath, { recursive: true });
+        fs.copyFileSync(
+            path.join(templatesPath, 'design-system.css'),
+            path.join(designPath, 'design-system.css')
+        );
+        logs.push(`✅ Design system installed`);
+
+        // STEP 4: COPY SEO CONFIG
+        const libPath = path.join(appPath, 'src', 'lib');
+        fs.mkdirSync(libPath, { recursive: true });
+        fs.copyFileSync(
+            path.join(templatesPath, 'seo-config.ts'),
+            path.join(libPath, 'seo-config.ts')
+        );
+        logs.push(`✅ SEO configuration installed`);
+
+        // STEP 5: COPY COMPONENTS
+        const compPath = path.join(appPath, 'src', 'components');
+        fs.mkdirSync(compPath, { recursive: true });
+        fs.copyFileSync(
+            path.join(templatesPath, 'component-template.tsx'),
+            path.join(compPath, 'Button.tsx')
+        );
+        logs.push(`✅ Sample components installed`);
+
+        // STEP 6: INSTALL REACT-HELMET-ASYNC
+        const npmCmd = `Set-Location "${appPath}"; npm install react-helmet-async --legacy-peer-deps`;
+        console.log(`🔧 Running: ${npmCmd}`);
+        const { stdout: npmOut } = await execAsync(npmCmd, {
+            cwd: process.cwd(),
+            maxBuffer: 20 * 1024 * 1024,
+            shell: 'powershell.exe'
+        });
+        logs.push(`✅ react-helmet-async installed`);
+
+        // STEP 7: INITIALIZE GIT
+        const gitInitCmd = `Set-Location "${appPath}"; git init; Copy-Item -Force -Path "..\\..\\..\\.agent\\workflows\\templates\\app-gitignore" -Destination ".gitignore"; git add .; git commit -m "Initial Vite + React scaffold"`;
+        console.log(`🔧 Initializing git...`);
+        const { stdout: gitOut } = await execAsync(gitInitCmd, {
+            cwd: process.cwd(),
+            maxBuffer: 5 * 1024 * 1024,
+            shell: 'powershell.exe'
+        });
+        logs.push(`✅ Git initialized with initial commit`);
+
+        // STEP 8: SETUP GITHUB ACTIONS
+        const githubPath = path.join(appPath, '.github', 'workflows');
+        fs.mkdirSync(githubPath, { recursive: true });
+        fs.copyFileSync(
+            path.join(templatesPath, 'github-ci.yml'),
+            path.join(githubPath, 'ci.yml')
+        );
+        fs.copyFileSync(
+            path.join(templatesPath, 'github-deploy.yml'),
+            path.join(githubPath, 'deploy.yml')
+        );
+        const gitHubCmd = `Set-Location "${appPath}"; git add .github; git commit -m "Add CI/CD workflows"`;
+        await execAsync(gitHubCmd, {
+            cwd: process.cwd(),
+            maxBuffer: 5 * 1024 * 1024,
+            shell: 'powershell.exe'
+        });
+        logs.push(`✅ GitHub Actions CI/CD configured`);
+
+        // STEP 9: INSTALL DEPENDENCIES
+        const installCmd = `Set-Location "${appPath}"; npm install --legacy-peer-deps`;
+        console.log(`🔧 Installing dependencies (this may take a minute)...`);
+        const { stdout: installOut } = await execAsync(installCmd, {
+            cwd: process.cwd(),
+            maxBuffer: 20 * 1024 * 1024,
+            shell: 'powershell.exe',
+            timeout: 120000
+        });
+        logs.push(`✅ Dependencies installed`);
+
+        // STEP 10: BUILD FOR DOCKER
+        const buildCmd = `Set-Location "${appPath}"; npm run build`;
+        console.log(`🔧 Building production version...`);
+        const { stdout: buildOut } = await execAsync(buildCmd, {
+            cwd: process.cwd(),
+            maxBuffer: 20 * 1024 * 1024,
+            shell: 'powershell.exe',
+            timeout: 120000
+        });
+        logs.push(`✅ Production build created`);
+
+        // STEP 11: COPY DOCKER CONFIG
+        fs.copyFileSync(
+            path.join(templatesPath, 'Dockerfile.vite'),
+            path.join(appPath, 'Dockerfile')
+        );
+        fs.copyFileSync(
+            path.join(templatesPath, 'nginx-spa.conf'),
+            path.join(appPath, 'nginx.conf')
+        );
+        const dockerCmd = `Set-Location "${appPath}"; git add Dockerfile nginx.conf; git commit -m "Add Docker configuration"`;
+        await execAsync(dockerCmd, {
+            cwd: process.cwd(),
+            maxBuffer: 5 * 1024 * 1024,
+            shell: 'powershell.exe'
+        });
+        logs.push(`✅ Docker configuration added`);
+
+        // SUCCESS: Full boilerplate complete
+        const descriptionText = description ? `\n**Description:** ${description}` : '';
+        const featuresText = features && features.length > 0 ? `\n**Features:** ${features.join(', ')}` : '';
+
+        return {
+            success: true,
+            message: `🎉 **VITE + REACT BOILERPLATE COMPLETE!**\n\n${logs.map(l => '  ' + l).join('\n')}\n\n**Project:** ${projectName}${descriptionText}${featuresText}\n**Location:** \`apps/${projectName}\`\n**Dev Server:** \`npm run dev\` (runs at localhost:5173)\n**Build:** \`npm run build\` (already completed for Docker)\n\nNext steps:\n1. Navigate to the project: \`cd apps/${projectName}\`\n2. Run dev server: \`npm run dev\`\n3. Edit files in \`src/\` to customize\n\nUse separate \`/\` commands for domain-specific customization (colors, features, APIs, etc.).`
+        };
+
+    } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        const failedStep = logs.length > 0 ? logs[logs.length - 1] : 'folder creation';
+        return {
+            success: false,
+            message: `❌ **Boilerplate Failed at:** ${failedStep}\n\n**Error:** ${errorMsg}\n\n**Logs:**\n${logs.map(l => '  ' + l).join('\n')}\n\nCheck the server console for more details.`
+        };
+    }
+}
+
+
 
 
 export async function convertFolderToApp(folderId: string, entryFileId: string) {
@@ -1183,25 +1424,48 @@ export async function installDynamicApp(folderId: string) {
         const imageName = `taskflow-app-${folderId}`;
         const containerName = `taskflow-app-${folderId}`;
 
-        const dockerfilePath = join(appPath, 'Dockerfile.taskflow');
-        const dockerfile = `FROM node:20-alpine
-    WORKDIR /app
-    COPY package*.json ./
-    RUN npm install --legacy-peer-deps
-    COPY . .
-    ENV NODE_ENV=production
-    ENV PORT=3000
-    RUN npm run build --if-present
-    EXPOSE 3000
-    CMD ["npm", "run", "${startScript}"]
-    `;
-        await writeFile(dockerfilePath, dockerfile);
+        let internalPort = 3000;
+        let dockerFileName = 'Dockerfile.taskflow';
+        let useExistingDockerfile = false;
+
+        // Check if a custom Dockerfile exists
+        try {
+            const existingDockerfileContent = await readFileFS(join(appPath, 'Dockerfile'), 'utf-8');
+            useExistingDockerfile = true;
+            dockerFileName = 'Dockerfile';
+
+            // Try to detect exposed port
+            const exposeMatch = existingDockerfileContent.match(/EXPOSE\s+(\d+)/);
+            if (exposeMatch) {
+                internalPort = parseInt(exposeMatch[1]);
+            } else if (existingDockerfileContent.includes('nginx')) {
+                internalPort = 80;
+            }
+        } catch {
+            // No existing Dockerfile, proceed with generation logic
+        }
+
+        if (!useExistingDockerfile) {
+            const dockerfile = `FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --legacy-peer-deps
+COPY . .
+ENV NODE_ENV=production
+ENV PORT=3000
+RUN npm run build --if-present
+EXPOSE 3000
+CMD ["npm", "run", "${startScript}"]
+`;
+            await writeFile(join(appPath, 'Dockerfile.taskflow'), dockerfile);
+        }
 
         const existingDeployment = await prisma.appDeployment.findFirst({
             where: { appId: folderId, userId: user.id }
         });
 
         const port = await getAvailablePort();
+        const dockerfilePath = join(appPath, dockerFileName);
 
         try {
             await execAsync(`docker rm -f ${containerName}`);
@@ -1210,7 +1474,7 @@ export async function installDynamicApp(folderId: string) {
         }
 
         await execAsync(`docker build -t ${imageName} -f "${dockerfilePath}" "${appPath}"`);
-        await execAsync(`docker run -d --name ${containerName} -p ${port}:3000 ${imageName}`);
+        await execAsync(`docker run -d --name ${containerName} -p ${port}:${internalPort} ${imageName}`);
 
         const proxyConfigPath = await writeProxyConfig(internalDomain, port);
         const dnsInstructions = `Add a hosts/DNS entry for ${internalDomain} -> 127.0.0.1 and reload your reverse proxy.`;
@@ -1315,10 +1579,12 @@ export async function getWorkspaceFiles() {
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
         if (!user) throw new Error('User not found');
 
-        return await prisma.workspaceFile.findMany({
+        const files = await prisma.workspaceFile.findMany({
             where: { userId: user.id },
             select: { id: true, name: true, type: true, parentId: true, order: true, items: true, size: true, tags: true }
         });
+
+        return deepSerialize(files);
     } catch (error) {
         console.error('Failed to get workspace files:', error);
         return [];
@@ -1452,7 +1718,7 @@ export async function getPrompts() {
             "Executes pre-approved tools reliably and reports results back to the main agent.",
             "You are TaskFlow AI's Tool Agent. Your sole job is to execute pre-approved tools and return concise results. Do not ask for approval. Do not re-plan. If a tool fails, report the failure and stop."
         );
-        return prompts;
+        return deepSerialize(prompts);
     } catch (error) {
         console.error('Failed to get prompts:', error);
         return [];
@@ -1574,7 +1840,7 @@ export async function generateSystemPrompt(description: string) {
     try {
         const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
         const genAI = new GoogleGenerativeAI(apiKey!);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: AI_CONFIG.smartModel });
         const prompt = `You are a Prompt Engineer. Enhance the following Agent description into a professional system instruction: "${description}". 
         
         STRUCTURE:
@@ -1598,7 +1864,7 @@ export async function generateMagicContent(params: { fileName: string; content: 
             return { success: false, error: 'Missing API key' };
         }
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: AI_CONFIG.fastModel });
         const recentContext = params.chatContext
             ?.filter(m => m.content && m.content.trim().length > 0)
             .slice(-5)
@@ -1631,7 +1897,7 @@ export async function generateMagicSuggestions(params: { fileName: string; descr
             return { success: false, error: 'Missing API key' };
         }
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: AI_CONFIG.fastModel });
         const prompt = `You are a senior product designer and front-end copywriter.
 Generate exactly 5 concise, high-quality content update suggestions for the file below based on the description.
 Return ONLY a JSON array of 5 strings. No extra text.
@@ -1659,7 +1925,7 @@ export async function generateSuggestions(
     try {
         const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
         const genAI = new GoogleGenerativeAI(apiKey!);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: AI_CONFIG.smartModel });
 
         // Parse context if provided
         let contextString = '';
@@ -2106,7 +2372,7 @@ export async function createHtmlFile(data: {
         // e.g., 'folderId/index.html'
         const relativeStoragePath = `${directoryName}/${diskFileName}`;
 
-        
+
         const cssLinkMatch = data.content.match(/<link[^>]+href=["']([^"']+\.css)["'][^>]*>/i);
         if (cssLinkMatch) {
             const cssHref = cssLinkMatch[1];
@@ -2774,7 +3040,7 @@ export async function agentDelegate(data: { agentType: string, task: string }) {
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const model = genAI.getGenerativeModel({ model: AI_CONFIG.smartModel });
         const prompt = `You are a strict Review Agent. Review the following plan or intended tool use.\n\nReturn:\n- Verdict: approve | revise | reject\n- Risks\n- Missing steps\n- Suggested changes\n\nCONTENT:\n${data.task}`;
         const result = await model.generateContent(prompt);
         const review = result.response.text();
@@ -2845,7 +3111,7 @@ export async function extractReceiptInfo(data: { fileIds: string[] }) {
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash',
+            model: AI_CONFIG.visionModel,
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -2976,7 +3242,7 @@ export async function summarizeFile(data: { fileId: string; detailLevel?: 'brief
         if (!apiKey) return { success: true, summary: `[Summary for ${file.name} - Gemini API Key missing]` };
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const model = genAI.getGenerativeModel({ model: AI_CONFIG.fastModel });
 
         const prompt = `Please provide a ${data.detailLevel || 'brief'} summary of the following file content:\n\n${content}`;
         const result = await model.generateContent(prompt);
@@ -3074,7 +3340,7 @@ export async function synthesizeDocuments(data: { fileIds: string[], outputFilen
         if (!apiKey) return { success: false, message: 'API Key missing' };
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const model = genAI.getGenerativeModel({ model: AI_CONFIG.smartModel });
 
         const prompt = `Synthesize the following documents into a single, cohesive master report. 
 Use a professional structure with an Executive Summary, Key Findings, and Consolidated Details.
@@ -3260,12 +3526,12 @@ async function processAgentJob(jobId: string) {
 
         // Initialize Gemini Models with System Instructions and Tools
         const orchestratorModel = genAI.getGenerativeModel({
-            model: "gemini-1.0-pro",
+            model: AI_CONFIG.smartModel,
             systemInstruction: ORCHESTRATOR_AGENT_PROMPT,
             tools
         });
         const workerModel = genAI.getGenerativeModel({
-            model: "gemini-1.0-pro",
+            model: AI_CONFIG.fastModel,
             systemInstruction: WORKER_AGENT_PROMPT,
             tools
         });
@@ -3449,7 +3715,7 @@ export async function extractTextFromImage(data: { fileId: string }) {
         if (!apiKey) return { success: false, message: 'Gemini API Key missing' };
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const model = genAI.getGenerativeModel({ model: AI_CONFIG.visionModel });
 
         const result = await model.generateContent([
             "Extract all text from this image as accurately as possible.",
@@ -3964,22 +4230,31 @@ export async function chatWithAI(
             return /\bresearch|investigate|find sources|look up|search\b/.test(normalized);
         };
 
+        const generateScaffoldViteDefaultName = () => `vite-app-${Date.now()}`;
+
         const parseScaffoldViteAppName = (text: string) => {
-            const trimmed = text.trim();
+            // Normalize spacing and separators
+            const normalized = text.trim().toLowerCase().replace(/\\/g, '/');
+
+            // Remove leading command token and common prefixes
+            const withoutCommand = normalized.replace(/^\/(scaffold-vite|viteapp|vite|scaffolde-vite)\s+/, '');
+
+            // If a path like "apps/premium-shopping-app" is provided, keep only the last segment
+            const lastSegment = withoutCommand.split('/').filter(Boolean).pop();
+            if (!lastSegment) return undefined;
+
+            // Extract the candidate and ensure kebab-case characters only
+            const kebabMatch = lastSegment.match(/[a-z0-9-]+/);
+            if (!kebabMatch) return undefined;
+            const candidate = kebabMatch[0];
+
             const stopWords = new Set([
                 'create', 'a', 'an', 'vite', 'react', 'ts', 'typescript', 'app', 'application', 'web', 'site', 'named'
             ]);
+            const reserved = new Set(['uploads', 'upload', 'public']);
+            if (stopWords.has(candidate) || reserved.has(candidate)) return undefined;
 
-            const directMatch = trimmed.match(/^\/(scaffold-vite|viteapp|vite|scaffolde-vite)\s+([a-z0-9-]+)/i);
-            if (directMatch) {
-                const candidate = directMatch[2].toLowerCase();
-                if (!stopWords.has(candidate)) return candidate;
-            }
-
-            const namedMatch = trimmed.match(/\bnamed\s+([a-z0-9-]+)/i);
-            if (namedMatch) return namedMatch[1].toLowerCase();
-
-            return undefined;
+            return candidate;
         };
 
         let workflowInstructions = '';
@@ -4033,7 +4308,7 @@ export async function chatWithAI(
 
             const slashTokenMatch = query.trim().match(/^\/(\S+)/);
             const slashToken = slashTokenMatch ? `/${slashTokenMatch[1].toLowerCase()}` : undefined;
-            let matchedWorkflow: { workflow: any; keyword: string; match: { score: number; matched: string; reason: 'slash' } } | undefined;
+            let matchedWorkflow: { workflow: any; keyword: string; match: { score: number; matched: string; reason: string } } | undefined;
 
             if (slashToken) {
                 const candidate = keywordCandidates.find(item => item.normalized === slashToken);
@@ -4078,20 +4353,36 @@ export async function chatWithAI(
                 const folderName = getAutoFolderName({ autoFolder: 'auto' });
 
                 if (matchedWorkflowValue.content) {
-                    const scaffoldViteName = matchedWorkflowValue.name === '/scaffold-vite'
-                        ? parseScaffoldViteAppName(query)
-                        : undefined;
-                    let workflowContent = matchedWorkflowValue.content;
+                    // Check if this is a scaffold-vite workflow
+                    const isScaffoldVite = matchedWorkflowValue.name?.toLowerCase().includes('scaffold') &&
+                        matchedWorkflowValue.name?.toLowerCase().includes('vite');
 
-                    if (scaffoldViteName) {
-                        workflowContent = workflowContent.replace(/<project-name>/g, scaffoldViteName);
-                        workflowContent = `\nNOTE: Use project name "${scaffoldViteName}" for all steps.\n` + workflowContent;
+                    if (isScaffoldVite) {
+                        // Extract project name from query
+                        const projectNameMatch = query.match(/\/scaffold-vite\s+([a-z0-9-]+)/i);
+                        const projectName = projectNameMatch ? projectNameMatch[1] : null;
+
+                        if (!projectName) {
+                            return {
+                                success: false,
+                                text: `❌ **Project name required**\n\nUsage: \`/scaffold-vite <project-name>\`\n\nExample: \`/scaffold-vite my-restaurant-app\`\n\nProject name must be kebab-case (lowercase with hyphens).`
+                            };
+                        }
+
+                        // Execute the scaffold immediately
+                        const result = await executeScaffoldVite({ projectName });
+
+                        return {
+                            success: result.success,
+                            text: result.message,
+                            toolUsed: result.success ? `workflow:${matchedWorkflowValue.name}` : undefined
+                        };
                     }
 
-                    // File-based workflow: Inject content directly as system instructions
+                    // Not a scaffold-vite workflow, proceed normally
+                    let workflowContent = matchedWorkflowValue.content;
                     workflowInstructions = `\n\n═══════════════════════════════════════════════════════════════════\nSYSTEM OVERRIDE: ACTIVE WORKFLOW: ${matchedWorkflowValue.name}\n═══════════════════════════════════════════════════════════════════\n${workflowContent}\n\nFOLLOW THESE INSTRUCTIONS EXACTLY TO COMPLETE THE WORKFLOW.`;
 
-                    // Also log activity
                     if (demoUser) {
                         await logAgentActivity({
                             type: 'info',
@@ -4102,7 +4393,7 @@ export async function chatWithAI(
                         });
                     }
                 } else {
-                    const scaffoldViteAppName = parseScaffoldViteAppName(query);
+                    const scaffoldViteAppName = parseScaffoldViteAppName(query) || generateScaffoldViteDefaultName();
                     const res = await executeWorkflow(matchedWorkflowValue.steps as WorkflowStep[], {
                         content,
                         query,
@@ -4448,7 +4739,7 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
             tools = getSkillSchemas(DEFAULT_SKILLS);
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", systemInstruction, tools });
+        const model = genAI.getGenerativeModel({ model: AI_CONFIG.fastModel, systemInstruction, tools });
         let promptParts: any[] = [query + workflowInstructions];
 
         // Resolve all file IDs (including those inside folders)
@@ -4827,12 +5118,12 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
             text: (finalText && finalText.trim() !== '') ? finalText : '',
             thinking: thoughtMatch && thoughtMatch[1] ? thoughtMatch[1].trim() : undefined,
             toolUsed: specialToolName || toolUsed || undefined,
-            toolResult: specialToolResult || lastToolResult || undefined
+            toolResult: deepSerialize(specialToolResult || lastToolResult || undefined)
         };
 
-        if (toolArgs) responseObj.toolArgs = toolArgs;
+        if (toolArgs) responseObj.toolArgs = deepSerialize(toolArgs);
 
-        return responseObj;
+        return deepSerialize(responseObj);
     } catch (error) {
         console.error('💥 chatWithAI error:', error);
         return { success: false, message: error instanceof Error ? error.message : 'AI failed' };
@@ -4889,7 +5180,7 @@ export async function syncWorkspaceFiles() {
                         // Regular folder - check if exists in DB, else create
                         // Fallback for non-ID upsert
                         let f = await prisma.workspaceFile.findFirst({
-                            where: { name: item, parentId: parentId, userId: user.id, type: 'folder' }
+                            where: { name: item, parentId: parentId, userId: user!.id, type: 'folder' }
                         });
 
                         if (!f) {
@@ -4897,7 +5188,7 @@ export async function syncWorkspaceFiles() {
                                 data: {
                                     name: item,
                                     type: 'folder',
-                                    userId: user.id,
+                                    userId: user!.id,
                                     parentId: parentId
                                 }
                             });
@@ -4916,7 +5207,7 @@ export async function syncWorkspaceFiles() {
                         where: {
                             name: item,
                             parentId: parentId,
-                            userId: user.id
+                            userId: user!.id
                         }
                     });
 
@@ -4936,7 +5227,7 @@ export async function syncWorkspaceFiles() {
                                 name: item,
                                 type: extension,
                                 size: `${stats.size} bytes`,
-                                userId: user.id,
+                                userId: user!.id,
                                 parentId: parentId,
                                 storagePath: storagePath
                             }
@@ -4963,7 +5254,7 @@ export async function suggestStrategies(data: { objective: string }) {
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash',
+            model: AI_CONFIG.smartModel,
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -5040,8 +5331,35 @@ export async function approveAgentJob(jobId: string) {
     }
 }
 
+export async function cancelAllAgentJobs() {
+    try {
+        const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+        if (!user) throw new Error('User not found');
 
+        await prisma.agentJob.updateMany({
+            where: {
+                userId: user.id,
+                status: { in: ['queued', 'running'] }
+            },
+            data: {
+                status: 'failed',
+                error: 'Cancelled by user'
+            }
+        });
 
+        // Log the activity
+        await prisma.agentActivity.create({
+            data: {
+                type: 'warning',
+                title: 'Agents Halted',
+                message: 'All active and queued agent jobs were manually cancelled by the user.',
+                userId: user.id
+            }
+        });
 
-
-
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to cancel jobs:', error);
+        return { success: false, message: 'Failed to cancel agent jobs' };
+    }
+}

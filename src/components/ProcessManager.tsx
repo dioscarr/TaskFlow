@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Play, Square, Trash2, RefreshCw, CheckCircle2, AlertCircle, Clock, Loader2 } from 'lucide-react';
-import { listProcesses, stopProcess, startProcess, checkProcessHealth, discoverProcesses, deleteProcess } from '@/app/processActions';
+import { listProcesses, stopProcess, startProcess, checkProcessHealth, discoverProcesses, deleteProcess, restartProcess, rebuildProcess, getDockerLogs } from '@/app/processActions';
 import { toast } from 'sonner';
 
 interface Process {
@@ -26,6 +26,8 @@ export default function ProcessManager() {
     const [processes, setProcesses] = useState<Process[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [actioningId, setActioningId] = useState<string | null>(null);
+    const [logs, setLogs] = useState<{ id: string; content: string } | null>(null);
+    const [isShowingLogs, setIsShowingLogs] = useState(false);
 
     const loadProcesses = async () => {
         setIsLoading(true);
@@ -56,6 +58,43 @@ export default function ProcessManager() {
             await loadProcesses();
         } else {
             toast.error(result.message || 'Failed to start process');
+        }
+        setActioningId(null);
+    };
+
+    const handleRestart = async (id: string) => {
+        setActioningId(id);
+        const result = await restartProcess(id);
+        if (result.success) {
+            toast.success('Process restarted');
+            await loadProcesses();
+        } else {
+            toast.error(result.message || 'Failed to restart process');
+        }
+        setActioningId(null);
+    };
+
+    const handleRebuild = async (id: string) => {
+        const loadingToast = toast.loading('Rebuilding and starting container...');
+        setActioningId(id);
+        const result = await rebuildProcess(id);
+        if (result.success) {
+            toast.success('Process rebuilt and started', { id: loadingToast });
+            await loadProcesses();
+        } else {
+            toast.error(result.message || 'Failed to rebuild process', { id: loadingToast });
+        }
+        setActioningId(null);
+    };
+
+    const handleGetLogs = async (id: string) => {
+        setActioningId(id);
+        const result = await getDockerLogs(id);
+        if (result.success && result.logs) {
+            setLogs({ id, content: result.logs });
+            setIsShowingLogs(true);
+        } else {
+            toast.error(result.message || 'Failed to fetch logs');
         }
         setActioningId(null);
     };
@@ -247,6 +286,14 @@ export default function ProcessManager() {
                                                         <RefreshCw size={14} />
                                                     </button>
                                                     <button
+                                                        onClick={() => handleRestart(process.id)}
+                                                        disabled={actioningId === process.id}
+                                                        className="p-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg text-blue-400 border border-blue-500/20 hover:border-blue-500/30 transition-all disabled:opacity-50"
+                                                        title="Restart Process"
+                                                    >
+                                                        <RefreshCw size={14} className={actioningId === process.id ? "animate-spin" : ""} />
+                                                    </button>
+                                                    <button
                                                         onClick={() => handleStop(process.id)}
                                                         disabled={actioningId === process.id}
                                                         className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 border border-red-500/20 hover:border-red-500/30 transition-all disabled:opacity-50"
@@ -273,6 +320,26 @@ export default function ProcessManager() {
                                                         <Play size={14} />
                                                     )}
                                                 </button>
+                                            )}
+                                            {process.type === 'docker-app' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleRebuild(process.id)}
+                                                        disabled={actioningId === process.id}
+                                                        className="p-2 bg-purple-500/10 hover:bg-purple-500/20 rounded-lg text-purple-400 border border-purple-500/20 hover:border-purple-500/30 transition-all disabled:opacity-50"
+                                                        title="Rebuild & Start"
+                                                    >
+                                                        <RefreshCw size={14} className={actioningId === process.id ? "animate-spin" : ""} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleGetLogs(process.id)}
+                                                        disabled={actioningId === process.id}
+                                                        className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-white border border-white/10 hover:border-white/20 transition-all disabled:opacity-50"
+                                                        title="View Logs"
+                                                    >
+                                                        <Activity size={14} />
+                                                    </button>
+                                                </>
                                             )}
                                             <button
                                                 onClick={() => handleDelete(process.id)}
@@ -337,6 +404,45 @@ export default function ProcessManager() {
                     </AnimatePresence>
                 </div>
             )}
+
+            {/* Logs Modal */}
+            <AnimatePresence>
+                {isShowingLogs && logs && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                        onClick={() => setIsShowingLogs(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="w-full max-w-4xl max-h-[80vh] bg-[#0c0c0c] border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/5">
+                                <div className="flex items-center gap-2">
+                                    <Activity size={16} className="text-blue-400" />
+                                    <h2 className="text-sm font-bold text-white uppercase tracking-wider">Container Logs</h2>
+                                </div>
+                                <button
+                                    onClick={() => setIsShowingLogs(false)}
+                                    className="p-1 hover:bg-white/10 rounded-md text-white/40 hover:text-white transition-colors"
+                                >
+                                    <Square size={16} fill="currentColor" />
+                                </button>
+                            </div>
+                            <div className="p-4 overflow-auto max-h-[calc(80vh-64px)] font-mono text-xs text-white/60 bg-black/40">
+                                <pre className="whitespace-pre-wrap">
+                                    {logs.content || "No logs available"}
+                                </pre>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

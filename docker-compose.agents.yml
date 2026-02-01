@@ -12,6 +12,9 @@ services:
       - AGENT_WORKER_ID=docker-worker-{{.Task.Slot}}
     env_file:
       - .env
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     restart: always
     volumes:
       - ./public/uploads:/app/public/uploads # Persist uploads

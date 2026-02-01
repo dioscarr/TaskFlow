@@ -29,7 +29,8 @@ export async function callAgentWithRetry<T>(
             // Attempt to parse JSON from the response (handling potentially wrapped markdown code blocks)
             const cleanJson = extractJson(rawResponse);
             if (!cleanJson) {
-                console.log('📝 RAW RESPONSE (No JSON found):\n', rawResponse);
+                console.error(`❌ FAILED TO EXTRACT JSON from ${agent.name}'s response`);
+                console.error(`📝 RAW RESPONSE:\n${rawResponse.substring(0, 1000)}${rawResponse.length > 1000 ? '\n...(truncated)' : ''}`);
                 throw new Error("No JSON found in response");
             }
 
@@ -46,27 +47,14 @@ export async function callAgentWithRetry<T>(
             console.log('📝 RAW RESPONSE:\n', rawResponse); // DEBUGGING: Show me what you got
 
             attempts++;
-            currentPrompt = `
-Your previous response was invalid. 
-ERROR: ${errorMessage}
+            currentPrompt = `[SYSTEM: RETRY REQUIRED]\n\nYour previous JSON response was invalid and failed validation.\n\nERROR: ${errorMessage}\n\nORIGINAL OBJECTIVE: ${prompt}\n\n⚠️ CRITICAL: You MUST respond with ONLY valid JSON (wrapped in \`\`\`json code block). No additional text. No explanations outside the code block.`;
 
-ORIGINAL INSTRUCTIONS: ${prompt}
-
-Please fix the JSON structure and return ONLY the corrected JSON.
-            `.trim();
 
         } catch (error) {
             console.warn(`⚠️ Agent ${agent.name} error (Attempt ${attempts + 1}/${maxRetries + 1}):`, error);
             attempts++;
 
-            currentPrompt = `
-Your previous response could not be parsed as JSON.
-ERROR: ${error instanceof Error ? error.message : String(error)}
-
-ORIGINAL INSTRUCTIONS: ${prompt}
-
-Return ONLY valid JSON.
-            `.trim();
+            currentPrompt = `[SYSTEM: RETRY REQUIRED - JSON PARSE ERROR]\n\nYour previous response could not be parsed as JSON.\n\nERROR: ${error instanceof Error ? error.message : String(error)}\n\nORIGINAL OBJECTIVE: ${prompt}\n\n⚠️ CRITICAL: Return ONLY valid JSON wrapped in triple backticks with the "json" language identifier:\n\`\`\`json\n{your json here}\n\`\`\`\n\nDo not include any text before or after the code block.`;
         }
     }
 
@@ -82,11 +70,21 @@ function extractJson(text: string): string | null {
 
     // Look for ```json blocks first (most reliable)
     const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
-    if (jsonBlockMatch) return jsonBlockMatch[1];
+    if (jsonBlockMatch) {
+        const extracted = jsonBlockMatch[1].trim();
+        if (isValidJson(extracted)) {
+            return extracted;
+        }
+    }
 
     // Look for generic ``` blocks
     const blockMatch = text.match(/```\s*([\s\S]*?)\s*```/);
-    if (blockMatch) return blockMatch[1];
+    if (blockMatch) {
+        const extracted = blockMatch[1].trim();
+        if (isValidJson(extracted)) {
+            return extracted;
+        }
+    }
 
     // Attempt to find the outermost { and }
     // This handles cases where the model validates "Here is the JSON: { ... }" without code blocks
@@ -100,11 +98,13 @@ function extractJson(text: string): string | null {
             braceCount++;
         } else if (text[i] === '}') {
             braceCount--;
-            if (braceCount === 0) {
+            if (braceCount === 0 && start !== -1) {
                 end = i;
-                // If we found a complete object, return it. 
-                // We assume the first valid full object is the response.
-                return text.substring(start, end + 1);
+                // If we found a complete object, validate and return it
+                const extracted = text.substring(start, end + 1);
+                if (isValidJson(extracted)) {
+                    return extracted;
+                }
             }
         }
     }
@@ -113,10 +113,25 @@ function extractJson(text: string): string | null {
     const simpleStart = text.indexOf('{');
     const simpleEnd = text.lastIndexOf('}');
     if (simpleStart !== -1 && simpleEnd !== -1 && simpleEnd > simpleStart) {
-        return text.substring(simpleStart, simpleEnd + 1);
+        const extracted = text.substring(simpleStart, simpleEnd + 1);
+        if (isValidJson(extracted)) {
+            return extracted;
+        }
     }
 
     return null;
+}
+
+/**
+ * Helper function to validate if a string is valid JSON
+ */
+function isValidJson(str: string): boolean {
+    try {
+        JSON.parse(str);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 /**

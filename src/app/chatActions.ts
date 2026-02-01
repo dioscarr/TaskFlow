@@ -1,6 +1,7 @@
 'use server';
 
 import prisma from '@/lib/prisma';
+import { deepSerialize } from '@/lib/serialization';
 
 /**
  * Create a new chat session
@@ -12,7 +13,7 @@ export async function createChatSession(title?: string) {
         }
     });
 
-    return { success: true, session: chatSession, message: undefined };
+    return { success: true, session: deepSerialize(chatSession), message: undefined };
 }
 
 /**
@@ -32,7 +33,7 @@ export async function getChatSessions() {
         }
     });
 
-    return chatSessions;
+    return deepSerialize(chatSessions);
 }
 
 /**
@@ -50,7 +51,7 @@ export async function getChatSession(sessionId: string) {
         }
     });
 
-    return chatSession;
+    return deepSerialize(chatSession);
 }
 
 /**
@@ -81,14 +82,16 @@ export async function addChatMessage(
         }
     }
 
-    const message = await (prisma.chatMessage as any).create({
+    const message = await prisma.chatMessage.create({
         data: {
             sessionId,
             role,
             content: finalContent,
             fileIds: fileIds || [],
             toolUsed,
-            thinking
+            thinking,
+            toolResult: toolResult && toolResult !== '{}' ? toolResult : undefined,
+            toolArgs: toolArgs || undefined
         }
     });
 
@@ -98,7 +101,7 @@ export async function addChatMessage(
         data: { updatedAt: new Date() }
     });
 
-    return { success: true, message };
+    return { success: true, message: deepSerialize(message) };
 }
 
 /**

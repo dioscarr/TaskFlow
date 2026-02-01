@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import AI_CONFIG from '../aiConfig';
 
 export class DesignAgent {
     private genAI: GoogleGenerativeAI;
@@ -11,7 +12,7 @@ export class DesignAgent {
         console.log('🎨 Design Expert activated for task:', task);
 
         const model = this.genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash',
+            model: AI_CONFIG.smartModel,
             tools: [{
                 functionDeclarations: [{
                     name: 'search_web',

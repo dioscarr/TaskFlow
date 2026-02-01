@@ -43,7 +43,7 @@ App runs at http://localhost:5173
 
 ```
 <execute>
-powershell -Command "Set-Location apps\<project-name>; copy ..\..\..\.agent\workflows\templates\Dockerfile.vite Dockerfile; copy ..\..\..\.agent\workflows\templates\nginx-spa.conf nginx.conf"
+powershell -Command "Set-Location apps\<project-name>; Copy-Item -Force -Path ..\..\..\.agent\workflows\templates\Dockerfile.vite -Destination Dockerfile; Copy-Item -Force -Path ..\..\..\.agent\workflows\templates\nginx-spa.conf -Destination nginx.conf"
 </execute>
 ```
 
