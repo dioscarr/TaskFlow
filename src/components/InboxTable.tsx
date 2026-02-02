@@ -224,7 +224,7 @@ export default function InboxTable({ tasks }: InboxTableProps) {
             </div>
 
             <motion.div
-                className="space-y-3"
+                className="space-y-2"
                 initial="hidden"
                 animate="visible"
                 variants={{
@@ -251,7 +251,7 @@ export default function InboxTable({ tasks }: InboxTableProps) {
                                     ...fullTask
                                 })}
                                 className={cn(
-                                    "group relative flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all duration-300 border border-white/5 hover:border-white/10",
+                                    "group relative flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 border border-white/5 hover:border-white/10",
                                     "bg-white/5 hover:bg-white/10 backdrop-blur-sm",
                                     task.status === 'unread' ? "shadow-[0_0_15px_-5px_theme(colors.blue.500/0.3)]" : ""
                                 )}
@@ -270,14 +270,14 @@ export default function InboxTable({ tasks }: InboxTableProps) {
 
                                 {/* Content */}
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
+                                    <div className="flex items-center gap-2 mb-0.5">
                                         <span className={cn("text-sm font-medium truncate", task.status === 'unread' ? "text-white" : "text-white/70")}>
                                             {sender.name}
                                         </span>
                                         {/* Attachment indicator placeholder */}
                                     </div>
                                     <div className="text-sm font-semibold text-white/90 truncate">{fullTask.title || task.title}</div>
-                                    <div className="text-xs text-white/50 truncate mt-0.5">{fullTask.preview || fullTask.description || task.description}</div>
+                                    <div className="text-xs text-white/50 truncate mt-0">{fullTask.preview || fullTask.description || task.description}</div>
                                 </div>
 
                                 {/* Meta & Date */}

@@ -1181,42 +1181,45 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
         }
         if (!text.trim() && attachedFiles.length === 0) return;
 
-        let sessionId = activeSessionId;
-
-        if (!sessionId) {
-            const title = buildSessionTitle(text);
-            const sessionRes = await createChatSession(title);
-            if (!sessionRes.success || !sessionRes.session) {
-                toast.error(sessionRes.message || 'Failed to create chat session');
-                return;
-            }
-            sessionId = sessionRes.session.id;
-            setActiveSessionId(sessionId);
-            setActiveSessionTitle(sessionRes.session.title || title);
-            setChatSessions(prev => [sessionRes.session, ...prev]);
-            await refreshAgentStatus(sessionId);
-        } else if (activeSessionTitle === 'New Chat') {
-            const title = buildSessionTitle(text);
-            await updateChatSessionTitle(sessionId, title);
-            setActiveSessionTitle(title);
-            setChatSessions(prev => prev.map(s => s.id === sessionId ? { ...s, title } : s));
-        }
+        setIsLoading(true);
 
         const userMsg = { role: 'user' as const, content: text, files: [...attachedFiles] };
         setMessages(prev => [...prev, userMsg]);
         setPromptHistory(prev => [text, ...prev]);
         setInput('');
-        setHistoryIndex(-1); // Reset history index on send
-        // DON'T clear attachedFiles - keep them for context
-        // setAttachedFiles([]);
+        setHistoryIndex(-1);
         setActiveTool(null);
-        setIsLoading(true);
+        // DON'T clear attachedFiles - keep them for context
 
-        if (sessionId) {
-            await addChatMessage(sessionId, 'user', userMsg.content, attachedFiles.map(f => f.id));
-        }
+        let sessionId = activeSessionId;
 
         try {
+            if (!sessionId) {
+                const title = buildSessionTitle(text);
+                const sessionRes = await createChatSession(title);
+                if (!sessionRes.success || !sessionRes.session) {
+                    toast.error(sessionRes.message || 'Failed to create chat session');
+                    setIsLoading(false);
+                    return;
+                }
+                sessionId = sessionRes.session.id;
+                setActiveSessionId(sessionId);
+                setActiveSessionTitle(sessionRes.session.title || title);
+                setChatSessions(prev => [sessionRes.session, ...prev]);
+                await refreshAgentStatus(sessionId);
+            } else if (activeSessionTitle === 'New Chat') {
+                const title = buildSessionTitle(text);
+                await updateChatSessionTitle(sessionId, title);
+                setActiveSessionTitle(title);
+                setChatSessions(prev => prev.map(s => s.id === sessionId ? { ...s, title } : s));
+            }
+
+            // Optimistic update done above
+
+            if (sessionId) {
+                await addChatMessage(sessionId, 'user', userMsg.content, attachedFiles.map(f => f.id));
+            }
+
             // Prepare history for Gemini format
             // Prepare history for Gemini format with tool context
             const geminiHistory = messages.map(m => {
@@ -1530,6 +1533,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isLoading) return;
         await sendMessage(input);
     };
 
@@ -1729,7 +1733,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
             command: '/scaffold-vite',
             label: 'Scaffold Vite app',
             description: 'Create a new Vite React app template.',
-            template: '/scaffold-vite\nLocation: apps/<project-name> (system folder). Do not use public/uploads.'
+            template: '/scaffold-vite '
         },
         {
             command: '/vite',
@@ -1809,7 +1813,9 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
         if (name.includes('code') || name.includes('review')) pool = codeTips;
         if (name.includes('web') || name.includes('architect') || name.includes('ui') || name.includes('ux')) pool = webTips;
 
-        return pool.slice(0, 3);
+        // Shuffle the pool for randomness
+        const shuffled = [...pool].sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, 3);
     }, [activePrompt?.name]);
 
     const applyCommand = (command: string) => {
@@ -1847,6 +1853,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
+            if (isLoading) return;
             handleSend(e);
         }
         if (e.key === 'ArrowUp') {
@@ -2068,7 +2075,11 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                             {quickTips.map((tip, ix) => (
                                                                 <button
                                                                     key={ix}
-                                                                    onClick={() => setInput(tip.text)}
+                                                                    onClick={() => setInput(prev => {
+                                                                        const text = tip.text;
+                                                                        if (!prev.trim()) return text;
+                                                                        return `${prev.trim()} ${text}`;
+                                                                    })}
                                                                     className="group p-4 bg-gradient-to-br from-white/[0.08] to-white/[0.03] border border-white/10 rounded-2xl text-left text-xs text-white/50 hover:text-white/90 hover:border-white/20 hover:from-white/[0.12] hover:to-white/[0.06] transition-all duration-300 active:scale-[0.98] backdrop-blur-xl shadow-lg hover:shadow-xl relative overflow-hidden"
                                                                 >
                                                                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-purple-500/5 to-pink-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -2150,7 +2161,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                         )}
                                     </AnimatePresence>
 
-                                    <div className="relative p-6 border-t border-white/10 bg-gradient-to-b from-black/20 to-black/60 backdrop-blur-xl">
+                                    <div className="relative z-50 p-6 border-t border-white/10 bg-gradient-to-b from-black/20 to-black/60 backdrop-blur-xl">
                                         <div className={cn(embedded ? "max-w-3xl mx-auto" : "w-full")}>
                                             {activeQuestions.length > 0 && (
                                                 <QuestionWizard
@@ -2174,7 +2185,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                             style={{ minHeight: '52px', maxHeight: '200px' }}
                                                         />
                                                         {isCommandMenuOpen && filteredCommands.length > 0 && (
-                                                            <div className="absolute bottom-full mb-3 left-0 w-full z-10 bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+                                                            <div className="absolute bottom-full mb-3 left-0 w-full z-50 bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
                                                                 <div className="text-[10px] text-white/40 px-4 py-2 border-b border-white/5 uppercase tracking-widest">Commands</div>
                                                                 <div className="max-h-52 overflow-y-auto">
                                                                     {filteredCommands.map((cmd, idx) => (
