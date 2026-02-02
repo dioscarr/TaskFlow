@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Play, Square, Trash2, RefreshCw, CheckCircle2, AlertCircle, Clock, Loader2 } from 'lucide-react';
 import { listProcesses, stopProcess, startProcess, checkProcessHealth, discoverProcesses, deleteProcess, restartProcess, rebuildProcess, getDockerLogs, reconfigureProcessPort } from '@/app/processActions';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface Process {
     id: string;
@@ -26,16 +27,32 @@ export default function ProcessManager() {
     const [processes, setProcesses] = useState<Process[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [actioningId, setActioningId] = useState<string | null>(null);
+    const [filter, setFilter] = useState<'all' | 'local' | 'container'>('all');
     const [logs, setLogs] = useState<{ id: string; content: string } | null>(null);
     const [isShowingLogs, setIsShowingLogs] = useState(false);
 
-    const loadProcesses = async () => {
-        setIsLoading(true);
-        const result = await listProcesses();
-        if (result.success && result.processes) {
-            setProcesses(result.processes as Process[]);
+    const isFetchingRef = React.useRef(false);
+
+    const loadProcesses = async ({ showLoading = true }: { showLoading?: boolean } = {}) => {
+        if (isFetchingRef.current) return;
+        isFetchingRef.current = true;
+        if (showLoading) setIsLoading(true);
+
+        try {
+            const result = await listProcesses();
+            if (result.success && result.processes) {
+                // Only update state if processes changed to avoid UI jitter
+                setProcesses((prev) => {
+                    const prevIds = prev.map((p) => p.id).join(',');
+                    const nextIds = (result.processes as Process[]).map((p) => p.id).join(',');
+                    if (prevIds === nextIds) return prev;
+                    return result.processes as Process[];
+                });
+            }
+        } finally {
+            if (showLoading) setIsLoading(false);
+            isFetchingRef.current = false;
         }
-        setIsLoading(false);
     };
 
     const handleStop = async (id: string) => {
@@ -43,7 +60,7 @@ export default function ProcessManager() {
         const result = await stopProcess(id);
         if (result.success) {
             toast.success('Process stopped');
-            await loadProcesses();
+            await loadProcesses({ showLoading: false });
         } else {
             toast.error(result.message || 'Failed to stop process');
         }
@@ -55,7 +72,7 @@ export default function ProcessManager() {
         const result = await startProcess(id);
         if (result.success) {
             toast.success('Process started');
-            await loadProcesses();
+            await loadProcesses({ showLoading: false });
         } else {
             toast.error(result.message || 'Failed to start process');
         }
@@ -67,7 +84,7 @@ export default function ProcessManager() {
         const result = await restartProcess(id);
         if (result.success) {
             toast.success('Process restarted');
-            await loadProcesses();
+            await loadProcesses({ showLoading: false });
         } else {
             toast.error(result.message || 'Failed to restart process');
         }
@@ -80,7 +97,7 @@ export default function ProcessManager() {
         const result = await rebuildProcess(id);
         if (result.success) {
             toast.success('Process rebuilt and started', { id: loadingToast });
-            await loadProcesses();
+            await loadProcesses({ showLoading: false });
         } else {
             toast.error(result.message || 'Failed to rebuild process', { id: loadingToast });
         }
@@ -113,7 +130,7 @@ export default function ProcessManager() {
         const result = await discoverProcesses();
         if (result.success && result.discovered) {
             toast.success(`Discovered ${result.discovered.length} process(es)`);
-            await loadProcesses();
+            await loadProcesses({ showLoading: true });
         }
     };
 
@@ -124,7 +141,7 @@ export default function ProcessManager() {
         const result = await deleteProcess(id);
         if (result.success) {
             toast.success('Process removed');
-            await loadProcesses();
+            await loadProcesses({ showLoading: false });
         } else {
             toast.error('Failed to remove process');
         }
@@ -132,10 +149,11 @@ export default function ProcessManager() {
     };
 
     useEffect(() => {
-        loadProcesses();
+        // Initial load with loader
+        loadProcesses({ showLoading: true });
 
-        // Auto-refresh every 30 seconds
-        const interval = setInterval(loadProcesses, 30000);
+        // Auto-refresh every 30 seconds (silent, no loader)
+        const interval = setInterval(() => loadProcesses({ showLoading: false }), 30000);
         return () => clearInterval(interval);
     }, []);
 
@@ -181,6 +199,15 @@ export default function ProcessManager() {
         return `${minutes}m`;
     };
 
+    const filteredProcesses = processes.filter((process) => {
+        if (filter === 'all') return true;
+        const isContainer = process.type === 'docker-app' || ['docker','repo-app','deployment'].includes(process.metadata?.source);
+        const isLocal = process.type === 'dev-server' && process.metadata?.source === 'local';
+        if (filter === 'local') return isLocal;
+        if (filter === 'container') return isContainer;
+        return true;
+    });
+
     return (
         <div className="p-6 space-y-6">
             {/* Header */}
@@ -200,21 +227,26 @@ export default function ProcessManager() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+                        <button onClick={() => setFilter('all')} className={cn("px-3 py-1 rounded-lg text-xs", filter === 'all' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white')}>All</button>
+                        <button onClick={() => setFilter('local')} className={cn("px-3 py-1 rounded-lg text-xs", filter === 'local' ? 'bg-emerald-500/10 text-emerald-300' : 'text-white/50 hover:text-white')}>Local</button>
+                        <button onClick={() => setFilter('container')} className={cn("px-3 py-1 rounded-lg text-xs", filter === 'container' ? 'bg-purple-500/10 text-purple-300' : 'text-white/50 hover:text-white')}>Container</button>
+                    </div>
                     <button
-                        onClick={handleDiscover}
+                        onClick={() => { handleDiscover(); }}
                         className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs text-white/60 hover:text-white border border-white/10 hover:border-white/20 transition-all"
                     >
                         <RefreshCw size={14} />
                         <span>Discover</span>
                     </button>
                     <button
-                        onClick={loadProcesses}
+                        onClick={() => loadProcesses({ showLoading: true })}
                         className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl text-xs text-blue-400 border border-blue-500/20 transition-all"
                     >
                         <RefreshCw size={14} />
                         <span>Refresh</span>
                     </button>
-                </div>
+                </div> 
             </div>
 
             {/* Process List */}
@@ -238,7 +270,9 @@ export default function ProcessManager() {
             ) : (
                 <div className="space-y-4">
                     <AnimatePresence>
-                        {processes.map((process) => {
+                        {filteredProcesses.map((process) => {
+                            const isContainer = process.type === 'docker-app' || ['docker','repo-app','deployment'].includes(process.metadata?.source);
+                            const isLocal = process.type === 'dev-server' && process.metadata?.source === 'local';
                             const internalDomain = process.metadata?.internalDomain as string | undefined;
                             const appUrl = process.port
                                 ? `http://localhost:${process.port}`
@@ -257,6 +291,7 @@ export default function ProcessManager() {
                                         <div className="flex-1 space-y-2">
                                             <div className="flex items-center gap-3">
                                                 <h3 className="text-base font-bold text-white">{process.name}</h3>
+                                                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${isContainer ? 'bg-purple-500/10 text-purple-300 border border-purple-500/20' : isLocal ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'bg-white/5 text-white/40 border border-white/10'}`}>{isContainer ? 'Container' : isLocal ? 'Local' : (process.metadata?.source || 'Unknown')}</span>
                                                 {process.port && (
                                                     <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400 font-mono">
                                                         :{process.port}

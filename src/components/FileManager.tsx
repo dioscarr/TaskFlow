@@ -1114,7 +1114,128 @@ export default function FileManager({ files }: FileManagerProps) {
             onClick={handleBackgroundClick}
         >
             {/* Global Drop Overlay - Purely Visual */}
-            {explorerMode === 'repo' && (
+                        <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                    {currentFolderId && (
+                        <button
+                            onClick={() => setCurrentFolderId(currentFolder?.parentId || null)}
+                            className="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors"
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
+                    )}
+                    <h1 className="text-3xl font-bold text-white">
+                        {explorerMode === 'repo'
+                            ? 'Repo Apps'
+                            : (searchQuery ? 'Search Results' : (currentFolderId ? currentFolder?.name : 'Files'))}
+                    </h1>
+                </div>
+
+                <div className="flex-1 max-w-md mx-8 hidden lg:block">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            placeholder={explorerMode === 'repo' ? "Search repo apps..." : "Search your files... (Ctrl+K)"}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex gap-2">
+                    {explorerMode === 'workspace' && (
+                        <>
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setIsCreateModalOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors text-sm font-medium border border-white/10"
+                            >
+                                <Folder size={16} />
+                                <span>New Folder</span>
+                            </motion.button>
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={triggerUpload}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-blue-500/20"
+                            >
+                                <UploadCloud size={16} />
+                                <span>Upload File</span>
+                            </motion.button>
+                        </>
+                    )}
+
+                    <div className="flex items-center bg-white/5 rounded-lg border border-white/10 p-1 ml-2">
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setExplorerMode('workspace')}
+                            className={cn(
+                                "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
+                                explorerMode === 'workspace' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
+                            )}
+                            title="Workspace Files"
+                        >
+                            Workspace
+                        </motion.button>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setExplorerMode('repo')}
+                            className={cn(
+                                "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
+                                explorerMode === 'repo' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
+                            )}
+                            title="Repo Apps"
+                        >
+                            Repo Apps
+                        </motion.button>
+                    </div>
+
+                    {explorerMode === 'workspace' && (
+                        <div className="flex items-center bg-white/5 rounded-lg border border-white/10 p-1 ml-2">
+                            <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => setViewMode('grid')}
+                                className={cn(
+                                    "p-1.5 rounded-md transition-all",
+                                    viewMode === 'grid' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
+                                )}
+                                title="Grid View"
+                            >
+                                <LayoutGrid size={18} />
+                            </motion.button>
+                            <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => setViewMode('list')}
+                                className={cn(
+                                    "p-1.5 rounded-md transition-all",
+                                    viewMode === 'list' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
+                                )}
+                                title="List View"
+                            >
+                                <List size={18} />
+                            </motion.button>
+                        </div>
+                    )}
+                    {explorerMode === 'workspace' && (
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                        />
+                    )}
+                </div>
+            </div>
+
+{explorerMode === 'repo' && (
                 <>
                     <div className="flex items-center gap-2 text-sm text-white/50 overflow-x-auto pb-2">
                         <button
@@ -1170,6 +1291,30 @@ export default function FileManager({ files }: FileManagerProps) {
                                     return procPath === entryPath || metaPath === entryPath || procPath.endsWith(entryPath) || entryPath.endsWith(procPath);
                                 });
 
+                                // Also try to find specifically local dev server and container processes for this repo entry
+                                const localProcess = processes.find(p => {
+                                    if (!p.path && !p.metadata?.appPath && p.name.toLowerCase() !== entry.name.toLowerCase()) return false;
+                                    const procPath = p.path ? norm(p.path) : (p.metadata?.appPath ? norm(p.metadata.appPath) : '');
+                                    const metaPath = p.metadata?.appPath ? norm(p.metadata.appPath) : '';
+                                    const nameMatch = p.name.toLowerCase() === entry.name.toLowerCase();
+                                    const pathMatch = procPath === entryPath || metaPath === entryPath || procPath.endsWith(entryPath) || entryPath.endsWith(procPath);
+                                    const isLocal = p.type === 'dev-server' || p.metadata?.source === 'local' || /local/i.test(p.name);
+                                    return nameMatch || (pathMatch && isLocal);
+                                });
+
+                                const containerProcess = processes.find(p => {
+                                    if (!p.path && !p.metadata?.appPath && p.name.toLowerCase() !== entry.name.toLowerCase()) return false;
+                                    const procPath = p.path ? norm(p.path) : (p.metadata?.appPath ? norm(p.metadata.appPath) : '');
+                                    const metaPath = p.metadata?.appPath ? norm(p.metadata.appPath) : '';
+                                    const nameMatch = p.name.toLowerCase() === entry.name.toLowerCase();
+                                    const pathMatch = procPath === entryPath || metaPath === entryPath || procPath.endsWith(entryPath) || entryPath.endsWith(procPath);
+                                    const isContainer = p.type === 'docker-app' || p.metadata?.source === 'repo-app' || p.metadata?.containerName || /docker|container|repo-app/i.test(p.name);
+                                    return nameMatch || (pathMatch && isContainer);
+                                });
+
+                                const localPort = localProcess?.port;
+                                const containerPort = containerProcess?.port;
+
                                 if (explorerMode === 'repo' && !repoCurrentPath) {
                                     // Console log occasionally or just once to debug
                                     // console.log('Checking match:', { entry: entry.path, process: process?.path });
@@ -1202,7 +1347,13 @@ export default function FileManager({ files }: FileManagerProps) {
                                                     <div className="min-w-0">
                                                         <div className="text-sm font-semibold text-white truncate flex items-center gap-2">
                                                             {entry.name}
-                                                            {port && <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-white/60 font-mono">:{port}</span>}
+                                                            {/* Show both local dev port and container port if available */}
+                                                            {localPort && (
+                                                                <span title="Local dev port" className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-white/60 font-mono">:{localPort} dev</span>
+                                                            )}
+                                                            {containerPort && (
+                                                                <span title="Container port" className="text-[10px] bg-purple-500/10 px-1.5 py-0.5 rounded text-purple-300 font-mono">:{containerPort} cont</span>
+                                                            )}
                                                         </div>
                                                         <div className="text-[10px] text-white/40 truncate">
                                                             {process ? (isRunning ? 'Running' : 'Stopped') : (entry.type === 'folder' ? 'Folder' : entry.type.toUpperCase())}
@@ -1215,19 +1366,39 @@ export default function FileManager({ files }: FileManagerProps) {
                                                 <div className="flex items-center gap-2 mt-1">
                                                     {process ? (
                                                         <>
-                                                            {isRunning && port && (
+                                                            {/* Open Dev Server */}
+                                                            {localProcess?.status === 'running' && localPort && (
                                                                 <motion.button
                                                                     whileHover={{ scale: 1.05 }}
                                                                     whileTap={{ scale: 0.95 }}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        window.open(`http://localhost:${port}`, '_blank');
+                                                                        window.open(`http://localhost:${localPort}`, '_blank');
                                                                     }}
                                                                     className="px-3 py-1.5 text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg transition-colors flex items-center gap-2"
-                                                                    title="Open App"
+                                                                    title="Open Dev Server"
                                                                 >
                                                                     <Globe size={14} />
-                                                                    Open App
+                                                                    Dev
+                                                                </motion.button>
+                                                            )}
+
+                                                            {/* Open Container URL */}
+                                                            {containerProcess?.status === 'running' && containerPort && (
+                                                                <motion.button
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const internal = containerProcess?.metadata?.internalDomain;
+                                                                        const url = internal ? `http://${internal}` : `http://localhost:${containerPort}`;
+                                                                        window.open(url, '_blank');
+                                                                    }}
+                                                                    className="px-3 py-1.5 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 rounded-lg transition-colors flex items-center gap-2"
+                                                                    title="Open Container"
+                                                                >
+                                                                    <ExternalLink size={14} />
+                                                                    Container
                                                                 </motion.button>
                                                             )}
 
@@ -1408,128 +1579,7 @@ export default function FileManager({ files }: FileManagerProps) {
                     />
                 )
             }
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    {currentFolderId && (
-                        <button
-                            onClick={() => setCurrentFolderId(currentFolder?.parentId || null)}
-                            className="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors"
-                        >
-                            <ChevronLeft size={20} />
-                        </button>
-                    )}
-                    <h1 className="text-3xl font-bold text-white">
-                        {explorerMode === 'repo'
-                            ? 'Repo Apps'
-                            : (searchQuery ? 'Search Results' : (currentFolderId ? currentFolder?.name : 'Files'))}
-                    </h1>
-                </div>
 
-                {explorerMode === 'workspace' && (
-                    <div className="flex-1 max-w-md mx-8 hidden lg:block">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                            <input
-                                ref={searchInputRef}
-                                type="text"
-                                placeholder="Search your files... (Ctrl+K)"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20"
-                            />
-                        </div>
-                    </div>
-                )}
-
-                <div className="flex gap-2">
-                    {explorerMode === 'workspace' && (
-                        <>
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => setIsCreateModalOpen(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors text-sm font-medium border border-white/10"
-                            >
-                                <Folder size={16} />
-                                <span>New Folder</span>
-                            </motion.button>
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={triggerUpload}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-blue-500/20"
-                            >
-                                <UploadCloud size={16} />
-                                <span>Upload File</span>
-                            </motion.button>
-                        </>
-                    )}
-
-                    <div className="flex items-center bg-white/5 rounded-lg border border-white/10 p-1 ml-2">
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setExplorerMode('workspace')}
-                            className={cn(
-                                "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
-                                explorerMode === 'workspace' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
-                            )}
-                            title="Workspace Files"
-                        >
-                            Workspace
-                        </motion.button>
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setExplorerMode('repo')}
-                            className={cn(
-                                "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
-                                explorerMode === 'repo' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
-                            )}
-                            title="Repo Apps"
-                        >
-                            Repo Apps
-                        </motion.button>
-                    </div>
-
-                    {explorerMode === 'workspace' && (
-                        <div className="flex items-center bg-white/5 rounded-lg border border-white/10 p-1 ml-2">
-                            <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => setViewMode('grid')}
-                                className={cn(
-                                    "p-1.5 rounded-md transition-all",
-                                    viewMode === 'grid' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
-                                )}
-                                title="Grid View"
-                            >
-                                <LayoutGrid size={18} />
-                            </motion.button>
-                            <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => setViewMode('list')}
-                                className={cn(
-                                    "p-1.5 rounded-md transition-all",
-                                    viewMode === 'list' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
-                                )}
-                                title="List View"
-                            >
-                                <List size={18} />
-                            </motion.button>
-                        </div>
-                    )}
-                    {explorerMode === 'workspace' && (
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            className="hidden"
-                        />
-                    )}
-                </div>
-            </div>
 
             {
                 explorerMode === 'workspace' && (
@@ -1548,12 +1598,12 @@ export default function FileManager({ files }: FileManagerProps) {
             }
 
             {
-                explorerMode === 'workspace' && (
+                (explorerMode === 'workspace' || explorerMode === 'repo') && (
                     <div className="lg:hidden relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                         <input
                             type="text"
-                            placeholder="Search your files..."
+                            placeholder={explorerMode === 'repo' ? 'Search repo apps...' : 'Search your files...'}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20"

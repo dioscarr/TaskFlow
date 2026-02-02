@@ -461,7 +461,7 @@ export async function discoverProcesses() {
                     });
 
                     if (!existing && pid) {
-                        // Create the process record
+                        // Create the process record (mark as local dev server)
                         const p = await prisma.processRegistry.create({
                             data: {
                                 name: `App on Port ${port}`,
@@ -474,6 +474,7 @@ export async function discoverProcesses() {
                                 healthCheckType: 'port',
                                 healthInterval: 30000,
                                 startedAt: new Date(),
+                                metadata: { source: 'local' },
                                 userId: user.id
                             }
                         });

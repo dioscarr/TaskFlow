@@ -141,7 +141,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
         <Layout>
             <CreateTaskModal />
 
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 p-1 bg-black/40 backdrop-blur-md border border-white/5 rounded-lg shadow-xl">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 p-1 bg-black/40 backdrop-blur-md border border-white/5 rounded-lg shadow-xl overflow-hidden max-w-full">
                 <button
                     onClick={() => setViewMode('zen')}
                     className={cn(
@@ -197,7 +197,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
             )}
 
             {viewMode === 'classic' && (
-                <div className="w-full h-full flex flex-col overflow-auto custom-scrollbar p-4 md:p-8 animate-in fade-in zoom-in-95 duration-300">
+                <div className="w-full h-full flex flex-col overflow-auto custom-scrollbar p-4 md:p-8 animate-in fade-in zoom-in-95 duration-300 min-w-0">
                     <div className="flex items-center gap-2 mb-8 p-1 bg-white/5 w-fit rounded-lg border border-white/5">
                         <button onClick={() => setActiveTab('inbox')} className={cn("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all", activeTab === 'inbox' ? "bg-white/10 text-white shadow-sm" : "text-white/50 hover:text-white/80")}>
                             <Mail size={16} /> Inbox

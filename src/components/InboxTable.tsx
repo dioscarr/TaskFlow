@@ -139,7 +139,7 @@ export default function InboxTable({ tasks }: InboxTableProps) {
     });
 
     return (
-        <div className="w-full space-y-4">
+        <div className="w-full space-y-4 min-w-0">
             <ContextMenu
                 isOpen={!!contextMenu}
                 onClose={() => setContextMenu(null)}
@@ -277,7 +277,7 @@ export default function InboxTable({ tasks }: InboxTableProps) {
                                         {/* Attachment indicator placeholder */}
                                     </div>
                                     <div className="text-sm font-semibold text-white/90 truncate">{fullTask.title || task.title}</div>
-                                    <div className="text-xs text-white/50 truncate mt-0">{fullTask.preview || fullTask.description || task.description}</div>
+                                    <div className="text-xs text-white/50 mt-0 break-words whitespace-normal max-w-full wrap-anywhere">{fullTask.preview || fullTask.description || task.description}</div>
                                 </div>
 
                                 {/* Meta & Date */}

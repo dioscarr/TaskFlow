@@ -39,8 +39,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
                 {/* Background Ambient Glows */}
                 <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-                    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] opacity-40 animate-pulse" />
-                    <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px] opacity-40 animate-pulse delay-1000" />
+                    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] max-w-[100vw] bg-blue-600/10 rounded-full blur-[120px] opacity-40 animate-pulse pointer-events-none" />
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] max-w-[100vw] bg-purple-600/10 rounded-full blur-[120px] opacity-40 animate-pulse delay-1000 pointer-events-none" />
                     <div className="absolute top-[40%] left-[40%] w-[20%] h-[20%] bg-emerald-500/5 rounded-full blur-[100px] opacity-30" />
                 </div>
 
@@ -58,14 +58,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </AnimatePresence>
 
                 {/* Content Area Wrapper */}
-                <div className="flex h-screen overflow-hidden">
+                <div className="flex h-screen overflow-hidden min-w-0">
                     {/* Main Content Layer */}
                     <div className={cn(
                         "flex-1 relative z-10 transition-all duration-700 h-full flex flex-col",
                         isFocused ? "scale-90 opacity-40 pointer-events-none blur-sm" : "opacity-100"
                     )}>
                         {/* Navbar */}
-                        <header className="flex items-center justify-between px-6 py-4 sticky top-0 z-20 border-b border-white/5 bg-black/5 backdrop-blur-sm">
+                        <header className="flex items-center justify-between px-6 py-4 sticky top-0 z-20 border-b border-white/5 bg-black/5 backdrop-blur-sm overflow-hidden max-w-full">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg shadow-blue-500/20 flex items-center justify-center font-bold text-white">
                                     T
@@ -91,7 +91,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                             </div>
                         </header>
 
-                        <main className="flex-1 w-full h-full relative overflow-hidden">
+                        <main className="flex-1 w-full h-full relative overflow-hidden min-w-0">
+
                             {children}
                         </main>
                     </div>

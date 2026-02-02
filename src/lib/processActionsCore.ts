@@ -176,9 +176,10 @@ export const syncDockerAppProcesses = async (userId: string) => {
                 stoppedAt: status === 'running' ? null : new Date(),
                 metadata: {
                     containerName,
-                    appId: appId || undefined
+                    appId: appId || undefined,
+                    source: 'docker'
                 }
-            };
+            }; 
 
             if (existing) {
                 await prisma.processRegistry.update({
