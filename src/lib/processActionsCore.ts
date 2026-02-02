@@ -65,7 +65,15 @@ export const getDockerContainerStatus = async (containerName: string) => {
 
 export const parseDockerPort = (ports?: string) => {
     if (!ports) return undefined;
-    const match = ports.match(/:(\d+)->3000\/tcp/);
+
+    // Prefer mappings that target common app ports (3000, 80, 5173)
+    let match = ports.match(/:(\d+)->\s*3000\/tcp/);
+    if (!match) match = ports.match(/:(\d+)->\s*80\/tcp/);
+    if (!match) match = ports.match(/:(\d+)->\s*5173\/tcp/);
+
+    // Fallback: match any host port mapping like '0.0.0.0:12345->80/tcp' or ':::12345->80/tcp'
+    if (!match) match = ports.match(/:(\d+)->\s*\d+\/tcp/);
+
     if (!match) return undefined;
     const parsed = Number(match[1]);
     return Number.isFinite(parsed) ? parsed : undefined;

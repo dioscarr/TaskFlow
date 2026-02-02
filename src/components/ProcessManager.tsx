@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Play, Square, Trash2, RefreshCw, CheckCircle2, AlertCircle, Clock, Loader2 } from 'lucide-react';
-import { listProcesses, stopProcess, startProcess, checkProcessHealth, discoverProcesses, deleteProcess, restartProcess, rebuildProcess, getDockerLogs } from '@/app/processActions';
+import { listProcesses, stopProcess, startProcess, checkProcessHealth, discoverProcesses, deleteProcess, restartProcess, rebuildProcess, getDockerLogs, reconfigureProcessPort } from '@/app/processActions';
 import { toast } from 'sonner';
 
 interface Process {
@@ -395,6 +395,32 @@ export default function ProcessManager() {
                                                     Copy URL
                                                 </button>
                                                 <span className="text-white/30 font-mono truncate">{appUrl}</span>
+                                            </div>
+                                        )}
+
+                                        {/* If no appUrl but this is a docker app, allow exposing it and opening */}
+                                        {!appUrl && process.type === 'docker-app' && (
+                                            <div className="flex items-center gap-2 text-xs">
+                                                <button
+                                                    onClick={async () => {
+                                                        setActioningId(process.id);
+                                                        const res = await reconfigureProcessPort(process.id);
+                                                        if (res.success && res.port) {
+                                                            toast.success(`Exposed on port ${res.port}`);
+                                                            await loadProcesses();
+                                                            const url = `http://localhost:${res.port}`;
+                                                            window.open(url, '_blank', 'noopener,noreferrer');
+                                                        } else {
+                                                            toast.error(res.error || 'Failed to expose container');
+                                                        }
+                                                        setActioningId(null);
+                                                    }}
+                                                    disabled={actioningId === process.id}
+                                                    className="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 rounded-lg border border-blue-500/20 transition-colors disabled:opacity-50"
+                                                >
+                                                    {actioningId === process.id ? 'Exposing...' : 'Expose & Open'}
+                                                </button>
+                                                <span className="text-white/30 font-mono truncate">Container: {(process.metadata as any)?.containerName || process.path}</span>
                                             </div>
                                         )}
                                     </div>
