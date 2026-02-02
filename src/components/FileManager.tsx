@@ -13,7 +13,7 @@ import ContextMenu from './ContextMenu';
 import CodeEditorModal from './CodeEditorModal';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { listProcesses, stopProcess, restartProcess, reconfigureProcessPort } from '@/app/processActions';
-import { Play, Square, RefreshCw, Globe, Wrench } from 'lucide-react';
+import { Play, Square, RefreshCw, Globe, Wrench, Hammer } from 'lucide-react';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -1228,6 +1228,23 @@ export default function FileManager({ files }: FileManagerProps) {
                                                                 >
                                                                     <Globe size={14} />
                                                                     Open App
+                                                                </motion.button>
+                                                            )}
+
+                                                            {/* Explicit Build/Install for Repo Apps */}
+                                                            {explorerMode === 'repo' && !isRunning && (
+                                                                <motion.button
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleInstallRepoApp(entry.path);
+                                                                    }}
+                                                                    className="px-3 py-1.5 text-[10px] font-semibold text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-lg transition-colors flex items-center gap-1.5"
+                                                                    title="Build & Install Container"
+                                                                >
+                                                                    <Hammer size={12} />
+                                                                    Build
                                                                 </motion.button>
                                                             )}
 

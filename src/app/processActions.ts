@@ -422,7 +422,7 @@ export async function discoverProcesses() {
         await syncDockerAppProcesses(user.id);
         await syncRepoAppProcesses(user.id); // Also sync repo apps
 
-        const commonPorts = [3000, 3001, 5173, 5174, 5175, 5176, 8080, 8081, 4200, 5000, 5001];
+        const commonPorts = [3000, 3001, 5173, 5174, 5175, 5176, 8080, 8081, 4200, 4100, 4101, 4102, 4103, 4104, 4105, 5000, 5001];
         const discovered = [];
 
         for (const port of commonPorts) {
@@ -584,7 +584,29 @@ export async function reconfigureProcessPort(processId: string) {
                 else if (ports.length > 0) internalPort = ports[0].split('/')[0];
             }
         } catch (e) {
-            console.log('Failed to detect port via docker inspect, defaulting to 3000', e);
+            console.log('Failed to detect port via docker inspect, attempting build if repo-app...', e);
+
+            // Attempt build for repo apps (fixes missing image issue)
+            if (proc.metadata && (proc.metadata as any).source === 'repo-app' && (proc.metadata as any).appPath) {
+                try {
+                    const appPath = (proc.metadata as any).appPath;
+                    console.log(`Building image for ${proc.name}...`);
+                    await execAsync(`docker build -t ${imageName} "${appPath}"`);
+
+                    // Retry inspect
+                    const { stdout } = await execAsync(`docker inspect --format="{{json .Config.ExposedPorts}}" ${imageName}`);
+                    const portsObj = JSON.parse(stdout.trim());
+                    if (portsObj) {
+                        const ports = Object.keys(portsObj);
+                        if (ports.includes('80/tcp')) internalPort = '80';
+                        else if (ports.includes('5173/tcp')) internalPort = '5173';
+                        else if (ports.includes('3000/tcp')) internalPort = '3000';
+                        else if (ports.length > 0) internalPort = ports[0].split('/')[0];
+                    }
+                } catch (buildError) {
+                    console.error('Build failed during auto-fix:', buildError);
+                }
+            }
         }
 
         // Allocate new port
