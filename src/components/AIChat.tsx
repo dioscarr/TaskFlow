@@ -1813,8 +1813,37 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
         if (name.includes('code') || name.includes('review')) pool = codeTips;
         if (name.includes('web') || name.includes('architect') || name.includes('ui') || name.includes('ux')) pool = webTips;
 
-        // Shuffle the pool for randomness
-        const shuffled = [...pool].sort(() => 0.5 - Math.random());
+        // Deterministic shuffle based on active prompt name so SSR and CSR match
+        const seededHash = (s: string) => {
+            let h = 2166136261;
+            for (let i = 0; i < s.length; i++) {
+                h ^= s.charCodeAt(i);
+                h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+            }
+            return h >>> 0;
+        };
+
+        const mulberry32 = (a: number) => {
+            return () => {
+                let t = a += 0x6D2B79F5;
+                t = Math.imul(t ^ (t >>> 15), t | 1);
+                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
+        };
+
+        const deterministicShuffle = <T,>(arr: T[], seedStr: string) => {
+            const seed = seededHash(seedStr || 'default');
+            const rnd = mulberry32(seed);
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(rnd() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        };
+
+        const shuffled = deterministicShuffle(pool, activePrompt?.name || 'default');
         return shuffled.slice(0, 3);
     }, [activePrompt?.name]);
 
