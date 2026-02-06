@@ -17,6 +17,107 @@ export interface ToolDefinition {
  * Available tools in the library
  */
 export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
+    view_file: {
+        id: 'view_file',
+        name: 'View File',
+        description: 'Read a specific section of a file (by line range). Preferred for large files. Use this instead of read_file when you only need a snippet.',
+        category: 'workspace',
+        icon: 'FileText',
+        schema: {
+            name: 'view_file',
+            description: 'Read lines from a file. 1-indexed.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileId: { type: 'string', description: 'File ID or absolute path' },
+                    startLine: { type: 'number', description: 'Start line (1-based)', default: 1 },
+                    endLine: { type: 'number', description: 'End line (1-based). If omitted, reads to end (limit 500 lines).' },
+                    useAbsolutePath: { type: 'boolean', description: 'If true, treat fileId as an absolute path', default: false }
+                },
+                required: ['fileId']
+            }
+        }
+    },
+    list_dir: {
+        id: 'list_dir',
+        name: 'List Directory',
+        description: 'List contents of a directory. Essential for exploration.',
+        category: 'workspace',
+        icon: 'Folder',
+        schema: {
+            name: 'list_dir',
+            description: 'List files and folders in a directory',
+            parameters: {
+                type: 'object',
+                properties: {
+                    path: { type: 'string', description: 'Directory path (relative to root or absolute)' },
+                    recursive: { type: 'boolean', description: 'List recursively (max depth 2)', default: false }
+                },
+                required: ['path']
+            }
+        }
+    },
+    replace_in_file: {
+        id: 'replace_in_file',
+        name: 'Smart Replace',
+        description: 'Replace a specific chunk of text in a file. SAFER than overwriting. Use this for code edits.',
+        category: 'workspace',
+        icon: 'Edit3',
+        schema: {
+            name: 'replace_in_file',
+            description: 'Replace exact string match in a file',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileId: { type: 'string', description: 'File ID or absolute path' },
+                    target: { type: 'string', description: 'Exact text to replace (must match unique)' },
+                    replacement: { type: 'string', description: 'New text' },
+                    useAbsolutePath: { type: 'boolean', description: 'If true, treat fileId as an absolute path', default: false }
+                },
+                required: ['fileId', 'target', 'replacement']
+            }
+        }
+    },
+    search_codebase: {
+        id: 'search_codebase',
+        name: 'Search Codebase',
+        description: 'Search for text patterns across the codebase (like grep).',
+        category: 'workspace',
+        icon: 'Search',
+        schema: {
+            name: 'search_codebase',
+            description: 'Search text patterns in files',
+            parameters: {
+                type: 'object',
+                properties: {
+                    query: { type: 'string', description: 'Text or Regex to search for' },
+                    dir: { type: 'string', description: 'Directory to search in', default: './src' },
+                    extensions: { type: 'array', items: { type: 'string' }, description: 'File extensions to check (e.g. ts, tsx)' }
+                },
+                required: ['query']
+            }
+        }
+    },
+    run_terminal_command: {
+        id: 'run_terminal_command',
+        name: 'Run Terminal Command',
+        description: 'Execute a command in the terminal. Use this for running tests, builds, or git commands.',
+        category: 'task',
+        icon: 'Terminal',
+        schema: {
+            name: 'run_terminal_command',
+            description: 'Run a shell command',
+            parameters: {
+                type: 'object',
+                properties: {
+                    command: { type: 'string', description: 'The command to run' },
+                    cwd: { type: 'string', description: 'Working directory' },
+                    background: { type: 'boolean', description: 'Run in background (fire and forget)', default: false }
+                },
+                required: ['command']
+            }
+        }
+    },
     search_web: {
         id: 'search_web',
         name: 'Search Web',
@@ -33,6 +134,26 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
                     type: { type: 'string', enum: ['web', 'image'], description: 'Type of search: "web" for text results, "image" for image URLs' }
                 },
                 required: ['query']
+            }
+        }
+    },
+    manage_app_lifecycle: {
+        id: 'manage_app_lifecycle',
+        name: 'Manage App Lifecycle',
+        description: 'Start, stop, or restart web applications. Handles port conflicts automatically and returns the live preview URL.',
+        category: 'task',
+        icon: 'Play',
+        schema: {
+            name: 'manage_app_lifecycle',
+            description: 'Control the lifecycle of a web app (scripts from package.json)',
+            parameters: {
+                type: 'object',
+                properties: {
+                    action: { type: 'string', enum: ['start', 'stop', 'restart', 'status'], description: 'The action to perform' },
+                    target: { type: 'string', description: 'The path to the app (absolute or relative to repo root). Defaults to active app.' },
+                    script: { type: 'string', description: 'Specific script to run (e.g., "dev", "start"). If omitted, auto-detects.', default: 'dev' }
+                },
+                required: ['action']
             }
         }
     },
@@ -861,6 +982,26 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
                 properties: {}
             }
         }
+    },
+    execute_scaffold_vite: {
+        id: 'execute_scaffold_vite',
+        name: 'Scaffold Vite App',
+        description: 'Scaffold a new Vite + React + TypeScript application with best practices, including Docker config, Design System, and SEO setup.',
+        category: 'task',
+        icon: 'Code',
+        schema: {
+            name: 'execute_scaffold_vite',
+            description: 'Scaffold a new Vite + React application',
+            parameters: {
+                type: 'object',
+                properties: {
+                    projectName: { type: 'string', description: 'Name of the project (kebab-case)' },
+                    description: { type: 'string', description: 'Short description of the app' },
+                    features: { type: 'array', items: { type: 'string' }, description: 'List of features to include in the description' }
+                },
+                required: ['projectName']
+            }
+        }
     }
 };
 
@@ -936,5 +1077,6 @@ export const DEFAULT_TOOLS = [
     'generate_blueprint',
     'get_blueprint',
     'export_blueprint',
-    'execute_command'
+    'execute_command',
+    'execute_scaffold_vite'
 ];

@@ -1,8 +1,15 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Folder, FileText, Image as ImageIcon, UploadCloud, MoreVertical, Users, X, ChevronLeft, Maximize2, Edit2, Share2, Move, Trash2, Search, LayoutGrid, List, Bot, AlignLeft, Edit, FolderTree, Sparkles, LayoutPanelLeft, Tag, Wand2, ExternalLink } from 'lucide-react';
+import {
+    Play, Square, RefreshCw, Globe, Wrench, Hammer, Terminal as TerminalIcon,
+    Server, FolderPlus, List, LayoutGrid, ChevronRight, Search, UploadCloud,
+    FileText, Folder, MoreVertical, Trash2, Edit, ChevronLeft, ExternalLink,
+    Wand2, Sparkles, AlignLeft, FolderTree, X, Maximize2, Edit2, Share2,
+    Move, Bot, LayoutPanelLeft, Tag, Users, Image as ImageIcon
+} from 'lucide-react';
 import type { WorkspaceFile } from '@prisma/client';
 import { deleteFile, createFile, uploadFile, moveFile, renameFile, toggleFileShare, reorderFiles, getFileContent, convertFolderToApp, unpromoteApp, installDynamicApp, listRepoAppEntries, getRepoAppFileContent, saveRepoAppFileContent, installRepoApp } from '@/app/actions';
 import { useRouter } from 'next/navigation';
@@ -12,8 +19,8 @@ import ConfirmationModal from './ConfirmationModal';
 import ContextMenu from './ContextMenu';
 import CodeEditorModal from './CodeEditorModal';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { listProcesses, stopProcess, restartProcess, reconfigureProcessPort } from '@/app/processActions';
-import { Play, Square, RefreshCw, Globe, Wrench, Hammer } from 'lucide-react';
+import { listProcesses, stopProcess, restartProcess, reconfigureProcessPort, startProcess, rebuildProcess, getDockerLogs } from '@/app/processActions';
+import IntegratedPreview from './IntegratedPreview';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -152,15 +159,49 @@ export default function FileManager({ files }: FileManagerProps) {
     const [repoEditorContent, setRepoEditorContent] = useState('');
     const [repoEditorPath, setRepoEditorPath] = useState<string | null>(null);
     const [isRepoSaving, setIsRepoSaving] = useState(false);
+    const [isSavingStart, setIsSavingStart] = useState(false);
+
+    // Integrated Preview State
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState<string | undefined>(undefined);
+    const [previewStatus, setPreviewStatus] = useState<'idle' | 'starting' | 'ready' | 'error'>('idle');
+    const [previewAppName, setPreviewAppName] = useState<string | undefined>(undefined);
+    const [previewLogs, setPreviewLogs] = useState<string[]>([]);
 
     // Code Editor State
     const [editingFile, setEditingFile] = useState<WorkspaceFile | null>(() => {
         const cachedId = fileManagerStateCache.editingFileId;
         return cachedId ? files.find(file => file.id === cachedId) || null : null;
     });
+
+    // Handle Integrated Preview Lifecycle
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isPreviewOpen && previewStatus === 'starting') {
+            interval = setInterval(async () => {
+                const res = await listProcesses();
+                if (res.success && res.processes) {
+                    setProcesses(res.processes);
+                    const currentApp = res.processes.find((p: any) =>
+                        p.name.includes(previewAppName || '') ||
+                        p.metadata?.appName === previewAppName
+                    );
+                    if (currentApp && currentApp.status === 'running' && currentApp.port) {
+                        const url = `http://localhost:${currentApp.port}`;
+                        setPreviewUrl(url);
+                        setPreviewStatus('ready');
+                        window.dispatchEvent(new CustomEvent('set-vibe-preview', { detail: url }));
+                        toast.success(`${previewAppName} is now live!`);
+                    }
+                }
+            }, 3000);
+        }
+        return () => clearInterval(interval);
+    }, [isPreviewOpen, previewStatus, previewAppName]);
+
+    // Code Editor Loading State
     const [editorContent, setEditorContent] = useState(fileManagerStateCache.editorContent);
     const [editorContentFileId, setEditorContentFileId] = useState<string | null>(fileManagerStateCache.editorContentFileId);
-    const [isSavingStart, setIsSavingStart] = useState(false);
 
     useEffect(() => {
         fileManagerStateCache.explorerMode = explorerMode;
@@ -246,7 +287,7 @@ export default function FileManager({ files }: FileManagerProps) {
                 }
             };
             fetchProcesses();
-            interval = setInterval(fetchProcesses, 5000);
+            interval = setInterval(fetchProcesses, 15000); // Pulse every 15s instead of 5s to save resources
         }
         return () => clearInterval(interval);
     }, [explorerMode]);
@@ -313,13 +354,19 @@ export default function FileManager({ files }: FileManagerProps) {
 
     const loadRepoEntries = async (path?: string | null) => {
         setIsRepoLoading(true);
-        const result = await listRepoAppEntries(path || '');
-        if (result.success && result.entries) {
-            setRepoEntries(result.entries as RepoEntry[]);
-        } else {
+        try {
+            const result = await listRepoAppEntries(path || '');
+            if (result.success && result.entries) {
+                setRepoEntries(result.entries as RepoEntry[]);
+            } else {
+                setRepoEntries([]);
+            }
+        } catch (error) {
+            console.error('Failed to load repo entries:', error);
             setRepoEntries([]);
+        } finally {
+            setIsRepoLoading(false);
         }
-        setIsRepoLoading(false);
     };
 
     useEffect(() => {
@@ -663,6 +710,15 @@ export default function FileManager({ files }: FileManagerProps) {
         setActiveMenuId(null); // Close regular menu if open
     };
 
+    const handleFolderOpen = (id: string | null) => {
+        setCurrentFolderId(id);
+        setSelectedFileIds(new Set());
+        setLastSelectedId(null);
+        setSearchQuery('');
+    };
+
+
+
     const handleDeleteRequest = (id: string | string[]) => {
         setDeletingId(id);
         setActiveMenuId(null);
@@ -975,6 +1031,81 @@ export default function FileManager({ files }: FileManagerProps) {
         }
     };
 
+    const handleRebuild = async (processId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setProcessActionLoading(processId);
+        const loadingToast = toast.loading('Rebuilding container...');
+        try {
+            await rebuildProcess(processId);
+            const res = await listProcesses();
+            if (res.success && res.processes) setProcesses(res.processes);
+            toast.success('Container rebuilt successfully', { id: loadingToast });
+        } catch (error) {
+            toast.error('Failed to rebuild container', { id: loadingToast });
+        } finally {
+            setProcessActionLoading(null);
+        }
+    };
+
+    const handleStartLocal = async (processId: string, e: React.MouseEvent, entryName?: string) => {
+        e.stopPropagation();
+        setProcessActionLoading(processId);
+
+        // Trigger Integrated Preview
+        if (entryName) {
+            setPreviewAppName(entryName);
+            setPreviewStatus('starting');
+            setIsPreviewOpen(true);
+            setPreviewUrl(undefined);
+            setPreviewLogs([`Starting local dev server for ${entryName}...`]);
+        }
+
+        try {
+            await startProcess(processId);
+            const res = await listProcesses();
+            if (res.success && res.processes) setProcesses(res.processes);
+            toast.success('Local dev server started');
+        } catch (error) {
+            toast.error('Failed to start local dev server');
+            setPreviewStatus('error');
+        } finally {
+            setProcessActionLoading(null);
+        }
+    };
+
+    const handleStartContainer = async (processId: string, e: React.MouseEvent, entryName?: string) => {
+        e.stopPropagation();
+        setProcessActionLoading(processId);
+
+        // Trigger Integrated Preview
+        if (entryName) {
+            setPreviewAppName(entryName);
+            setPreviewStatus('starting');
+            setIsPreviewOpen(true);
+            setPreviewUrl(undefined);
+            setPreviewLogs([`Booting container for ${entryName}...`]);
+        }
+
+        try {
+            // For repo-apps, prefer rebuild (build & run). Otherwise, start the container.
+            const target = processes.find(p => p.id === processId);
+            const isRepoApp = target?.metadata && (target.metadata as any).source === 'repo-app';
+            if (isRepoApp) {
+                await rebuildProcess(processId);
+            } else {
+                await startProcess(processId);
+            }
+
+            const res = await listProcesses();
+            if (res.success && res.processes) setProcesses(res.processes);
+            toast.success('Container started');
+        } catch (error) {
+            toast.error('Failed to start container');
+        } finally {
+            setProcessActionLoading(null);
+        }
+    };
+
     const handleAutoConfigure = async (processId: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (processActionLoading) return;
@@ -992,6 +1123,25 @@ export default function FileManager({ files }: FileManagerProps) {
             toast.error('Failed to configure port');
         } finally {
             setProcessActionLoading(null);
+        }
+    };
+
+    const handleViewLogs = async (processId: string, appName: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setPreviewAppName(appName);
+        setIsPreviewOpen(true);
+        setPreviewStatus('starting'); // Use starting state to show logs view
+        setPreviewLogs(['Fetching logs...']);
+
+        try {
+            const res = await getDockerLogs(processId);
+            if (res.success && res.logs) {
+                setPreviewLogs(res.logs.split('\n'));
+            } else {
+                setPreviewLogs([res.message || 'No logs available']);
+            }
+        } catch (error) {
+            setPreviewLogs(['Error fetching logs']);
         }
     };
 
@@ -1114,382 +1264,589 @@ export default function FileManager({ files }: FileManagerProps) {
             onClick={handleBackgroundClick}
         >
             {/* Global Drop Overlay - Purely Visual */}
-                        <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
-                    {currentFolderId && (
-                        <button
-                            onClick={() => setCurrentFolderId(currentFolder?.parentId || null)}
-                            className="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors"
-                        >
-                            <ChevronLeft size={20} />
-                        </button>
-                    )}
-                    <h1 className="text-3xl font-bold text-white">
-                        {explorerMode === 'repo'
-                            ? 'Repo Apps'
-                            : (searchQuery ? 'Search Results' : (currentFolderId ? currentFolder?.name : 'Files'))}
-                    </h1>
-                </div>
-
-                <div className="flex-1 max-w-md mx-8 hidden lg:block">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                        <input
-                            ref={searchInputRef}
-                            type="text"
-                            placeholder={explorerMode === 'repo' ? "Search repo apps..." : "Search your files... (Ctrl+K)"}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20"
-                        />
-                    </div>
-                </div>
-
-                <div className="flex gap-2">
-                    {explorerMode === 'workspace' && (
-                        <>
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => setIsCreateModalOpen(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors text-sm font-medium border border-white/10"
-                            >
-                                <Folder size={16} />
-                                <span>New Folder</span>
-                            </motion.button>
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={triggerUpload}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-blue-500/20"
-                            >
-                                <UploadCloud size={16} />
-                                <span>Upload File</span>
-                            </motion.button>
-                        </>
-                    )}
-
-                    <div className="flex items-center bg-white/5 rounded-lg border border-white/10 p-1 ml-2">
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setExplorerMode('workspace')}
-                            className={cn(
-                                "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
-                                explorerMode === 'workspace' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
-                            )}
-                            title="Workspace Files"
-                        >
-                            Workspace
-                        </motion.button>
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setExplorerMode('repo')}
-                            className={cn(
-                                "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
-                                explorerMode === 'repo' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
-                            )}
-                            title="Repo Apps"
-                        >
-                            Repo Apps
-                        </motion.button>
-                    </div>
-
-                    {explorerMode === 'workspace' && (
-                        <div className="flex items-center bg-white/5 rounded-lg border border-white/10 p-1 ml-2">
-                            <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => setViewMode('grid')}
-                                className={cn(
-                                    "p-1.5 rounded-md transition-all",
-                                    viewMode === 'grid' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
-                                )}
-                                title="Grid View"
-                            >
-                                <LayoutGrid size={18} />
-                            </motion.button>
-                            <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => setViewMode('list')}
-                                className={cn(
-                                    "p-1.5 rounded-md transition-all",
-                                    viewMode === 'list' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/80"
-                                )}
-                                title="List View"
-                            >
-                                <List size={18} />
-                            </motion.button>
+            {/* Premium IDE Header */}
+            <div className="flex flex-col gap-6 mb-8">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-2 mb-1">
+                                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)] animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">System Explorer</span>
+                            </div>
+                            <h1 className="text-4xl font-black text-white tracking-tighter flex items-center gap-3">
+                                {explorerMode === 'repo' ? 'REPO' : 'FILES'}
+                                <span className="text-white/10 font-thin">/</span>
+                                <span className="text-blue-500/80">{searchQuery ? 'SEARCH' : (currentFolderId ? currentFolder?.name?.toUpperCase() : 'ROOT')}</span>
+                            </h1>
                         </div>
-                    )}
-                    {explorerMode === 'workspace' && (
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            className="hidden"
-                        />
-                    )}
+                    </div>
+
+                    {/* Global Service Indicators */}
+                    <div className="hidden xl:flex items-center gap-4 px-6 py-2 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                        <div className="flex items-center gap-2">
+                            <div className="flex -space-x-2">
+                                {processes.filter(p => p.status === 'running').slice(0, 3).map((p, i) => (
+                                    <div key={p.id} className="w-6 h-6 rounded-full bg-zinc-800 border-2 border-[#0A0A0A] flex items-center justify-center text-[10px] font-bold text-emerald-400 group relative">
+                                        {p.name[0].toUpperCase()}
+                                        <div className="absolute inset-0 rounded-full border border-emerald-500/50 animate-ping opacity-20" />
+                                    </div>
+                                ))}
+                                {processes.filter(p => p.status === 'running').length > 3 && (
+                                    <div className="w-6 h-6 rounded-full bg-zinc-800 border-2 border-[#0A0A0A] flex items-center justify-center text-[8px] font-bold text-white/40">
+                                        +{processes.filter(p => p.status === 'running').length - 3}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex flex-col leading-none ml-2">
+                                <span className="text-[10px] font-black text-emerald-400/80">{processes.filter(p => p.status === 'running').length} ACTIVE</span>
+                                <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Services</span>
+                            </div>
+                        </div>
+                        <div className="w-px h-6 bg-white/10" />
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setIsPreviewOpen(true)}
+                                className="flex items-center gap-2 text-xs font-bold text-white/40 hover:text-white transition-colors"
+                            >
+                                <TerminalIcon size={14} />
+                                <span>LOGS</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="flex bg-zinc-900/50 p-1 rounded-xl border border-white/5 shadow-inner">
+                            <button
+                                onClick={() => setExplorerMode('workspace')}
+                                className={cn(
+                                    "relative px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
+                                    explorerMode === 'workspace' ? "text-white" : "text-white/30 hover:text-white/60"
+                                )}
+                            >
+                                {explorerMode === 'workspace' && (
+                                    <motion.div layoutId="mode-bg" className="absolute inset-0 bg-blue-600/20 border border-blue-500/30 rounded-lg shadow-[0_0_20px_rgba(59,130,246,0.15)]" />
+                                )}
+                                <span className="relative z-10 flex items-center gap-2"><Folder size={12} /> Workspace</span>
+                            </button>
+                            <button
+                                onClick={() => setExplorerMode('repo')}
+                                className={cn(
+                                    "relative px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
+                                    explorerMode === 'repo' ? "text-white" : "text-white/30 hover:text-white/60"
+                                )}
+                            >
+                                {explorerMode === 'repo' && (
+                                    <motion.div layoutId="mode-bg" className="absolute inset-0 bg-purple-600/20 border border-purple-500/30 rounded-lg shadow-[0_0_20px_rgba(168,85,247,0.15)]" />
+                                )}
+                                <span className="relative z-10 flex items-center gap-2"><Server size={12} /> Repo Apps</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
+
+                <div className="flex items-center gap-4">
+                    <div className="flex-1 relative group">
+                        <div className="absolute inset-0 bg-blue-500/5 rounded-2xl blur-xl group-focus-within:bg-blue-500/10 transition-all opacity-0 group-focus-within:opacity-100" />
+                        <div className="relative flex items-center bg-white/5 border border-white/10 hover:border-white/20 rounded-2xl px-4 py-3 transition-all focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:bg-white/10">
+                            <Search className="text-white/20 mr-3" size={18} />
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                placeholder={explorerMode === 'repo' ? "Explore provisioned services..." : "Locate files across workspace... (Ctrl+K)"}
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="bg-transparent border-none text-sm text-white w-full focus:outline-none placeholder:text-white/20 font-medium"
+                            />
+                            <div className="flex items-center gap-1.5 ml-4">
+                                <kbd className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[10px] font-black text-white/40">CTRL</kbd>
+                                <kbd className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[10px] font-black text-white/40">K</kbd>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {explorerMode === 'workspace' && (
+                            <>
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => setIsCreateModalOpen(true)}
+                                    className="p-3 bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 rounded-2xl transition-all"
+                                    title="New Folder"
+                                >
+                                    <FolderPlus size={20} />
+                                </motion.button>
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={triggerUpload}
+                                    className="px-6 py-3 bg-blue-600/90 hover:bg-blue-600 text-white rounded-2xl transition-all text-sm font-bold shadow-[0_10px_30px_rgba(37,99,235,0.3)] flex items-center gap-2"
+                                >
+                                    <UploadCloud size={20} />
+                                    <span>UPLOAD</span>
+                                </motion.button>
+                            </>
+                        )}
+                        <div className="w-px h-8 bg-white/10 mx-2" />
+                        <div className="flex p-1 bg-white/5 rounded-xl border border-white/10">
+                            <button onClick={() => setViewMode('grid')} className={cn("p-2 rounded-lg transition-all", viewMode === 'grid' ? "bg-white/10 text-white shadow-sm" : "text-white/30 hover:text-white/60")}>
+                                <LayoutGrid size={18} />
+                            </button>
+                            <button onClick={() => setViewMode('list')} className={cn("p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-white/10 text-white shadow-sm" : "text-white/30 hover:text-white/60")}>
+                                <List size={18} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Breadcrumbs / Path Navigator */}
+                {!searchQuery && (
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 px-2 overflow-x-auto no-scrollbar py-1">
+                            <button
+                                onClick={() => {
+                                    setCurrentFolderId(null);
+                                    setRepoCurrentPath(null);
+                                }}
+                                className="text-xs font-bold text-white/20 hover:text-blue-400 transition-colors uppercase tracking-widest whitespace-nowrap"
+                            >
+                                ROOT
+                            </button>
+                            {explorerMode === 'workspace' ? (
+                                (currentFolder as any)?.path?.split(/[\/\\]/).filter(Boolean).map((part: string, i: number, arr: string[]) => (
+                                    <React.Fragment key={i}>
+                                        <ChevronRight size={12} className="text-white/10 shrink-0" />
+                                        <span className={cn("text-xs font-bold uppercase tracking-widest whitespace-nowrap", i === arr.length - 1 ? "text-blue-400" : "text-white/40")}>
+                                            {part}
+                                        </span>
+                                    </React.Fragment>
+                                ))
+                            ) : (
+                                repoCurrentPath?.split(/[\/\\]/).filter(Boolean).map((part: string, i: number, arr: string[]) => (
+                                    <React.Fragment key={i}>
+                                        <ChevronRight size={12} className="text-white/10 shrink-0" />
+                                        <button
+                                            onClick={() => {
+                                                const parts = repoCurrentPath?.split(/[\/\\]/).filter(Boolean) || [];
+                                                setRepoCurrentPath(parts.slice(0, i + 1).join('/'));
+                                            }}
+                                            className={cn("text-xs font-bold uppercase tracking-widest whitespace-nowrap", i === arr.length - 1 ? "text-purple-400" : "text-white/40 hover:text-purple-400")}
+                                        >
+                                            {part}
+                                        </button>
+                                    </React.Fragment>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
-{explorerMode === 'repo' && (
-                <>
-                    <div className="flex items-center gap-2 text-sm text-white/50 overflow-x-auto pb-2">
-                        <button
-                            onClick={() => setRepoCurrentPath(null)}
-                            className={cn(
-                                "hover:text-white transition-colors flex items-center gap-1",
-                                !repoCurrentPath && "text-white font-medium"
-                            )}
-                        >
-                            <Folder size={14} />
-                            <span>Repo Apps</span>
-                        </button>
-                        {repoCurrentPath && repoCurrentPath.split('/').map((segment, index, parts) => {
-                            const path = parts.slice(0, index + 1).join('/');
-                            return (
-                                <React.Fragment key={path}>
-                                    <ChevronLeft size={12} className="rotate-180" />
-                                    <button
-                                        onClick={() => setRepoCurrentPath(path)}
-                                        className="text-white font-medium hover:text-white/80 transition-colors"
-                                    >
-                                        {segment}
-                                    </button>
-                                </React.Fragment>
-                            );
-                        })}
-                    </div>
-
-                    {isRepoLoading ? (
-                        <div className="flex items-center justify-center py-20 text-white/40">
-                            Loading repo apps...
+            {/* Main Content Area */}
+            <div className="flex-1 min-h-0 relative">
+                {explorerMode === 'workspace' && (
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2 text-sm text-white/50">
+                                <button
+                                    onClick={() => handleFolderOpen(null)}
+                                    className={cn(
+                                        "hover:text-white transition-colors flex items-center gap-1",
+                                        !currentFolderId && "text-white font-medium"
+                                    )}
+                                >
+                                    <Folder size={14} />
+                                    <span>Home</span>
+                                </button>
+                                {currentFolderId && (
+                                    <>
+                                        <ChevronRight size={12} className="text-white/20" />
+                                        <span className="text-white font-medium">{files.find(f => f.id === currentFolderId)?.name || 'Folder'}</span>
+                                    </>
+                                )}
+                            </div>
                         </div>
-                    ) : (
+
                         <motion.div
                             variants={containerVariants}
                             initial="hidden"
                             animate="show"
-                            className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col space-y-2"}
+                            className={cn(
+                                viewMode === 'grid'
+                                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+                                    : "flex flex-col space-y-2"
+                            )}
                         >
-                            {repoEntries.map((entry) => {
-                                // Debug matching
-                                const norm = (p: string) => p?.replace(/\\/g, '/').toLowerCase();
-                                const entryPath = norm(entry.path);
-
-                                const process = processes.find(p => {
-                                    // Robust matching:
-                                    // 1. Name match (case-insensitive) is reliable for Repo Apps
-                                    if (p.name.toLowerCase() === entry.name.toLowerCase()) return true;
-
-                                    if (!p.path) return false;
-                                    const procPath = norm(p.path);
-                                    const metaPath = p.metadata?.appPath ? norm(p.metadata.appPath) : '';
-                                    return procPath === entryPath || metaPath === entryPath || procPath.endsWith(entryPath) || entryPath.endsWith(procPath);
-                                });
-
-                                // Also try to find specifically local dev server and container processes for this repo entry
-                                const localProcess = processes.find(p => {
-                                    if (!p.path && !p.metadata?.appPath && p.name.toLowerCase() !== entry.name.toLowerCase()) return false;
-                                    const procPath = p.path ? norm(p.path) : (p.metadata?.appPath ? norm(p.metadata.appPath) : '');
-                                    const metaPath = p.metadata?.appPath ? norm(p.metadata.appPath) : '';
-                                    const nameMatch = p.name.toLowerCase() === entry.name.toLowerCase();
-                                    const pathMatch = procPath === entryPath || metaPath === entryPath || procPath.endsWith(entryPath) || entryPath.endsWith(procPath);
-                                    const isLocal = p.type === 'dev-server' || p.metadata?.source === 'local' || /local/i.test(p.name);
-                                    return nameMatch || (pathMatch && isLocal);
-                                });
-
-                                const containerProcess = processes.find(p => {
-                                    if (!p.path && !p.metadata?.appPath && p.name.toLowerCase() !== entry.name.toLowerCase()) return false;
-                                    const procPath = p.path ? norm(p.path) : (p.metadata?.appPath ? norm(p.metadata.appPath) : '');
-                                    const metaPath = p.metadata?.appPath ? norm(p.metadata.appPath) : '';
-                                    const nameMatch = p.name.toLowerCase() === entry.name.toLowerCase();
-                                    const pathMatch = procPath === entryPath || metaPath === entryPath || procPath.endsWith(entryPath) || entryPath.endsWith(procPath);
-                                    const isContainer = p.type === 'docker-app' || p.metadata?.source === 'repo-app' || p.metadata?.containerName || /docker|container|repo-app/i.test(p.name);
-                                    return nameMatch || (pathMatch && isContainer);
-                                });
-
-                                const localPort = localProcess?.port;
-                                const containerPort = containerProcess?.port;
-
-                                if (explorerMode === 'repo' && !repoCurrentPath) {
-                                    // Console log occasionally or just once to debug
-                                    // console.log('Checking match:', { entry: entry.path, process: process?.path });
-                                }
-
-                                const isRunning = process?.status === 'running';
-                                const port = process?.port;
-                                const isLoading = processActionLoading === process?.id;
-                                const isRootView = !repoCurrentPath;
+                            {filteredFiles.map((file) => {
+                                const highlightStyles = {
+                                    backgroundColor: file.highlightBgColor || undefined,
+                                    borderColor: file.highlightBorderColor || undefined
+                                } as React.CSSProperties;
+                                const nameStyles = {
+                                    color: file.highlightTextColor || undefined,
+                                    fontWeight: file.highlightFontWeight || undefined
+                                } as React.CSSProperties;
 
                                 return (
                                     <motion.div
-                                        key={entry.path}
+                                        key={file.id}
+                                        id={`file-${file.id}`}
                                         variants={itemVariants}
                                         layout
-                                        whileHover={{ scale: 1.01, backgroundColor: "rgba(255,255,255,0.08)" }}
-                                        whileTap={{ scale: 0.99 }}
-                                        onClick={() => handleRepoEntryOpen(entry)}
-                                        className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all cursor-pointer group"
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onContextMenu={(e) => handleContextMenu(e, file)}
+                                        draggable={true}
+                                        onDragStart={(e: any) => handleDragStart(e, file)}
+                                        onDragOver={(e) => handleDragOverFile(e, file)}
+                                        onDragLeave={(e) => {
+                                            setReorderTarget(null);
+                                            if (file.type === 'folder') handleDragLeave(e);
+                                            else setDragOverFileId(null);
+                                        }}
+                                        onDrop={(e) => handleDropOnFile(e, file)}
+                                        onClick={(e) => handleFileClick(e, file.id)}
+                                        onDoubleClick={(e) => {
+                                            e.stopPropagation();
+                                            if (file.type === 'folder') setCurrentFolderId(file.id);
+                                            else handlePreviewFile(file);
+                                        }}
+                                        className={cn(
+                                            "group relative cursor-pointer z-10 transition-all border",
+                                            viewMode === 'grid' ? "p-4 rounded-xl" : "px-4 py-3 rounded-lg flex items-center gap-4",
+                                            selectedFileIds.has(file.id) ? "ring-2 ring-blue-500 bg-blue-500/20 border-blue-500/50" : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10",
+                                            (dragOverFolderId === file.id || dragOverFileId === file.id) ? "ring-2 ring-blue-500 bg-blue-500/20 scale-[1.05] z-30 shadow-xl shadow-blue-500/20" : ""
+                                        )}
+                                        style={highlightStyles}
                                     >
-                                        <div className="flex flex-col gap-3">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <div className="p-2 rounded-lg bg-white/5 text-blue-300 relative">
-                                                        {entry.type === 'folder' ? <Folder size={18} /> : <FileText size={18} />}
-                                                        {process && (
-                                                            <div className={cn("absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border border-[#0A0A0A]", isRunning ? "bg-emerald-500" : "bg-red-500")} />
-                                                        )}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <div className="text-sm font-semibold text-white truncate flex items-center gap-2">
-                                                            {entry.name}
-                                                            {/* Show both local dev port and container port if available */}
-                                                            {localPort && (
-                                                                <span title="Local dev port" className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-white/60 font-mono">:{localPort} dev</span>
-                                                            )}
-                                                            {containerPort && (
-                                                                <span title="Container port" className="text-[10px] bg-purple-500/10 px-1.5 py-0.5 rounded text-purple-300 font-mono">:{containerPort} cont</span>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-[10px] text-white/40 truncate">
-                                                            {process ? (isRunning ? 'Running' : 'Stopped') : (entry.type === 'folder' ? 'Folder' : entry.type.toUpperCase())}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {entry.type === 'folder' && isRootView && (
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    {process ? (
-                                                        <>
-                                                            {/* Open Dev Server */}
-                                                            {localProcess?.status === 'running' && localPort && (
-                                                                <motion.button
-                                                                    whileHover={{ scale: 1.05 }}
-                                                                    whileTap={{ scale: 0.95 }}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        window.open(`http://localhost:${localPort}`, '_blank');
-                                                                    }}
-                                                                    className="px-3 py-1.5 text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg transition-colors flex items-center gap-2"
-                                                                    title="Open Dev Server"
-                                                                >
-                                                                    <Globe size={14} />
-                                                                    Dev
-                                                                </motion.button>
-                                                            )}
-
-                                                            {/* Open Container URL */}
-                                                            {containerProcess?.status === 'running' && containerPort && (
-                                                                <motion.button
-                                                                    whileHover={{ scale: 1.05 }}
-                                                                    whileTap={{ scale: 0.95 }}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        const internal = containerProcess?.metadata?.internalDomain;
-                                                                        const url = internal ? `http://${internal}` : `http://localhost:${containerPort}`;
-                                                                        window.open(url, '_blank');
-                                                                    }}
-                                                                    className="px-3 py-1.5 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 rounded-lg transition-colors flex items-center gap-2"
-                                                                    title="Open Container"
-                                                                >
-                                                                    <ExternalLink size={14} />
-                                                                    Container
-                                                                </motion.button>
-                                                            )}
-
-                                                            {/* Explicit Build/Install for Repo Apps */}
-                                                            {explorerMode === 'repo' && !isRunning && (
-                                                                <motion.button
-                                                                    whileHover={{ scale: 1.05 }}
-                                                                    whileTap={{ scale: 0.95 }}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleInstallRepoApp(entry.path);
-                                                                    }}
-                                                                    className="px-3 py-1.5 text-[10px] font-semibold text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-lg transition-colors flex items-center gap-1.5"
-                                                                    title="Build & Install Container"
-                                                                >
-                                                                    <Hammer size={12} />
-                                                                    Build
-                                                                </motion.button>
-                                                            )}
-
-                                                            {/* Auto Configure Button if Port Missing */}
-                                                            {(!port) && (
-                                                                <motion.button
-                                                                    whileHover={{ scale: 1.05 }}
-                                                                    whileTap={{ scale: 0.95 }}
-                                                                    onClick={(e) => handleAutoConfigure(process.id, e)}
-                                                                    className="px-3 py-1.5 text-[10px] font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-lg transition-colors flex items-center gap-1.5"
-                                                                    title="Auto Configure Port"
-                                                                    disabled={isLoading}
-                                                                >
-                                                                    <Wand2 size={12} />
-                                                                    Auto Fix
-                                                                </motion.button>
-                                                            )}
-
-                                                            <motion.button
-                                                                whileHover={{ scale: 1.02 }}
-                                                                whileTap={{ scale: 0.98 }}
-                                                                onClick={(e) => isRunning ? handleStopProcess(process.id, e) : handleRestartProcess(process.id, e)}
-                                                                className={cn(
-                                                                    "px-2.5 py-1 text-[10px] font-semibold rounded-lg transition-colors flex-1 flex items-center justify-center gap-1.5",
-                                                                    isRunning
-                                                                        ? "text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20"
-                                                                        : "text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20"
-                                                                )}
-                                                                disabled={isLoading}
-                                                            >
-                                                                {isLoading ? <RefreshCw size={12} className="animate-spin" /> : (isRunning ? <Square size={12} className="fill-current" /> : <Play size={12} className="fill-current" />)}
-                                                                {isRunning ? 'Stop' : 'Start'}
-                                                            </motion.button>
-                                                            <motion.button
-                                                                whileHover={{ scale: 1.05 }}
-                                                                whileTap={{ scale: 0.95 }}
-                                                                onClick={(e) => handleRestartProcess(process.id, e)}
-                                                                className="p-1.5 text-zinc-400 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
-                                                                title="Restart"
-                                                                disabled={isLoading}
-                                                            >
-                                                                <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-                                                            </motion.button>
-                                                        </>
-                                                    ) : (
-                                                        <motion.button
-                                                            whileHover={{ scale: 1.02 }}
-                                                            whileTap={{ scale: 0.98 }}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleInstallRepoApp(entry.path);
-                                                            }}
-                                                            className="px-2.5 py-1 text-[10px] font-semibold text-zinc-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors flex-1"
-                                                            title="Install App (Docker)"
-                                                        >
-                                                            Install
-                                                        </motion.button>
-                                                    )}
-                                                </div>
-                                            )}
+                                        <div className="flex-1 min-w-0 flex items-center gap-3">
+                                            {file.type === 'folder' ? <Folder size={20} className="text-blue-400" /> : <FileText size={20} className="text-white/40" />}
+                                            <span className="truncate text-sm font-medium" style={nameStyles}>{file.name}</span>
                                         </div>
                                     </motion.div>
                                 );
                             })}
-                            {repoEntries.length === 0 && (
-                                <div className="col-span-full text-center text-white/40 py-10">
-                                    No repo apps found.
-                                </div>
-                            )}
                         </motion.div>
-                    )}
-                </>
-            )
-            }
+
+                        {/* Empty State */}
+                        {filteredFiles.length === 0 && (
+                            <div className="col-span-full py-20 flex flex-col items-center justify-center text-white/20">
+                                <Folder size={48} className="mb-4 opacity-20" />
+                                <p className="text-lg font-medium">No files found</p>
+                                <p className="text-sm">This folder is empty</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {explorerMode === 'repo' && (
+                    <div className="space-y-6">
+                        {isRepoLoading ? (
+                            <div className="flex items-center justify-center py-20 text-white/40">
+                                <RefreshCw size={24} className="animate-spin mr-3" />
+                                <span className="text-sm font-bold uppercase tracking-widest">Initialising Repositories...</span>
+                            </div>
+                        ) : (
+                            <motion.div
+                                variants={containerVariants}
+                                initial="hidden"
+                                animate="show"
+                                className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "flex flex-col space-y-3"}
+                            >
+                                {/* App Service Status Banner (Visible when inside a repo folder) */}
+                                {repoCurrentPath && (() => {
+                                    const appName = repoCurrentPath.split(/[\/\\]/).filter(Boolean)[0] || '';
+                                    const appProcess = processes.find(p =>
+                                        p.name.toLowerCase().includes(appName.toLowerCase()) ||
+                                        p.metadata?.appName?.toLowerCase() === appName.toLowerCase() ||
+                                        p.metadata?.containerName?.toLowerCase() === appName.toLowerCase()
+                                    );
+
+                                    // If we are deep inside but no process is found, we should still show a "Provision" banner
+                                    if (!appProcess) {
+                                        return (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="mb-6 p-4 rounded-3xl bg-zinc-900/40 border border-white/5 backdrop-blur-md flex items-center justify-between shadow-xl"
+                                            >
+                                                <div className="flex items-center gap-4 text-white/40">
+                                                    <Hammer size={18} />
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-black uppercase tracking-widest">{appName}</span>
+                                                        <span className="text-[10px] font-bold uppercase tracking-tighter">Not Provisioned</span>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleInstallRepoApp(repoCurrentPath.split('/')[0] === appName ? repoCurrentPath : appName); }}
+                                                    className="h-8 px-4 rounded-xl text-[10px] font-black bg-blue-600 hover:bg-blue-500 text-white transition-all flex items-center gap-2"
+                                                >
+                                                    <Hammer size={12} /> PROVISION APP
+                                                </button>
+                                            </motion.div>
+                                        );
+                                    }
+
+                                    const isRunning = appProcess.status === 'running';
+                                    const isLoading = processActionLoading === appProcess.id;
+                                    const port = appProcess.port;
+
+                                    return (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="mb-6 p-4 rounded-3xl bg-blue-500/10 border border-blue-500/20 backdrop-blur-md flex items-center justify-between shadow-lg shadow-blue-500/5 ring-1 ring-blue-500/20"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={cn(
+                                                    "w-3 h-3 rounded-full",
+                                                    isRunning ? "bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-zinc-600"
+                                                )} />
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-black text-white uppercase tracking-widest">{appName} Service</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-tighter">{appProcess.status}</span>
+                                                        {port && <span className="text-[10px] font-mono text-blue-400 bg-blue-400/10 px-1 rounded">:{port}</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        window.dispatchEvent(new CustomEvent('open-vibe', { detail: { id: appName, name: appName } }));
+                                                        if (isRunning && port) {
+                                                            window.dispatchEvent(new CustomEvent('set-vibe-preview', { detail: `http://localhost:${port}` }));
+                                                        }
+                                                    }}
+                                                    className="h-8 px-4 rounded-xl text-[10px] font-black bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/20 transition-all flex items-center gap-2 active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+                                                >
+                                                    <Sparkles size={12} className="animate-pulse" />
+                                                    VIBE MODE
+                                                </button>
+
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (isRunning) handleStopProcess(appProcess.id, e);
+                                                        else handleStartContainer(appProcess.id, e, appName);
+                                                    }}
+                                                    disabled={isLoading}
+                                                    className={cn(
+                                                        "h-8 px-4 rounded-xl text-[10px] font-black transition-all flex items-center gap-2 border",
+                                                        isRunning ? "text-red-400 border-red-500/20 hover:bg-red-400/10" : "text-emerald-400 border-emerald-500/20 hover:bg-emerald-400/10"
+                                                    )}
+                                                >
+                                                    {isLoading ? <RefreshCw size={12} className="animate-spin" /> : (isRunning ? <Square size={12} /> : <Play size={12} className="fill-current" />)}
+                                                    {isRunning ? 'STOP' : 'START'}
+                                                </button>
+
+                                                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
+                                                    <button
+                                                        onClick={(e) => handleRebuild(appProcess.id, e)}
+                                                        title="Rebuild & Restart"
+                                                        className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-all"
+                                                    >
+                                                        <RefreshCw size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => handleViewLogs(appProcess.id, appName, e)}
+                                                        title="View Logs"
+                                                        className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-all"
+                                                    >
+                                                        <TerminalIcon size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => handleAutoConfigure(appProcess.id, e)}
+                                                        title="Auto-Fix Port"
+                                                        className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-all"
+                                                    >
+                                                        <Wrench size={14} />
+                                                    </button>
+                                                    {isRunning && port && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); window.open(`http://localhost:${port}`, '_blank'); }}
+                                                            title="Open In Browser"
+                                                            className="p-2 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg text-blue-400 transition-all border border-blue-500/30"
+                                                        >
+                                                            <Globe size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })()}
+
+                                {repoEntries.map((entry) => {
+                                    const norm = (p: string) => p?.replace(/\\/g, '/').toLowerCase();
+                                    const entryPath = norm(entry.path);
+
+                                    const process = processes.find(p => {
+                                        const pName = p.name.toLowerCase();
+                                        const eName = entry.name.toLowerCase();
+                                        if (pName === eName || pName.includes(eName)) return true;
+                                        if (p.metadata?.appName?.toLowerCase() === eName) return true;
+                                        if (p.metadata?.containerName?.toLowerCase() === eName) return true;
+
+                                        const procPath = p.path ? norm(p.path) : '';
+                                        const metaPath = p.metadata?.appPath ? norm(p.metadata.appPath) : '';
+                                        return procPath === entryPath || metaPath === entryPath || (procPath && procPath.includes(entryPath));
+                                    });
+
+                                    const localProcess = processes.find(p => {
+                                        const pName = p.name.toLowerCase();
+                                        const eName = entry.name.toLowerCase();
+                                        const nameMatch = pName === eName || pName.includes(eName);
+                                        const isLocal = p.type === 'dev-server' || p.metadata?.source === 'local' || p.name.includes('Dev') || p.name.includes('Local');
+                                        return nameMatch && isLocal;
+                                    });
+
+                                    const containerProcess = processes.find(p => {
+                                        const pName = p.name.toLowerCase();
+                                        const eName = entry.name.toLowerCase();
+                                        const nameMatch = pName === eName || pName.includes(eName);
+                                        const isContainer = p.type === 'docker-app' || p.metadata?.source === 'repo-app' || pName.includes('docker') || pName.includes('container');
+                                        return nameMatch && isContainer;
+                                    });
+
+                                    const localPort = localProcess?.port;
+                                    const containerPort = containerProcess?.port;
+                                    const isRunning = process?.status === 'running';
+                                    const isLoading = processActionLoading === (process?.id || localProcess?.id || containerProcess?.id);
+                                    const isRootView = !repoCurrentPath;
+
+                                    return (
+                                        <motion.div
+                                            key={entry.path}
+                                            variants={itemVariants}
+                                            layout
+                                            whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                                            onClick={() => handleRepoEntryOpen(entry)}
+                                            className="relative group p-5 rounded-3xl bg-zinc-900/40 border border-white/5 hover:border-blue-500/30 transition-all cursor-pointer backdrop-blur-sm shadow-xl"
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-transparent to-purple-500/0 group-hover:from-blue-500/5 group-hover:to-purple-500/5 rounded-3xl transition-all duration-500" />
+                                            <div className="relative flex flex-col gap-4">
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="p-3 rounded-2xl bg-white/5 text-blue-400 group-hover:bg-blue-500/10 transition-colors relative shadow-inner">
+                                                            {entry.type === 'folder' ? <Folder size={22} className="fill-blue-400/10" /> : <FileText size={22} />}
+                                                            {process && (
+                                                                <div className={cn(
+                                                                    "absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-[#0A0A0A] shadow-lg",
+                                                                    isRunning ? "bg-emerald-500 animate-pulse" : "bg-zinc-600"
+                                                                )} />
+                                                            )}
+                                                        </div>
+                                                        <div className="min-w-0 pr-4">
+                                                            <h3 className="text-base font-bold text-white tracking-tight truncate">{entry.name}</h3>
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-white/30">
+                                                                {process ? (isRunning ? 'Service Active' : 'Service Paused') : 'Uninitialized'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {entry.type === 'folder' && isRootView && (
+                                                    <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                                                        <div className="flex gap-1.5 flex-1">
+                                                            {process ? (
+                                                                <>
+                                                                    <motion.button
+                                                                        whileHover={{ scale: 1.05 }}
+                                                                        whileTap={{ scale: 0.95 }}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            if (isRunning) handleStopProcess(process.id, e);
+                                                                            else {
+                                                                                if (localProcess) handleStartLocal(localProcess.id, e, entry.name);
+                                                                                else if (containerProcess) handleStartContainer(containerProcess.id, e, entry.name);
+                                                                            }
+                                                                        }}
+                                                                        className={cn(
+                                                                            "h-9 px-4 rounded-xl text-xs font-bold transition-all flex-1 flex items-center justify-center gap-2 border shadow-lg",
+                                                                            isRunning ? "text-red-400 bg-red-400/5 border-red-500/20 hover:bg-red-400/10" : "text-emerald-400 bg-emerald-400/5 border-emerald-500/20 hover:bg-emerald-400/10 shadow-emerald-500/5"
+                                                                        )}
+                                                                        disabled={isLoading}
+                                                                    >
+                                                                        {isLoading ? <RefreshCw size={14} className="animate-spin" /> : (isRunning ? <Square size={14} /> : <Play size={14} className="fill-current" />)}
+                                                                        <span>{isRunning ? 'STOP' : 'START'}</span>
+                                                                    </motion.button>
+
+                                                                    <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                window.dispatchEvent(new CustomEvent('open-vibe', { detail: entry }));
+                                                                                if (isRunning && (localPort || containerPort)) {
+                                                                                    window.dispatchEvent(new CustomEvent('set-vibe-preview', { detail: `http://localhost:${localPort || containerPort}` }));
+                                                                                }
+                                                                            }}
+                                                                            title="Edit in Vibe Mode"
+                                                                            className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-[9px] font-black tracking-widest transition-all"
+                                                                        >
+                                                                            VIBE
+                                                                        </button>
+                                                                        <div className="w-px h-3.5 bg-white/10 mx-0.5" />
+                                                                        <button
+                                                                            onClick={(e) => handleRebuild(process.id, e)}
+                                                                            title="Rebuild & Restart"
+                                                                            className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-colors"
+                                                                        >
+                                                                            <RefreshCw size={14} />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={(e) => handleViewLogs(process.id, entry.name, e)}
+                                                                            title="Logs"
+                                                                            className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-colors"
+                                                                        >
+                                                                            <TerminalIcon size={14} />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={(e) => handleAutoConfigure(process.id, e)}
+                                                                            title="Auto-Fix Port"
+                                                                            className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-colors"
+                                                                        >
+                                                                            <Wrench size={14} />
+                                                                        </button>
+                                                                        {isRunning && (localPort || containerPort) && (
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    const port = localPort || containerPort;
+                                                                                    window.open(`http://localhost:${port}`, '_blank');
+                                                                                }}
+                                                                                title="Open App"
+                                                                                className="p-2 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg text-blue-400 transition-colors"
+                                                                            >
+                                                                                <Globe size={14} />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </>
+                                                            ) : (
+                                                                <motion.button
+                                                                    whileHover={{ scale: 1.02 }}
+                                                                    whileTap={{ scale: 0.98 }}
+                                                                    onClick={(e) => { e.stopPropagation(); handleInstallRepoApp(entry.path); }}
+                                                                    className="h-9 px-5 rounded-xl text-xs font-bold text-zinc-400 bg-white/5 border border-white/10 hover:text-white flex-1 justify-center flex items-center gap-2"
+                                                                >
+                                                                    <Hammer size={14} /> PROVISION
+                                                                </motion.button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                            </motion.div>
+                        )}
+                    </div>
+                )}
+            </div>
+
 
             <AnimatePresence>
                 {isGlobalDragActive && (
@@ -1508,30 +1865,25 @@ export default function FileManager({ files }: FileManagerProps) {
                 )}
             </AnimatePresence>
 
-            {/* Overlay to catch the leave event triggers logic, but must not block folders.
-                Actually we don't need a separate capture div if we use the parent div for Drop.
-                But we do need to detect 'leave' from the parent.
-             */}
             {
                 isGlobalDragActive && (
                     <div
-                        className="absolute inset-0 z-0"
+                        className="absolute inset-0 z-0 pointer-events-none"
                         onDragLeave={() => setIsGlobalDragActive(false)}
                     />
                 )
             }
 
-
             <ConfirmationModal
                 isOpen={!!deletingId}
                 onClose={() => setDeletingId(null)}
                 onConfirm={handleConfirmDelete}
-                title={Array.isArray(deletingId) && deletingId.length > 1 ? `Delete ${deletingId.length} Items` : "Delete Item"}
-                message={Array.isArray(deletingId) && deletingId.length > 1
+                title={deletingId && Array.isArray(deletingId) && deletingId.length > 1 ? `Delete ${deletingId.length} Items` : "Delete Item"}
+                message={deletingId && Array.isArray(deletingId) && deletingId.length > 1
                     ? `Are you sure you want to delete these ${deletingId.length} items? This action cannot be undone.`
                     : "Are you sure you want to delete this item? This action cannot be undone."
                 }
-                confirmText={Array.isArray(deletingId) && deletingId.length > 1 ? `Delete ${deletingId.length} Items` : "Delete"}
+                confirmText={deletingId && Array.isArray(deletingId) && deletingId.length > 1 ? `Delete ${deletingId.length} Items` : "Delete"}
                 isDanger
                 isLoading={isDeleting}
             />
@@ -1556,17 +1908,19 @@ export default function FileManager({ files }: FileManagerProps) {
                         previewFile={editingFile}
                         previewContent={previewContent}
                         chatContext={chatContext}
+                        onModeToggle={() => setEditorMode(m => m === 'edit' ? 'preview' : 'edit')}
                     />
                 )
             }
+
             {
                 repoEditingFile && (
                     <CodeEditorModal
                         isOpen={!!repoEditingFile}
                         onClose={() => {
                             setRepoEditingFile(null);
-                            setRepoEditorContent('');
-                            setRepoEditorPath(null);
+                            setEditorMode('edit');
+                            setEditorContent('');
                         }}
                         fileName={repoEditingFile.name}
                         initialContent={repoEditorContent}
@@ -1796,17 +2150,31 @@ export default function FileManager({ files }: FileManagerProps) {
                                             </div>
                                             <div className={cn("relative z-30 flex items-center gap-1", file.type !== 'folder' ? "absolute top-4 right-4" : "")} onClick={(e) => e.stopPropagation()}>
                                                 {isEditableFile(file) && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            handleEditFile(file);
-                                                        }}
-                                                        title="Edit code"
-                                                        className="p-1.5 rounded-md bg-black/20 hover:bg-black/60 backdrop-blur-sm text-white/50 hover:text-white transition-colors border border-white/5"
-                                                    >
-                                                        <Edit2 size={16} />
-                                                    </button>
+                                                    <>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                window.dispatchEvent(new CustomEvent('open-vibe', { detail: file }));
+                                                            }}
+                                                            title="Edit in Vibe Mode"
+                                                            className="px-2 py-1 relative overflow-hidden group/vbtn rounded-md bg-emerald-500 hover:bg-emerald-400 text-white transition-all border border-emerald-400/50 shadow-[0_0_15px_rgba(16,185,129,0.3)] active:scale-95 flex items-center gap-1.5"
+                                                        >
+                                                            <Sparkles size={12} className="animate-pulse" />
+                                                            <span className="text-[9px] font-black uppercase tracking-widest leading-none">Vibe</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                handleEditFile(file);
+                                                            }}
+                                                            title="Quick Edit"
+                                                            className="p-1.5 rounded-md bg-black/20 hover:bg-black/60 backdrop-blur-sm text-white/50 hover:text-white transition-colors border border-white/5"
+                                                        >
+                                                            <Edit2 size={16} />
+                                                        </button>
+                                                    </>
                                                 )}
                                                 <button
                                                     onClick={(e) => {
@@ -2209,153 +2577,39 @@ export default function FileManager({ files }: FileManagerProps) {
                                 icon: <Maximize2 size={16} />,
                                 onClick: () => {
                                     if (contextMenu.file.type === 'folder') {
-                                        setCurrentFolderId(contextMenu.file.id);
+                                        handleFolderOpen(contextMenu.file.id);
                                     } else {
-                                        handlePreviewFile(contextMenu.file);
+                                        handleEditFile(contextMenu.file);
                                     }
                                 }
                             },
                             {
-                                label: 'Edit Code',
-                                icon: <Edit size={16} className="text-blue-400" />,
-                                onClick: () => handleEditFile(contextMenu.file),
-                                className: !isEditableFile(contextMenu.file) ? 'hidden' : ''
+                                label: 'Edit',
+                                icon: <Edit size={16} />,
+                                onClick: () => handleEditFile(contextMenu.file)
                             },
                             {
-                                label: 'Open in New Tab',
+                                label: 'Open in AI Pilot',
                                 icon: <ExternalLink size={16} />,
                                 onClick: () => {
-                                    if (contextMenu.file.type === 'folder') {
-                                        // Find index.html
-                                        const indexFile = files.find(f => f.parentId === contextMenu.file.id && f.name === 'index.html');
-                                        if (indexFile) {
-                                            window.open(`/uploads/${indexFile.storagePath || indexFile.name}`, '_blank');
-                                        } else {
-                                            toast.error('No index.html found in this folder');
-                                        }
-                                    } else {
-                                        window.open(`/uploads/${contextMenu.file.storagePath || contextMenu.file.name}`, '_blank');
-                                    }
+                                    window.dispatchEvent(new CustomEvent('pilot-open-file', {
+                                        detail: { path: (contextMenu.file as any).storagePath || contextMenu.file.name }
+                                    }));
                                 }
                             },
-                            // Add "Run App" for app folders or folders with index.html
-                            ...(contextMenu.file.tags?.includes('app_root') || (contextMenu.file.type === 'folder' && files.some(f => f.parentId === contextMenu.file.id && f.name === 'index.html')) ? [{
-                                label: 'Run App',
-                                icon: <LayoutPanelLeft size={16} className="text-emerald-400" />,
-                                onClick: () => {
-                                    // 1. Find the entry file
-                                    const entryFile = files.find(f =>
-                                        f.parentId === contextMenu.file.id &&
-                                        (f.tags?.includes('app_entry') || f.name === 'index.html')
-                                    );
-
-                                    if (entryFile) {
-                                        window.dispatchEvent(new CustomEvent('open-preview-tab', { detail: entryFile }));
-                                        setActiveMenuId(null);
-                                        setContextMenu(null);
-                                    } else {
-                                        toast.error('No entry file (index.html) found in this app folder.');
-                                    }
-                                }
-                            }] : []),
-                            ...(contextMenu.file.tags?.includes('app_root') ? [{
-                                label: 'Install App (Docker)',
-                                icon: <Wand2 size={16} className="text-purple-400" />,
-                                onClick: () => handleInstallApp(contextMenu.file.id)
-                            }] : []),
-                            // Add "Convert to App" for regular folders
-                            ...(contextMenu.file.type === 'folder' && !contextMenu.file.tags?.includes('app_root') ? [{
-                                label: 'Convert to App',
-                                icon: <LayoutGrid size={16} className="text-blue-400" />,
-                                onClick: async () => {
-                                    // Try to find index.html to be the entry point
-                                    const entryFile = files.find(f =>
-                                        f.parentId === contextMenu.file.id &&
-                                        f.name === 'index.html'
-                                    );
-
-                                    if (!entryFile) {
-                                        toast.error('Cannot convert: No "index.html" found in this folder.');
-                                        return;
-                                    }
-
-                                    const loadingToast = toast.loading('Converting to App...');
-                                    const res = await convertFolderToApp(contextMenu.file.id, entryFile.id);
-
-                                    if (res.success) {
-                                        toast.success('Folder converted to App Module!', { id: loadingToast });
-                                        router.refresh();
-                                    } else {
-                                        toast.error('Conversion failed', { id: loadingToast });
-                                    }
-                                    setActiveMenuId(null);
-                                    setContextMenu(null);
-                                }
-                            }] : []),
-                            // Add "Destroy App" for app folders
-                            ...(contextMenu.file.tags?.includes('app_root') ? [{
-                                label: 'Destroy App & Wipe Data',
-                                icon: <Trash2 size={16} className="text-red-400" />,
-                                danger: true,
-                                onClick: async () => {
-                                    if (!confirm('Are you sure? This will remove the app designation and DELETE ALL associated prototype data. The files will remain.')) return;
-
-                                    const loadingToast = toast.loading('Destroying App...');
-                                    const res = await unpromoteApp(contextMenu.file.id);
-                                    if (res.success) {
-                                        toast.success('App destroyed & data wiped', { id: loadingToast });
-                                        router.refresh();
-                                    } else {
-                                        toast.error('Failed to destroy app', { id: loadingToast });
-                                    }
-                                    setActiveMenuId(null);
-                                    setContextMenu(null);
-                                }
-                            }] : []),
-                            // Add specific Live Preview for HTML files
-                            ...(contextMenu.file.name.endsWith('.html') || contextMenu.file.type === 'html' ? [{
-                                label: 'Open Live Preview',
-                                icon: <LayoutPanelLeft size={16} className="text-emerald-400" />,
-                                onClick: () => {
-                                    console.log('Dispatching open-preview-tab for:', contextMenu.file);
-                                    window.dispatchEvent(new CustomEvent('open-preview-tab', { detail: contextMenu.file }));
-                                    setActiveMenuId(null);
-                                    setContextMenu(null);
-                                }
-                            }] : []),
-                            // Add "Set as App Entry Point" for HTML files
-                            ...(contextMenu.file.name.endsWith('.html') || contextMenu.file.type === 'html' ? [{
-                                label: 'Set as App Entry Point',
-                                icon: <LayoutGrid size={16} className="text-blue-400" />,
-                                onClick: async () => {
-                                    if (!contextMenu.file.parentId) {
-                                        toast.error('File must be in a folder to convert to App');
-                                        return;
-                                    }
-                                    const loadingToast = toast.loading('Converting folder to App...');
-                                    const res = await convertFolderToApp(contextMenu.file.parentId, contextMenu.file.id);
-                                    if (res.success) {
-                                        toast.success('Folder converted to App!', { id: loadingToast });
-                                        router.refresh();
-                                    } else {
-                                        toast.error('Failed to convert', { id: loadingToast });
-                                    }
-                                    setActiveMenuId(null);
-                                    setContextMenu(null);
-                                }
-                            }] : []),
                             {
-                                label: 'Ask AI about this',
-                                icon: <Bot size={16} className="text-indigo-400" />,
+                                label: 'Add to AI Context',
+                                icon: <Bot size={16} />,
+                                onClick: () => window.dispatchEvent(new CustomEvent('add-to-ai-chat', { detail: contextMenu.file }))
+                            },
+                            {
+                                label: 'Set as AI Target',
+                                icon: <LayoutPanelLeft size={16} />,
                                 onClick: () => {
-                                    if (selectedFileIds.size > 1 && selectedFileIds.has(contextMenu.file.id)) {
-                                        // Add all selected files
-                                        files.filter(f => selectedFileIds.has(f.id)).forEach(f => {
-                                            window.dispatchEvent(new CustomEvent('add-to-ai-chat', { detail: f }));
-                                        });
-                                    } else {
-                                        window.dispatchEvent(new CustomEvent('add-to-ai-chat', { detail: contextMenu.file }));
-                                    }
+                                    window.dispatchEvent(new CustomEvent('set-ai-target', {
+                                        detail: { id: contextMenu.file.id, name: contextMenu.file.name }
+                                    }));
+                                    toast.success(`${contextMenu.file.name} set as primary AI target`);
                                 }
                             },
                             {
@@ -2363,6 +2617,44 @@ export default function FileManager({ files }: FileManagerProps) {
                                 icon: <Edit2 size={16} />,
                                 onClick: () => startRename(contextMenu.file)
                             },
+                            // Workspace App Promotion
+                            ...(() => {
+                                const file = contextMenu.file;
+                                const isFolder = file.type === 'folder';
+                                const isRepo = explorerMode === 'repo' || (file as any).storagePath?.startsWith('repo-apps/') || (file as any).path?.startsWith('repo-apps/');
+                                if (!isFolder || isRepo) return [];
+
+                                const isApp = file.tags?.includes('app_root');
+                                if (!isApp) {
+                                    return [{
+                                        label: 'Promote to App',
+                                        icon: <Sparkles size={16} className="text-emerald-400" />,
+                                        onClick: () => {
+                                            // Find an entry file (index.html or main.js)
+                                            const entry = files.find(f => f.parentId === file.id && (f.name === 'index.html' || f.name === 'main.js' || f.name === 'App.tsx'));
+                                            if (entry) {
+                                                convertFolderToApp(file.id, entry.id);
+                                                toast.success(`${file.name} promoted to App!`);
+                                            } else {
+                                                toast.error('No entry file (index.html, etc) found in folder');
+                                            }
+                                        }
+                                    }];
+                                }
+
+                                return [
+                                    {
+                                        label: 'Install/Deploy App',
+                                        icon: <Hammer size={16} />,
+                                        onClick: () => handleInstallApp(file.id)
+                                    },
+                                    {
+                                        label: 'Unpromote from App',
+                                        icon: <X size={16} />,
+                                        onClick: () => unpromoteApp(file.id)
+                                    }
+                                ];
+                            })(),
                             {
                                 label: contextMenu.file.shared ? 'Unshare' : 'Share',
                                 icon: <Share2 size={16} />,
@@ -2391,7 +2683,58 @@ export default function FileManager({ files }: FileManagerProps) {
                                         handleDeleteRequest(contextMenu.file.id);
                                     }
                                 }
-                            }
+                            },
+                            // Docker / Process Actions
+                            ...(() => {
+                                const entry = contextMenu.file as any;
+                                const isRepo = explorerMode === 'repo' || entry.storagePath?.startsWith('repo-apps/') || entry.path?.startsWith('repo-apps/');
+                                if (!isRepo) return [];
+
+                                const norm = (p: string) => p?.replace(/\\/g, '/').toLowerCase();
+                                const entryPath = norm(entry.path || entry.storagePath);
+                                const entryName = entry.name;
+
+                                const process = processes.find(p => {
+                                    if (p.name.toLowerCase().includes(entryName.toLowerCase())) return true;
+                                    if (!p.path) return false;
+                                    const procPath = norm(p.path);
+                                    const metaPath = p.metadata?.appPath ? norm(p.metadata.appPath) : '';
+                                    return procPath === entryPath || metaPath === entryPath || procPath.includes(entryPath);
+                                });
+
+                                if (!process) {
+                                    return [{
+                                        label: 'Provision Container',
+                                        icon: <Hammer size={16} />,
+                                        onClick: () => handleInstallRepoApp(entry.path || entry.storagePath)
+                                    }];
+                                }
+
+                                const isRunning = process.status === 'running';
+                                return [
+                                    { divider: true },
+                                    {
+                                        label: isRunning ? 'Stop Service' : 'Start Service',
+                                        icon: isRunning ? <Square size={16} /> : <Play size={16} />,
+                                        onClick: (e: any) => isRunning ? handleStopProcess(process.id, e) : handleStartContainer(process.id, e, entryName)
+                                    },
+                                    {
+                                        label: 'Rebuild & Restart',
+                                        icon: <RefreshCw size={16} />,
+                                        onClick: (e: any) => handleRestartProcess(process.id, e)
+                                    },
+                                    {
+                                        label: 'View Logs',
+                                        icon: <TerminalIcon size={16} />,
+                                        onClick: (e: any) => handleViewLogs(process.id, entryName, e)
+                                    },
+                                    {
+                                        label: 'Configure Port',
+                                        icon: <Wrench size={16} />,
+                                        onClick: (e: any) => handleAutoConfigure(process.id, e)
+                                    }
+                                ];
+                            })()
                         ]}
                     />
                 )
@@ -2498,7 +2841,19 @@ export default function FileManager({ files }: FileManagerProps) {
                 )}
             </AnimatePresence>
 
-            {/* Pulse Highlight Animation Global Styles */}
+            <IntegratedPreview
+                isOpen={isPreviewOpen}
+                onClose={() => setIsPreviewOpen(false)}
+                url={previewUrl}
+                appName={previewAppName}
+                status={previewStatus}
+                logs={previewLogs}
+                onRestart={() => {
+                    const proc = processes.find(p => p.name.includes(previewAppName || '') || p.metadata?.appName === previewAppName);
+                    if (proc) handleRestartProcess(proc.id, { stopPropagation: () => { } } as any);
+                }}
+            />
+
             <style jsx global>{`
                 @keyframes agent-pulse {
                     0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); border-color: rgba(59, 130, 246, 1); }
@@ -2513,6 +2868,6 @@ export default function FileManager({ files }: FileManagerProps) {
                     transition: all 0.3s ease;
                 }
             `}</style>
-        </div >
+        </div>
     );
 }

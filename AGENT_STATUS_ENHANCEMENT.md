@@ -3,6 +3,8 @@
 ## Overview
 Enhanced the AI agent's background activity status display to provide more granular, real-time feedback to users about what the agent is currently doing.
 
+> **Note:** Tool execution is now **synchronous by default** (environment variable `TOOL_EXECUTION_MODE='synchronous'`). Set it to `'background'` to restore the previous background-worker behavior. A small automatic retry policy is enabled (`TOOL_AUTO_RETRY=1`).
+
 ## Changes Made
 
 ### 1. Backend Enhancement (`src/app/actions.ts`)

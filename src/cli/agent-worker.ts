@@ -40,7 +40,7 @@ type ChatResult = {
 type ActivityType = 'info' | 'success' | 'warning' | 'error';
 
 const workerId = process.env.AGENT_WORKER_ID || `worker-${process.pid}`;
-const pollMs = Number(process.env.AGENT_POLL_MS || 2000);
+const pollMs = Number(process.env.AGENT_POLL_MS || 5000);
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -172,26 +172,20 @@ async function runJob(job: AgentJobRecord) {
     });
 
     try {
-        const result = await chatWithAI(
-            payload.query,
-            payload.fileIds || [],
-            payload.history || [],
-            payload.currentFolder,
-            payload.currentFolderId,
-            { sessionId: job.sessionId || undefined, allowToolExecution: true, agentMode: 'tool-agent' }
-        ) as ChatResult;
+        // Use the unified processAgentJob which contains the Premium GeminiAgentAdapter logic
+        const { processAgentJob } = await import('../app/actions');
+        const updatedJob = await processAgentJob(job.id);
+        const result = updatedJob?.result as any;
 
-        if (result.success) {
-            // Handle Chat Success
-            if (job.sessionId) {
+        if (updatedJob?.status === 'succeeded') {
+            // Handle Success
+            if (job.sessionId && result?.finalOutput) {
                 await prisma.chatMessage.create({
                     data: {
                         sessionId: job.sessionId,
                         role: 'ai',
-                        content: result.text || 'Background task completed.',
-                        toolUsed: result.toolUsed || undefined,
-                        toolResult: result.toolResult || undefined,
-                        toolArgs: result.toolArgs || undefined
+                        content: result.finalOutput,
+                        toolUsed: 'agent_completion'
                     }
                 });
 
@@ -200,6 +194,8 @@ async function runJob(job: AgentJobRecord) {
                     data: { updatedAt: new Date() }
                 });
             }
+            // ... the rest of the feedback loop logic remains in agent-worker.ts ...
+
 
             // --- FEEDBACK LOOP LOGIC ---
             const analysis = await feedbackEngine.analyzeResult(job.id, result);

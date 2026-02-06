@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Bot, Command, Copy, CornerDownLeft, Eye, File, FileCode, FileText, Image, Layout, Loader2, MessageSquare, MoreHorizontal, Paperclip, Play, Plus, RefreshCw, Send, Settings, Sparkles, Terminal, Trash2, X, Maximize2, Minimize2, CheckCircle2, ChevronDown, List, FolderOpen, Folder, FileJson, Square, BrainCircuit, Image as ImageIcon, ExternalLink, Check, ChevronRight, Edit2, Pin, PinOff, Search, Receipt, DollarSign, Save, AlignLeft, Lightbulb, Compass, Activity, Zap, ArrowDown } from 'lucide-react';
+import { ArrowRight, Bot, Command, Copy, CornerDownLeft, Eye, File, FileCode, FileText, Image, Layout, Loader2, MessageSquare, MoreHorizontal, Paperclip, Play, Plus, RefreshCw, Send, Settings, Sparkles, Terminal, Trash2, X, Maximize2, Minimize2, CheckCircle2, ChevronDown, List, FolderOpen, Folder, FileJson, Square, BrainCircuit, Image as ImageIcon, ExternalLink, Check, ChevronRight, Edit2, Pin, PinOff, Search, Receipt, DollarSign, Save, AlignLeft, Lightbulb, Compass, Activity, Zap, ArrowDown, AlertTriangle, Globe, Monitor } from 'lucide-react';
 import { chatWithAI, chatWithAIStream, getPrompts, createPrompt, updatePrompt, setActivePrompt, deletePrompt, generateSystemPrompt, getIntentRules, getWorkspaceFiles, getChatSessionAgentStatus, approveLatestAgentJob, getAgentActivitiesForSession, cancelAllAgentJobs } from '@/app/actions';
 import { createChatSession, getChatSessions, getChatSession, addChatMessage, updateChatSessionTitle, deleteChatSession } from '@/app/chatActions';
 import { toast } from 'sonner';
@@ -11,6 +11,7 @@ import { TOOL_LIBRARY, DEFAULT_TOOLS } from '@/lib/toolLibrary';
 import type { WorkspaceFile, AIPromptSet, IntentRule } from '@prisma/client';
 import PromptEditorModal from './PromptEditorModal';
 import QuestionWizard from './QuestionWizard';
+import TerminalView from './TerminalView';
 import SuggestionsLibraryModal from './SuggestionsLibraryModal';
 import ConfirmationModal from './ConfirmationModal';
 import ReactMarkdown from 'react-markdown';
@@ -19,6 +20,8 @@ import { normalizeMarkdown, hasMarkdownTable } from '@/utils/markdownUtils';
 import FileEditPreviewModal from './FileEditPreviewModal';
 import EmojiCelebration from './EmojiCelebration';
 import { readStreamableValue } from 'ai/rsc';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 export type SelectedFile = {
     id: string;
@@ -43,53 +46,353 @@ const aiChatStateCache = {
     activeSessionId: null as string | null,
     activeSessionTitle: 'New Chat',
     currentFolderContext: { id: null as string | null, name: 'Root' },
-    activePreviewContext: null as { id: string, name: string, parentId: string | null } | null
+    activePreviewContext: null as { id: string, name: string, parentId: string | null } | null,
+    activeAppContext: null as { name: string; path: string } | null
 };
+
+const CodeBlock = ({ language, code, fileName }: { language: string, code: string, fileName?: string }) => {
+    const [isCollapsed, setIsCollapsed] = useState(code.split('\n').length > 20);
+    const [isCopied, setIsCopied] = useState(false);
+
+    const handleCopy = async () => {
+        await navigator.clipboard.writeText(code);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+        toast.success("Code copied to clipboard");
+    };
+
+    return (
+        <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0d0d12] my-4 group shadow-2xl">
+            <div className="flex items-center justify-between px-4 py-2 bg-white/[0.03] border-b border-white/5 backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                    <div className="flex gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-500/40 border border-red-500/30" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500/40 border border-amber-500/30" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/40 border border-emerald-500/30" />
+                    </div>
+                    {fileName && (
+                        <div className="flex items-center gap-2 px-2 py-0.5 rounded bg-white/5 border border-white/10">
+                            <FileCode size={10} className="text-blue-400" />
+                            <span className="text-[10px] font-mono text-white/70 truncate max-w-[200px]">{fileName}</span>
+                        </div>
+                    )}
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="text-[10px] uppercase font-bold text-white/30 tracking-widest font-mono">{language}</span>
+                    <div className="flex items-center gap-1 border-l border-white/10 pl-3">
+                        <button
+                            onClick={handleCopy}
+                            className="p-1.5 hover:bg-white/10 rounded-md text-white/40 hover:text-white transition-all active:scale-90"
+                            title="Copy code"
+                        >
+                            {isCopied ? <Check size={14} className="text-emerald-400" /> : <Copy size={13} />}
+                        </button>
+                        {code.split('\n').length > 20 && (
+                            <button
+                                onClick={() => setIsCollapsed(!isCollapsed)}
+                                className="p-1.5 hover:bg-white/10 rounded-md text-white/40 hover:text-white transition-all"
+                                title={isCollapsed ? "Expand code" : "Collapse code"}
+                            >
+                                {isCollapsed ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+            <div className={cn(
+                "relative overflow-hidden transition-all duration-500 ease-in-out",
+                isCollapsed ? "max-h-[300px]" : "max-h-[2000px]"
+            )}>
+                <SyntaxHighlighter
+                    language={language.toLowerCase()}
+                    style={vscDarkPlus}
+                    customStyle={{
+                        margin: 0,
+                        padding: '1.25rem',
+                        fontSize: '12px',
+                        lineHeight: '1.6',
+                        backgroundColor: 'transparent',
+                        background: 'transparent',
+                    }}
+                    showLineNumbers={true}
+                    lineNumberStyle={{
+                        minWidth: '2.5em',
+                        paddingRight: '1em',
+                        color: '#343b4d',
+                        textAlign: 'right',
+                        userSelect: 'none',
+                    }}
+                >
+                    {code}
+                </SyntaxHighlighter>
+
+                {isCollapsed && (
+                    <div
+                        className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0d0d12] via-[#0d0d12]/80 to-transparent flex items-end justify-center pb-4 cursor-pointer group/expand"
+                        onClick={() => setIsCollapsed(false)}
+                    >
+                        <div className="px-4 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-full backdrop-blur-md text-[10px] font-bold text-white/50 group-hover/expand:text-white transition-all transform group-hover/expand:translate-y-[-2px]">
+                            EXPAND {code.split('\n').length} LINES
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+const TraceLabel = ({ icon: Icon, label, colorClass, dotColor }: { icon: any, label: string, colorClass: string, dotColor: string }) => (
+    <div className="flex items-center gap-3 mb-2 group/trace">
+        <div className={cn("w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover/trace:scale-125", dotColor)} />
+        <div className="flex items-center gap-2">
+            <Icon size={12} className={cn("opacity-80", colorClass)} />
+            <span className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-60 group-hover/trace:opacity-100 transition-opacity", colorClass)}>
+                {label}
+            </span>
+        </div>
+    </div>
+);
 
 const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
     if (!result || !result.success) return null;
 
+    if (tool === 'view_file' && result.content) {
+        return (
+            <div className="mt-2">
+                <TraceLabel
+                    icon={FileCode}
+                    label="File Read Result"
+                    colorClass="text-blue-400"
+                    dotColor="bg-blue-500"
+                />
+                <CodeBlock
+                    language={result.path?.split('.').pop() || 'text'}
+                    code={result.content}
+                    fileName={result.path}
+                />
+                {result.meta && (
+                    <div className="text-[9px] text-white/30 font-mono mt-1 flex justify-end">
+                        {result.meta.viewingLines}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    if (tool === 'manage_app_lifecycle' && result.previewUrl) {
+        return (
+            <div className="mt-3">
+                <TraceLabel
+                    icon={Play}
+                    label="Application Controller"
+                    colorClass="text-emerald-400"
+                    dotColor="bg-emerald-500"
+                />
+                <div className="rounded-xl border border-white/10 bg-[#1e1e1e] overflow-hidden shadow-xl p-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                                <Activity className="text-emerald-400" size={20} />
+                            </div>
+                            <div>
+                                <h4 className="text-white font-medium text-sm">Application Running</h4>
+                                <a href={result.previewUrl} target="_blank" rel="noopener noreferrer" className="text-white/40 text-xs hover:text-white/60 transition-colors flex items-center gap-1">
+                                    {result.previewUrl}
+                                    <ExternalLink size={10} />
+                                </a>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => {
+                                window.dispatchEvent(new CustomEvent('set-vibe-preview', { detail: result.previewUrl }));
+                                toast.success('Preview updated');
+                            }}
+                            className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs rounded-lg transition-colors flex items-center gap-2"
+                        >
+                            <Monitor size={12} />
+                            Open in Dashboard
+                        </button>
+                    </div>
+                    {result.message && (
+                        <div className="mt-3 pt-3 border-t border-white/5 text-xs text-white/60">
+                            {result.message}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    if (tool === 'list_dir' && result.entries) {
+        return (
+            <div className="mt-3">
+                <TraceLabel
+                    icon={FolderOpen}
+                    label="Directory Discovery"
+                    colorClass="text-amber-400"
+                    dotColor="bg-amber-500"
+                />
+                <div className="rounded-xl border border-white/10 bg-[#1e1e1e] overflow-hidden shadow-xl">
+                    <div className="px-3 py-2 bg-white/5 border-b border-white/5 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest font-bold">Filesystem Node</span>
+                        </div>
+                        <span className="text-[9px] text-white/30 font-mono">{result.total} items</span>
+                    </div>
+                    <div className="max-h-[240px] overflow-y-auto p-2 space-y-0.5 custom-scrollbar">
+                        {result.entries.map((e: any, i: number) => (
+                            <div key={i} className="flex items-center gap-2 group px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors cursor-default">
+                                {e.type === 'dir'
+                                    ? <Folder size={12} className="text-amber-500/80 group-hover:text-amber-400" />
+                                    : <File size={12} className="text-blue-400/60 group-hover:text-blue-300" />
+                                }
+                                <span className="text-[11px] text-white/60 font-mono group-hover:text-white/90 truncate">{e.name}</span>
+                                <span className="ml-auto text-[9px] text-white/20 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {e.type === 'dir' ? 'DIR' : e.size || 'FILE'}
+                                </span>
+                            </div>
+                        ))}
+                        {result.isTruncated && (
+                            <div className="px-2 py-1 text-[10px] text-white/30 italic">
+                                ... {result.total - result.entries.length} more items hidden
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (tool === 'run_terminal_command') {
+        const isError = !!result.stderr;
+        return (
+            <div className="mt-3">
+                <TraceLabel
+                    icon={Terminal}
+                    label="Command Execution"
+                    colorClass={isError ? "text-red-400" : "text-emerald-400"}
+                    dotColor={isError ? "bg-red-500" : "bg-emerald-500"}
+                />
+                <TerminalView
+                    content={result.stdout || ''}
+                    isError={isError}
+                    title="Shell Output"
+                />
+                {result.stderr && (
+                    <div className="mt-2">
+                        <TerminalView
+                            content={result.stderr}
+                            isError={true}
+                            title="Error Output"
+                        />
+                    </div>
+                )}
+                {!result.stdout && !result.stderr && (
+                    <div className="mt-3 rounded-xl border border-white/10 bg-black/40 p-4 text-center">
+                        <div className="text-white/30 italic text-[10px]">Command completed with no visible output.</div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    if (tool === 'replace_in_file' || tool === 'search_codebase') {
+        const isReplace = tool === 'replace_in_file';
+        return (
+            <div className="mt-3">
+                <TraceLabel
+                    icon={isReplace ? Edit2 : Search}
+                    label={isReplace ? "File Modification" : "Codebase Search"}
+                    colorClass={isReplace ? "text-emerald-400" : "text-purple-400"}
+                    dotColor={isReplace ? "bg-emerald-500" : "bg-purple-500"}
+                />
+                <div className="rounded-xl border border-white/10 bg-[#1e1e1e] p-4 flex items-center gap-4 shadow-xl">
+                    <div className={cn(
+                        "p-3 rounded-full",
+                        isReplace ? "bg-emerald-500/10 text-emerald-400" : "bg-purple-500/10 text-purple-400"
+                    )}>
+                        {isReplace ? <Edit2 size={16} /> : <Search size={16} />}
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold uppercase text-white/40 tracking-wider mb-1">
+                            {isReplace ? 'Patch Applied' : 'Index Result'}
+                        </p>
+                        <p className="text-xs text-white/90 font-mono leading-relaxed">
+                            {tool === 'replace_in_file' ? result.message : `Found ${result.count} matches in codebase.`}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (tool === 'search_web') {
+        if (result.type === 'image' && result.results) {
+            return (
+                <div className="mt-4 space-y-3">
+                    <p className="text-[10px] uppercase font-bold text-white/40 tracking-widest pl-1">Image Result</p>
+                    <div className="grid grid-cols-2 gap-2">
+                        {result.results.map((img: any, i: number) => (
+                            <div key={i} className="relative group overflow-hidden rounded-xl bg-black/20 aspect-video border border-white/5 hover:border-blue-500/50 transition-all">
+                                <img
+                                    src={img.url}
+                                    alt={img.alt}
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                                    <span className="text-[9px] text-white/80 line-clamp-1">{img.alt}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        if (result.type === 'web' && result.results) {
+            return (
+                <div className="mt-4 space-y-2">
+                    <div className="flex items-center gap-2 px-1">
+                        <Globe size={12} className="text-indigo-400" />
+                        <span className="text-[10px] font-bold uppercase text-white/40 tracking-widest">Web Research</span>
+                    </div>
+                    {result.results.map((item: any, i: number) => (
+                        <div key={i} className="p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <h4 className="text-xs font-semibold text-indigo-300 group-hover:text-indigo-200 mb-1">{item.title}</h4>
+                                    <p className="text-[11px] text-white/60 leading-relaxed line-clamp-2">{item.snippet}</p>
+                                </div>
+                                {item.url && <ExternalLink size={12} className="text-white/20 group-hover:text-white/40 flex-shrink-0 mt-1" />}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+    }
+
+    // Legacy / Specific Tools (Receipts, etc)
     if (tool === 'extract_receipt_info' && result.extractedData) {
         const data = result.extractedData;
         return (
-            <div className="mt-4 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 space-y-4 shadow-inner">
-                <div className="flex items-center justify-between">
+            <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-blue-900/20 to-purple-900/20 border border-blue-500/20 shadow-lg">
+                <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2 text-blue-400">
                         <Receipt size={14} />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Fiscal Intelligence</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Fiscal Intelligence</span>
                     </div>
-                    {data.date && <span className="text-[9px] text-white/30 font-bold uppercase">{data.date}</span>}
+                    {data.date && <span className="text-[10px] text-white/40 font-mono">{data.date}</span>}
                 </div>
-
-                <div className="grid grid-cols-2 gap-6 pb-2">
-                    <div className="space-y-1">
-                        <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Provider</p>
-                        <p className="text-sm text-white font-bold truncate leading-none">{data.provider}</p>
+                <div className="grid grid-cols-2 gap-6">
+                    <div>
+                        <p className="text-[9px] text-white/30 uppercase font-bold tracking-wider mb-1">Provider</p>
+                        <p className="text-sm text-white font-semibold truncate">{data.provider}</p>
                     </div>
-                    <div className="space-y-1 text-right">
-                        <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">Total Amount</p>
-                        <p className="text-xl text-emerald-400 font-black leading-none">${data.total?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
-                    <div className="space-y-1">
-                        <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">RNC Identification</p>
-                        <p className="text-[11px] text-white/60 font-mono">{data.rnc || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1 text-right">
-                        <p className="text-[8px] text-white/20 uppercase font-black tracking-widest">NCF Sequence</p>
-                        <p className="text-[11px] text-white/60 font-mono">{data.ncf || 'N/A'}</p>
+                    <div className="text-right">
+                        <p className="text-[9px] text-white/30 uppercase font-bold tracking-wider mb-1">Total</p>
+                        <p className="text-lg text-emerald-400 font-bold font-mono">${data.total?.toLocaleString()}</p>
                     </div>
                 </div>
-
-                <button
-                    onClick={() => window.dispatchEvent(new CustomEvent('focus-workspace-item', { detail: { itemId: result.fileId } }))}
-                    className="w-full py-2 mt-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] text-white/40 hover:text-white transition-all border border-white/5 flex items-center justify-center gap-2"
-                >
-                    <Search size={12} />
-                    <span>View Original File</span>
-                </button>
             </div>
         );
     }
@@ -135,111 +438,227 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
         );
     }
 
-    if (tool === 'search_web') {
-        if (result.type === 'image' && result.results) {
-            return (
-                <div className="mt-4 space-y-3">
-                    <p className="text-[10px] uppercase font-bold text-white/40 tracking-widest pl-1">Image Result</p>
-                    <div className="grid grid-cols-2 gap-2">
-                        {result.results.map((img: any, i: number) => (
-                            <div key={i} className="relative group overflow-hidden rounded-xl bg-black/20 aspect-video border border-white/5 hover:border-blue-500/50 transition-all">
-                                <img
-                                    src={img.url}
-                                    alt={img.alt}
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-                                    <span className="text-[9px] text-white/80 line-clamp-1">{img.alt}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        }
-
-        if (result.type === 'web' && result.results) {
-            return (
-                <div className="mt-4 space-y-3">
-                    <p className="text-[10px] uppercase font-bold text-white/40 tracking-widest pl-1">Web Search Result</p>
-                    <div className="space-y-2">
-                        {result.results.map((item: any, i: number) => (
-                            <div key={i} className="p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group">
-                                <h4 className="text-xs font-bold text-blue-300 group-hover:text-blue-200 mb-1">{item.title}</h4>
-                                <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-[9px] text-white/30 hover:text-white/50 mb-2 block truncate font-mono">{item.url}</a>
-                                <p className="text-[11px] text-white/70 leading-relaxed line-clamp-2">{item.snippet}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        }
-    }
-
-    return null;
+    // Fallback JSON renderer for any tool result
+    return (
+        <div className="mt-3">
+            <div className="flex items-center gap-2 mb-2 px-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500/40" />
+                <span className="text-[9px] font-bold uppercase text-white/30 tracking-widest">Execution Trace</span>
+            </div>
+            <CodeBlock
+                language="json"
+                code={JSON.stringify(result, null, 2)}
+            />
+        </div>
+    );
 };
 
 const ThinkingProcess = ({ content }: { content: string }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
-    // Parse content into steps
-    const steps = content.split(/\n+/).filter(line => line.trim().length > 0).map(line => {
-        const isIndented = line.startsWith('  ') || line.startsWith('\t') || line.startsWith('- ') || line.startsWith('  -');
-        return {
-            text: line.trim().replace(/^[-*]\s+/, ''),
-            indented: isIndented
+    // Parse structured thinking into sections
+    const parseSections = (text: string) => {
+        const sections: Array<{ title: string; content: string; icon: any; color: string }> = [];
+        const lines = text.split('\n');
+        let currentSection: { title: string; content: string[]; icon: any; color: string } | null = null;
+
+        // Section mappings with icons and colors
+        const sectionTypes: Record<string, { icon: any; color: string }> = {
+            'analysis': { icon: Search, color: 'text-blue-400' },
+            'strategy': { icon: Compass, color: 'text-purple-400' },
+            'consultation': { icon: Compass, color: 'text-purple-400' },
+            'constructive critique': { icon: Lightbulb, color: 'text-amber-400' },
+            'critique': { icon: Lightbulb, color: 'text-amber-400' },
+            'research gap': { icon: FileText, color: 'text-pink-400' },
+            'orchestration': { icon: Zap, color: 'text-emerald-400' },
+            'thinking': { icon: BrainCircuit, color: 'text-indigo-400' },
+            'risk': { icon: AlertTriangle, color: 'text-red-400' }
         };
-    });
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+
+            // Check if this is a section header (number followed by period or starts with **)
+            const sectionMatch = trimmed.match(/^\d+\.\s*\*?\*?(.+?)[:*]*$/i) ||
+                trimmed.match(/^\*\*(.+?)\*\*:?$/i);
+
+            if (sectionMatch) {
+                // Save previous section
+                if (currentSection) {
+                    sections.push({
+                        title: currentSection.title,
+                        content: currentSection.content.join('\n'),
+                        icon: currentSection.icon,
+                        color: currentSection.color
+                    });
+                }
+
+                // Start new section
+                const title = sectionMatch[1].trim();
+                const titleLower = title.toLowerCase();
+                const matchedType = Object.keys(sectionTypes).find(key => titleLower.includes(key));
+                const sectionInfo = matchedType ? sectionTypes[matchedType] : { icon: FileText, color: 'text-white/60' };
+
+                currentSection = {
+                    title,
+                    content: [],
+                    icon: sectionInfo.icon,
+                    color: sectionInfo.color
+                };
+            } else if (currentSection) {
+                // Add to current section
+                currentSection.content.push(line);
+            } else {
+                // No section yet, create default
+                if (!currentSection) {
+                    currentSection = {
+                        title: 'Thinking',
+                        content: [line],
+                        icon: BrainCircuit,
+                        color: 'text-blue-400'
+                    };
+                }
+            }
+        }
+
+        // Save last section
+        if (currentSection && currentSection.content.length > 0) {
+            sections.push({
+                title: currentSection.title,
+                content: currentSection.content.join('\n'),
+                icon: currentSection.icon,
+                color: currentSection.color
+            });
+        }
+
+        return sections.length > 0 ? sections : [{
+            title: 'Thinking',
+            content: text,
+            icon: BrainCircuit,
+            color: 'text-blue-400'
+        }];
+    };
+
+    const sections = parseSections(content);
+    const toggleSection = (idx: number) => {
+        const newSet = new Set(expandedSections);
+        if (newSet.has(idx)) newSet.delete(idx);
+        else newSet.add(idx);
+        setExpandedSections(newSet);
+    };
 
     return (
-        <div className="mb-4 overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] transition-all">
-            <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors group"
-            >
-                <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-400 group-hover:scale-110 transition-transform">
-                        <BrainCircuit size={14} />
-                    </div>
-                    <div className="text-left">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 leading-none mb-1">Intelligence Trace</p>
-                        <p className="text-[9px] text-white/20 font-bold uppercase truncate max-w-[200px]">
-                            {isExpanded ? "Synthesizing tactical execution..." : steps[0]?.text || "Thinking..."}
-                        </p>
-                    </div>
-                </div>
-                <div className={cn("transition-transform duration-300", isExpanded ? "rotate-90" : "")}>
-                    <ChevronRight size={14} className="text-white/20" />
-                </div>
-            </button>
+        <div className="mb-6 group/thought">
+            <TraceLabel
+                icon={Brain}
+                label="Agent Thought"
+                colorClass="text-blue-400"
+                dotColor="bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.4)]"
+            />
 
-            <AnimatePresence>
-                {isExpanded && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="px-4 pb-4"
-                    >
-                        <div className="pt-2 border-t border-white/5 space-y-2 relative pl-4 border-l border-blue-500/20 ml-1.5">
-                            {steps.map((step, idx) => (
-                                <div
-                                    key={idx}
-                                    className={cn(
-                                        "text-[11px] transition-all duration-300",
-                                        step.indented ? "ml-4 opacity-70 border-l border-white/10 pl-2" : "text-white/60"
-                                    )}
-                                >
-                                    <div className="flex items-start gap-2">
-                                        {!step.indented && <div className="mt-1.5 w-1 h-1 rounded-full bg-blue-500" />}
-                                        <p className="leading-relaxed font-mono">{step.text}</p>
-                                    </div>
-                                </div>
-                            ))}
+            <div className="overflow-hidden rounded-[1.25rem] border border-white/5 bg-white/[0.01] backdrop-blur-sm transition-all shadow-2xl hover:bg-white/[0.03] group-hover/thought:border-white/10">
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="w-full h-11 px-4 flex items-center justify-between transition-colors"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="text-left">
+                            <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">
+                                {isExpanded ? `Synthesizing ${sections.length} Reasoning Tracks` : "Expand Intelligence Trace"}
+                            </p>
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="flex -space-x-1.5 mr-2">
+                            {sections.slice(0, 3).map((s, i) => {
+                                const Icon = s.icon;
+                                return (
+                                    <div key={i} className={cn("w-5 h-5 rounded-full bg-[#111114] border border-white/10 flex items-center justify-center shadow-lg", s.color)}>
+                                        <Icon size={10} />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <ChevronDown size={14} className={cn("text-white/20 transition-transform duration-500", isExpanded && "rotate-180")} />
+                    </div>
+                </button>
+
+                <AnimatePresence>
+                    {isExpanded && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="border-t border-white/5 overflow-hidden"
+                        >
+                            <div className="p-3 space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar bg-black/40">
+                                {sections.map((section, idx) => {
+                                    const Icon = section.icon;
+                                    const isOpen = expandedSections.has(idx);
+
+                                    return (
+                                        <div key={idx} className="border border-white/5 rounded-xl overflow-hidden bg-white/[0.02]">
+                                            <button
+                                                onClick={() => toggleSection(idx)}
+                                                className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors group/section"
+                                            >
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className={cn("p-1.5 rounded-lg bg-white/5 border border-white/5", section.color)}>
+                                                        <Icon size={12} />
+                                                    </div>
+                                                    <span className={cn("text-[11px] font-bold uppercase tracking-wider", section.color)}>
+                                                        {section.title}
+                                                    </span>
+                                                </div>
+                                                <ChevronRight
+                                                    size={12}
+                                                    className={cn(
+                                                        "text-white/30 transition-transform duration-300",
+                                                        isOpen && "rotate-90"
+                                                    )}
+                                                />
+                                            </button>
+
+                                            <AnimatePresence>
+                                                {isOpen && (
+                                                    <motion.div
+                                                        initial={{ height: 0, opacity: 0 }}
+                                                        animate={{ height: 'auto', opacity: 1 }}
+                                                        exit={{ height: 0, opacity: 0 }}
+                                                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                                        className="border-t border-white/5 bg-black/20"
+                                                    >
+                                                        <div className="p-4 text-[12px] text-white/70 leading-relaxed font-sans space-y-2">
+                                                            {section.content.split('\n').map((line, i) => {
+                                                                const trimmed = line.trim();
+                                                                if (!trimmed) return null;
+
+                                                                const isBullet = trimmed.match(/^[-*•]\s+(.+)$/);
+                                                                if (isBullet) {
+                                                                    return (
+                                                                        <div key={i} className="flex items-start gap-3 ml-1 group/line">
+                                                                            <div className="mt-2 w-1 h-1 rounded-full bg-indigo-400/50 group-hover/line:scale-125 transition-transform" />
+                                                                            <span className="flex-1 opacity-90">{isBullet[1]}</span>
+                                                                        </div>
+                                                                    );
+                                                                }
+
+                                                                return <p key={i} className={cn(line.startsWith('  ') && "ml-4 text-white/50 italic font-mono text-[11px]")}>{trimmed}</p>;
+                                                            })}
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
 };
@@ -248,66 +667,67 @@ const CognitiveTimeline = ({ activities }: { activities: any[] }) => {
     if (!activities || activities.length === 0) return null;
 
     return (
-        <div className="my-6 p-6 rounded-[2.5rem] bg-black/40 backdrop-blur-3xl border border-white/5 space-y-4 shadow-2xl overflow-hidden relative group">
-            {/* Glossy overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-
-            <div className="flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/20">
-                        <Activity size={16} />
-                    </div>
-                    <div>
-                        <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white/90">Agent Interaction Timeline</h3>
-                        <p className="text-[10px] text-white/40 font-medium">Internal symphony logging</p>
-                    </div>
-                </div>
+        <div className="my-3 pl-3 pr-2 border-l-2 border-white/5 space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+                <Activity size={12} className="text-amber-400 opacity-60" />
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-white/30">Live Agent Activity</h3>
             </div>
 
-            <div className="space-y-6 relative z-10">
+            <div className="space-y-4">
                 {activities.map((activity, idx) => (
-                    <div key={activity.id} className="relative pl-6 group/item">
-                        {/* Connector line */}
-                        {idx !== activities.length - 1 && (
-                            <div className="absolute left-[7px] top-4 bottom-[-24px] w-px bg-gradient-to-b from-amber-500/50 via-amber-500/10 to-transparent" />
-                        )}
-
-                        {/* Dot */}
+                    <div key={activity.id} className="relative pl-4 group/item">
+                        {/* Minimal Dot */}
                         <div className={cn(
-                            "absolute left-0 top-1.5 w-3.5 h-3.5 rounded-full border-2 border-black flex items-center justify-center transition-all duration-500",
-                            activity.type === 'error' ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]" :
-                                activity.type === 'thinking' ? "bg-blue-500 animate-pulse" : "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]"
-                        )}>
-                            {activity.type === 'thinking' && <div className="w-1 h-1 bg-white rounded-full animate-ping" />}
-                        </div>
+                            "absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full border-2 border-[#1e1e1e] transition-all duration-500",
+                            activity.type === 'error' ? "bg-red-500" :
+                                activity.type === 'thinking' ? "bg-blue-500" : "bg-amber-500 opacity-60"
+                        )} />
 
-                        <div className="space-y-1">
-                            <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
                                 <span className={cn(
-                                    "text-[10px] font-black uppercase tracking-widest",
+                                    "text-[10px] font-bold uppercase tracking-wide",
                                     activity.type === 'error' ? "text-red-400" :
-                                        activity.type === 'thinking' ? "text-blue-400" : "text-amber-400"
+                                        activity.type === 'thinking' ? "text-blue-400" : "text-amber-400/80"
                                 )}>
                                     {activity.title}
                                 </span>
-                                <span className="text-[9px] text-white/20 font-mono">
-                                    {new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                </span>
                             </div>
                             <div className={cn(
-                                "text-[11px] rounded-2xl p-3 border transition-all duration-300",
-                                activity.type === 'error' ? "bg-red-500/10 border-red-500/20 text-red-200/70" :
-                                    activity.type === 'thinking' ? "bg-blue-500/10 border-blue-500/20 text-blue-100/70 italic" :
-                                        "bg-white/5 border-white/10 text-white/60 group-hover/item:border-white/20 group-hover/item:bg-white/[0.07]"
+                                "text-[11px] leading-relaxed p-3 rounded-xl border backdrop-blur-md shadow-2xl transition-all",
+                                activity.type === 'error' ? "text-red-300 bg-red-500/5 border-red-500/20" :
+                                    activity.type === 'thinking' ? "text-blue-100/90 bg-indigo-500/5 border-indigo-500/10" :
+                                        "text-zinc-300 bg-white/[0.02] border-white/5"
                             )}>
-                                <p className="leading-relaxed whitespace-pre-wrap">{activity.message}</p>
-
-                                {activity.toolUsed && (
-                                    <div className="mt-2 flex items-center gap-1.5 opacity-60">
-                                        <Zap size={10} className="text-amber-400" />
-                                        <span className="text-[9px] font-bold uppercase tracking-tighter">{activity.toolUsed}</span>
-                                    </div>
-                                )}
+                                <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{
+                                        code: ({ node, className, children, ...props }: any) => {
+                                            const match = /language-(\w+)/.exec(className || '');
+                                            const codeString = String(children).replace(/\n$/, '');
+                                            if (!match && !codeString.includes('\n')) {
+                                                return <code className="bg-white/10 px-1 py-0.5 rounded text-indigo-400 font-mono" {...props}>{children}</code>;
+                                            }
+                                            return <CodeBlock language={match?.[1] || 'text'} code={codeString} />;
+                                        },
+                                        p: ({ node, ...props }: any) => <p {...props} className="mb-2 last:mb-0" />,
+                                        ul: ({ node, ...props }: any) => <ul {...props} className="list-disc pl-4 mb-2 space-y-1" />,
+                                    }}
+                                >
+                                    {(() => {
+                                        // Auto-format JSON strings in activities
+                                        const trimmed = activity.message.trim();
+                                        if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+                                            try {
+                                                const parsed = JSON.parse(trimmed);
+                                                return "```json\n" + JSON.stringify(parsed, null, 2) + "\n```";
+                                            } catch (e) {
+                                                return activity.message;
+                                            }
+                                        }
+                                        return activity.message;
+                                    })()}
+                                </ReactMarkdown>
                             </div>
                         </div>
                     </div>
@@ -319,17 +739,28 @@ const CognitiveTimeline = ({ activities }: { activities: any[] }) => {
 
 const AgentStepBadge = ({ tool, status }: { tool: string, status: 'executing' | 'done' | 'failed' }) => {
     return (
-        <div className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all mb-2 w-fit",
-            status === 'executing' ? "bg-amber-500/10 border-amber-500/20 text-amber-400 animate-pulse" :
-                status === 'done' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
-                    "bg-red-500/10 border-red-500/20 text-red-400"
-        )}>
-            {status === 'executing' ? <Loader2 size={12} className="animate-spin" /> :
-                status === 'done' ? <Check size={12} /> : <X size={12} />}
-            <span className="text-[10px] font-black uppercase tracking-widest">
-                {status === 'executing' ? 'Analyzing' : 'Complete'}: {tool.replace(/_/g, ' ')}
-            </span>
+        <div className="mb-4 animate-in fade-in slide-in-from-left-2 duration-700">
+            <TraceLabel
+                icon={Zap}
+                label="Agent Action"
+                colorClass="text-amber-400"
+                dotColor="bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.4)]"
+            />
+            <div className={cn(
+                "inline-flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all shadow-lg",
+                status === 'executing' ? "bg-amber-500/5 border-amber-500/20 text-amber-300 animate-pulse" :
+                    status === 'done' ? "bg-white/[0.02] border-white/10 text-zinc-300" :
+                        "bg-red-500/5 border-red-500/20 text-red-300"
+            )}>
+                {status === 'executing' ? <Loader2 size={14} className="animate-spin" /> :
+                    status === 'done' ? <Terminal size={14} className="text-amber-400/60" /> : <X size={14} />}
+                <div className="flex flex-col">
+                    <span className="text-[10px] text-white/20 font-black uppercase tracking-widest leading-none mb-1">Invoking Command</span>
+                    <span className="text-[11px] font-mono font-bold">
+                        {tool.replace(/_/g, ' ')}
+                    </span>
+                </div>
+            </div>
         </div>
     );
 };
@@ -337,40 +768,24 @@ const AgentStepBadge = ({ tool, status }: { tool: string, status: 'executing' | 
 const MessageBubble = ({
     msg,
     attachedFiles,
-    setInput,
-    setActiveTool,
-    isBackgroundBusy,
     onApprove,
-    hasMarkdownTable,
-    normalizeMarkdown,
-    remarkGfm,
-    ToolResultPreview
+    setInput,
+    setActiveTool
 }: {
     msg: any,
     attachedFiles: SelectedFile[],
-    setInput: (s: string) => void,
-    setActiveTool: (s: string | null) => void,
-    isBackgroundBusy: boolean,
     onApprove: (jobId?: string) => void,
-    hasMarkdownTable: (s: string) => boolean,
-    normalizeMarkdown: (s: string) => string,
-    remarkGfm: any,
-    ToolResultPreview: any
+    setInput: (s: string) => void,
+    setActiveTool: (s: string | null) => void
 }) => {
+    // Helper to determine file type for icons
     const fileMeta = (() => {
         const file = msg?.toolResult?.file;
         if (file?.name) return { name: file.name as string, type: file.type as string | undefined };
-        if (msg?.toolResult?.fileName) {
-            const name = msg.toolResult.fileName as string;
-            return { name, type: name.split('.').pop()?.toLowerCase() };
-        }
-        if (msg?.toolArgs?.filename) {
-            const name = msg.toolArgs.filename as string;
-            return { name, type: name.split('.').pop()?.toLowerCase() };
-        }
+        if (msg?.toolResult?.fileName) return { name: msg.toolResult.fileName as string, type: msg.toolResult.fileName.split('.').pop()?.toLowerCase() };
+        if (msg?.toolArgs?.filename) return { name: msg.toolArgs.filename as string, type: msg.toolArgs.filename.split('.').pop()?.toLowerCase() };
         if (msg?.toolArgs?.fileId && typeof msg.toolArgs.fileId === 'string' && msg.toolArgs.fileId.includes('.')) {
-            const name = msg.toolArgs.fileId as string;
-            return { name, type: name.split('.').pop()?.toLowerCase() };
+            return { name: msg.toolArgs.fileId as string, type: msg.toolArgs.fileId.split('.').pop()?.toLowerCase() };
         }
         return null;
     })();
@@ -379,175 +794,155 @@ const MessageBubble = ({
         : (fileMeta?.type?.includes('png') || fileMeta?.type?.includes('jpg') || fileMeta?.type?.includes('jpeg') || fileMeta?.type?.includes('image')) ? ImageIcon
             : (fileMeta?.type?.includes('html') ? Layout : FileText);
 
+    const isUser = msg.role === 'user';
+    const isApproval = msg.toolResult?.requiresApproval && !msg.toolResult.approved;
+
     return (
         <div className={cn(
             "flex flex-col gap-2 max-w-[95%] w-full animate-in fade-in slide-in-from-bottom-2 duration-500",
-            msg.role === 'user' ? "ml-auto items-end" : "items-start"
+            isUser ? "ml-auto items-end" : "items-start"
         )}>
+            {/* User Attachments */}
             {msg.files && msg.files.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-1 justify-end">
                     {msg.files.map((f: any) => (
-                        <div key={f.id} className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 rounded-lg text-[9px] text-blue-300 border border-blue-500/20 shadow-lg">
+                        <div key={f.id} className="flex items-center gap-1.5 px-2 py-1 bg-white/5 rounded-lg text-[10px] text-white/60 border border-white/10">
                             {f.type === 'pdf' ? <FileText size={10} /> : <ImageIcon size={10} />}
-                            {f.name}
+                            <span className="truncate max-w-[150px]">{f.name}</span>
                         </div>
                     ))}
                 </div>
             )}
 
-            {msg.role === 'ai' && msg.thinking && (
-                <ThinkingProcess content={msg.thinking} />
-            )}
+            {/* AI Thinking & Trace */}
+            <div className="relative pl-6 border-l border-white/5 space-y-2">
+                {!isUser && msg.thinking && (
+                    <ThinkingProcess content={msg.thinking} />
+                )}
 
-            {msg.role === 'ai' && msg.toolUsed && (
-                <AgentStepBadge tool={msg.toolUsed} status="done" />
-            )}
+                {!isUser && msg.toolUsed && (
+                    <AgentStepBadge tool={msg.toolUsed} status="done" />
+                )}
+            </div>
 
             <div className={cn(
-                "px-6 py-5 rounded-[1.8rem] text-[13px] leading-relaxed relative group/msg transition-all duration-300",
-                msg.role === 'user'
-                    ? "bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white rounded-tr-none shadow-2xl shadow-blue-500/20 hover:shadow-blue-500/30 border border-blue-400/20"
-                    : "bg-gradient-to-br from-white/[0.05] to-white/[0.02] text-white/90 rounded-tl-none border border-white/10 backdrop-blur-xl shadow-2xl hover:bg-white/[0.08] hover:border-white/20 agent-bubble-glow"
+                "relative group/msg transition-all duration-300 rounded-2xl p-0 overflow-hidden shadow-xl",
+                isUser
+                    ? "bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-600 text-white rounded-tr-md"
+                    : "bg-[#18181b] border border-white/5 text-zinc-300 rounded-tl-md"
             )}>
-                {msg.role === 'ai' && (
-                    <div className="absolute top-0 right-0 p-4 opacity-[0.03] pointer-events-none overflow-hidden">
-                        <BrainCircuit size={80} className="neural-glow" />
-                    </div>
-                )}
-                <div className="markdown-content max-w-full overflow-x-hidden break-words relative z-10">
+                {/* Message Content */}
+                <div className={cn("px-6 py-5 text-[14px] leading-[1.8] tracking-tight", isUser ? "text-white/95 font-medium" : "text-zinc-300 font-normal")}>
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
                             table: ({ node, ...props }: any) => (
-                                <div className="table-container my-4 overflow-x-auto rounded-xl border border-white/5 bg-black/20">
-                                    <table {...props} className="text-[11px] w-full border-collapse" />
+                                <div className="table-container my-6 overflow-x-auto rounded-[1rem] border border-white/10 bg-black/40 shadow-2xl">
+                                    <table {...props} className="text-[12px] w-full border-collapse" />
                                 </div>
                             ),
+                            thead: ({ node, ...props }: any) => <thead {...props} className="bg-white/5 text-white/40 uppercase text-[10px] font-bold tracking-widest border-b border-white/10" />,
+                            th: ({ node, ...props }: any) => <th {...props} className="px-5 py-3 text-left" />,
+                            td: ({ node, ...props }: any) => <td {...props} className="px-5 py-3 border-t border-white/5" />,
                             a: ({ node, ...props }: any) => (
-                                <a {...props} className="text-blue-400 hover:text-blue-300 underline decoration-blue-500/30 underline-offset-4" target="_blank" rel="noopener noreferrer" />
+                                <a {...props} className="text-blue-400 hover:text-blue-300 underline underline-offset-4 decoration-blue-500/30 font-medium transition-colors" target="_blank" rel="noopener noreferrer" />
                             ),
-                            code: ({ node, ...props }: any) => (
-                                <code {...props} className="bg-black/40 px-1.5 py-0.5 rounded text-blue-300 font-mono text-[11px]" />
+                            code: ({ node, className, children, ...props }: any) => {
+                                const match = /language-(\w+)/.exec(className || '');
+                                const codeString = String(children).replace(/\n$/, '');
+                                const isInline = !match && !codeString.includes('\n');
+
+                                if (isInline) {
+                                    return (
+                                        <code className="bg-white/10 px-1.5 py-0.5 rounded-md font-mono text-[11px] text-blue-300 border border-white/5 mx-0.5" {...props}>
+                                            {children}
+                                        </code>
+                                    );
+                                }
+
+                                return (
+                                    <CodeBlock
+                                        language={match?.[1] || 'text'}
+                                        code={codeString}
+                                    />
+                                );
+                            },
+                            p: ({ node, ...props }: any) => <p {...props} className="mb-5 last:mb-0 opacity-90" />,
+                            ul: ({ node, ...props }: any) => <ul {...props} className="list-none pl-1 mb-5 space-y-2.5" />,
+                            ol: ({ node, ...props }: any) => <ol {...props} className="list-none pl-1 mb-5 space-y-2.5" />,
+                            li: ({ node, ...props }: any) => {
+                                const isInsideOl = node.parent?.tagName === 'ol';
+                                const index = node.parent?.children.indexOf(node) + 1;
+                                return (
+                                    <li {...props} className="flex items-start gap-4">
+                                        <div className="mt-2 flex-shrink-0 flex items-center justify-center">
+                                            {isInsideOl ? (
+                                                <span className="text-[10px] font-black text-indigo-400/60 w-5 h-5 rounded-full bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-center">
+                                                    {index}
+                                                </span>
+                                            ) : (
+                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500/40 border border-indigo-500/20" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 opacity-90">{props.children}</div>
+                                    </li>
+                                );
+                            },
+                            h1: ({ node, ...props }: any) => <h1 {...props} className="text-xl font-black text-white mb-4 mt-8 pb-3 border-b border-white/10 tracking-tight" />,
+                            h2: ({ node, ...props }: any) => <h2 {...props} className="text-lg font-bold text-white mb-3 mt-8 tracking-tight flex items-center gap-2 before:w-1 before:h-4 before:bg-indigo-500 before:rounded-full" />,
+                            h3: ({ node, ...props }: any) => <h3 {...props} className="text-[15px] font-bold text-white mb-2 mt-6 tracking-tight" />,
+                            blockquote: ({ node, ...props }: any) => (
+                                <blockquote {...props} className="border-l-4 border-indigo-500/40 pl-6 py-1 italic text-white/50 my-6 bg-white/[0.02] rounded-r-xl" />
                             ),
-                            p: ({ node, ...props }: any) => (
-                                <p {...props} className="mb-3 last:mb-0" />
-                            )
                         }}
                     >
                         {normalizeMarkdown(msg.content)}
                     </ReactMarkdown>
+
+                    {/* Tool Result Preview */}
+                    {!isUser && msg.toolUsed && (
+                        <div className="pt-2 border-t border-white/5 mt-4">
+                            <ToolResultPreview tool={msg.toolUsed} result={msg.toolResult} />
+                        </div>
+                    )}
+
+                    {/* File Meta */}
+                    {!isUser && fileMeta && (
+                        <div className="mt-3 flex items-center gap-2 text-[10px] text-white/40 bg-white/5 p-2 rounded-lg inline-flex">
+                            <FileIcon size={12} className="text-indigo-300" />
+                            <span className="truncate">{fileMeta.name}</span>
+                        </div>
+                    )}
                 </div>
 
-                {msg.role === 'ai' && msg.toolUsed && (
-                    <div className="pt-2 border-t border-white/5 mt-4">
-                        <ToolResultPreview tool={msg.toolUsed} result={msg.toolResult} />
-                    </div>
-                )}
+                {/* Footer / Actions */}
+                {!isUser && (
+                    <div className="px-3 py-2 bg-black/20 border-t border-white/5 flex items-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                        <button
+                            onClick={() => {
+                                navigator.clipboard.writeText(msg.content);
+                                toast.success('Copied!');
+                            }}
+                            className="p-1.5 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-colors"
+                            title="Copy Message"
+                        >
+                            <Copy size={12} />
+                        </button>
 
-                {msg.role === 'ai' && fileMeta && (
-                    <div className="mt-3 flex items-center gap-2 text-[10px] text-white/40">
-                        <FileIcon size={12} className="text-blue-300/70" />
-                        <span className="truncate">{fileMeta.name}</span>
-                    </div>
-                )}
-
-                {/* Premium Copy Button & Timestamp for AI messages */}
-                {msg.role === 'ai' && (
-                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/5">
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => {
-                                    navigator.clipboard.writeText(msg.content);
-                                    toast.success('Copied to clipboard!');
-                                }}
-                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/40 hover:text-white/80 transition-all duration-300 group"
-                                title="Copy message"
-                            >
-                                <Copy size={11} className="group-hover:scale-110 transition-transform" />
-                                <span className="text-[9px] font-medium uppercase tracking-wider">Copy</span>
-                            </button>
-
-                            {/* Quick Reactions */}
-                            <div className="flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
-                                {['👍', '❤️', '🎉', '🤔'].map((emoji) => (
-                                    <button
-                                        key={emoji}
-                                        onClick={() => {
-                                            toast.success(`Reacted with ${emoji}`);
-                                            if (typeof window !== 'undefined') {
-                                                window.dispatchEvent(new CustomEvent('emoji-celebration', { detail: { emoji } }));
-                                            }
-                                        }}
-                                        className="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 flex items-center justify-center text-xs hover:scale-125 active:scale-95 transition-all duration-200"
-                                        title={`React with ${emoji}`}
-                                    >
-                                        {emoji}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="text-[9px] text-white/20 font-mono">
-                            {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                    </div>
-                )}
-
-                {msg.role === 'ai' && (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        {msg.toolUsed === 'enqueue_agent_job' && msg.toolResult?.requiresApproval && !msg.toolResult?.approved && (
+                        {isApproval && (
                             <button
                                 onClick={() => onApprove(msg.toolResult?.jobId)}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-xl text-[10px] text-emerald-300 hover:text-white transition-all border border-emerald-500/20 animate-pulse"
-                                title="Approve and run the background job"
+                                className="ml-auto flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg text-[10px] text-emerald-400 border border-emerald-500/20 animate-pulse transition-all"
                             >
                                 <Check size={12} />
-                                <span>Approve Action</span>
+                                <span className="font-bold">Approve Action</span>
                             </button>
                         )}
-                        {(() => {
-                            const planCue = /\b(plan|steps|strategy|approach|outline|proposed)\b/i.test(msg.content);
-                            const queuedWork = msg.toolUsed === 'enqueue_agent_job';
-                            return (planCue || queuedWork) && !isBackgroundBusy;
-                        })() && (
-                                <button
-                                    onClick={() => {
-                                        setInput('Please delegate to a UI/UX designer to review the frontend and visual design.');
-                                        setActiveTool('agent_delegate');
-                                    }}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-xl text-[10px] text-emerald-300 hover:text-white transition-all border border-emerald-500/20"
-                                    title="Request a UI/UX design review"
-                                >
-                                    <Sparkles size={12} />
-                                    <span>Request Design Review</span>
-                                </button>
-                            )}
-                        {/* Show as Table Button */}
-                        {(msg.content.toLowerCase().includes('need') ||
-                            msg.content.toLowerCase().includes('information') ||
-                            msg.content.toLowerCase().includes('proceed') ||
-                            msg.toolUsed === 'verify_dgii_rnc') &&
-                            !hasMarkdownTable(msg.content) && (
-                                <button
-                                    onClick={() => {
-                                        setInput("Display the extracted receipt data in a markdown table, including all fields (Date, Provider, RNC, NCF, Total Amount, ITBIS) and the business verification information from DGII.");
-                                        setActiveTool('extract');
-                                    }}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 rounded-xl text-[10px] text-purple-300 hover:text-white transition-all border border-purple-500/20 shadow-lg shadow-purple-500/5"
-                                >
-                                    <Receipt size={12} />
-                                    <span>Show as Table</span>
-                                </button>
-                            )}
 
-                        {hasMarkdownTable(msg.content) && (
-                            <button
-                                onClick={() => setInput("Export this table as a markdown file. Please ask me if I want a new folder first.")}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl text-[10px] text-blue-300 hover:text-white transition-all border border-blue-500/20"
-                            >
-                                <FileText size={12} />
-                                <span>Save as Report</span>
-                            </button>
+                        {!isApproval && (
+                            <div className="ml-auto text-[10px] text-white/20 font-mono">
+                                AI Assistant
+                            </div>
                         )}
                     </div>
                 )}
@@ -556,9 +951,15 @@ const MessageBubble = ({
     );
 };
 
-
-
-export default function AIChat({ embedded = false }: { embedded?: boolean }) {
+export default function AIChat({
+    embedded = false,
+    activeFile = null,
+    activeApp = null
+}: {
+    embedded?: boolean;
+    activeFile?: any;
+    activeApp?: { name: string; path: string } | null;
+}) {
     const [isOpen, setIsOpen] = useState(embedded);
     const [view, setView] = useState<'chat' | 'prompts' | 'sessions'>('chat');
     const [input, setInput] = useState('');
@@ -566,6 +967,13 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
     const [isBackgroundBusy, setIsBackgroundBusy] = useState(false);
     const [backgroundJobLabel, setBackgroundJobLabel] = useState<string | null>(null);
     const [backgroundJobMessage, setBackgroundJobMessage] = useState<string | null>(null);
+    const [streamingStatus, setStreamingStatus] = useState<'idle' | 'connecting' | 'streaming' | 'processing'>('idle');
+    const [streamProgress, setStreamProgress] = useState(0);
+    const [aiActivity, setAiActivity] = useState<string>('');
+    const [showActivityPanel, setShowActivityPanel] = useState(false);
+    const [activityLog, setActivityLog] = useState<Array<{ time: string; agent: string; message: string }>>([]);
+    const [jobStartTime, setJobStartTime] = useState<number | null>(null);
+    const [elapsedTime, setElapsedTime] = useState(0);
     const [messages, setMessages] = useState<{
         id?: string;
         role: 'user' | 'ai';
@@ -610,7 +1018,10 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
     const [currentFolderContext, setCurrentFolderContext] = useState<{ id: string | null, name: string }>(aiChatStateCache.currentFolderContext);
     const [promptHistory, setPromptHistory] = useState<string[]>([]);
     const [activePreviewContext, setActivePreviewContext] = useState<{ id: string, name: string, parentId: string | null } | null>(aiChatStateCache.activePreviewContext);
+    const [activeAppContext, setActiveAppContext] = useState<{ name: string; path: string } | null>(aiChatStateCache.activeAppContext);
     const [showScrollButton, setShowScrollButton] = useState(false);
+    const [isUserScrolling, setIsUserScrolling] = useState(false);
+    const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
     const [celebration, setCelebration] = useState<{ emoji: string; timestamp: number } | null>(null);
     const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
     const [sessionActivities, setSessionActivities] = useState<any[]>([]);
@@ -619,6 +1030,26 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
     const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
     const [activeCommandIndex, setActiveCommandIndex] = useState(0);
     const [dismissedQuestionId, setDismissedQuestionId] = useState<string | null>(null);
+
+    // Sync Props to State
+    useEffect(() => {
+        if (activeApp) {
+            setActiveAppContext(activeApp);
+            aiChatStateCache.activeAppContext = activeApp;
+        }
+    }, [activeApp]);
+
+    useEffect(() => {
+        if (activeFile) {
+            const context = {
+                id: activeFile.path || activeFile.id,
+                name: activeFile.name,
+                parentId: activeFile.parentId || null
+            };
+            setActivePreviewContext(context);
+            aiChatStateCache.activePreviewContext = context;
+        }
+    }, [activeFile]);
 
     // Calculate active wizard state
     const activeQuestions = useMemo(() => {
@@ -673,6 +1104,10 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
         aiChatStateCache.activePreviewContext = activePreviewContext;
     }, [activePreviewContext]);
 
+    useEffect(() => {
+        aiChatStateCache.activeAppContext = activeAppContext;
+    }, [activeAppContext]);
+
     // Listen for preview changes
     useEffect(() => {
         const handlePreviewChange = (e: any) => {
@@ -702,6 +1137,8 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const lastBackgroundBusyRef = useRef(false);
     const lastJobStatusRef = useRef<{ id?: string; updatedAt?: number; status?: string }>({});
+    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isNearBottomRef = useRef(true);
 
     const resolveToolBadge = (toolUsed?: string) => {
         if (!toolUsed) return null;
@@ -731,6 +1168,8 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
     useEffect(() => {
         if (isOpen) {
             refreshData();
+            // Cleanup: Ensure no stale jobs are pending on load/mount
+            cancelAllAgentJobs().catch(e => console.error("Failed to cleanup jobs on load", e));
         }
     }, [isOpen]);
 
@@ -768,7 +1207,25 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
             // Use latest activity title if available, otherwise fall back to job type
             const label = res.latestActivity?.title || res.latestJob?.type || null;
             setBackgroundJobLabel(label);
-            setBackgroundJobMessage((res.latestActivity as any)?.message || res.latestJob?.error || null);
+            const message = (res.latestActivity as any)?.message || res.latestJob?.error || null;
+            setBackgroundJobMessage(message);
+
+            // Add to activity log if there's new activity
+            if (message && label) {
+                setActivityLog(prev => {
+                    const newEntry = {
+                        time: new Date().toLocaleTimeString(),
+                        agent: label,
+                        message: message
+                    };
+                    // Only add if it's different from the last entry
+                    if (prev.length === 0 || prev[prev.length - 1].message !== message) {
+                        return [...prev.slice(-9), newEntry]; // Keep last 10 entries
+                    }
+                    return prev;
+                });
+            }
+
             return { busy: !!res.busy, latestJob: res.latestJob };
         }
         setIsBackgroundBusy(false);
@@ -809,6 +1266,9 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
         }
 
         let cancelled = false;
+        let pollInterval = 2000; // Start at 2 seconds
+        let idleCount = 0;
+        let timeoutId: NodeJS.Timeout;
 
         const tick = async () => {
             if (cancelled) return;
@@ -830,7 +1290,15 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
             if (wasBusy && !isBusy) {
                 await syncSessionMessages(activeSessionId);
                 toast.success('Background agent finished. You can continue.');
+                setJobStartTime(null);
+                setElapsedTime(0);
             }
+
+            // Start timer when job begins
+            if (!wasBusy && isBusy) {
+                setJobStartTime(Date.now());
+            }
+
             lastBackgroundBusyRef.current = isBusy;
             if (latestJob?.id) {
                 lastJobStatusRef.current = {
@@ -839,16 +1307,124 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                     updatedAt: latestUpdatedAt
                 };
             }
+
+            // Adaptive polling: fast when busy, slow when idle
+            if (isBusy || isLoading) {
+                pollInterval = 1500; // Poll faster when active (1.5s)
+                idleCount = 0;
+            } else {
+                idleCount++;
+                // Exponential backoff: 2s → 4s → 8s (max)
+                pollInterval = Math.min(2000 * Math.pow(2, Math.min(idleCount, 2)), 8000);
+            }
+
+            // Schedule next tick
+            if (!cancelled) {
+                timeoutId = setTimeout(tick, pollInterval);
+            }
         };
 
         tick();
-        const interval = setInterval(tick, 3000);
 
         return () => {
             cancelled = true;
-            clearInterval(interval);
+            if (timeoutId) clearTimeout(timeoutId);
         };
-    }, [activeSessionId, isOpen, manualStop]);
+    }, [activeSessionId, isOpen, manualStop, isLoading]);
+
+    // Timer for elapsed time during background jobs
+    useEffect(() => {
+        if (!jobStartTime) return;
+
+        const updateElapsed = () => {
+            setElapsedTime(Math.floor((Date.now() - jobStartTime) / 1000));
+        };
+
+        updateElapsed();
+        const timer = setInterval(updateElapsed, 1000);
+
+        return () => clearInterval(timer);
+    }, [jobStartTime]);
+
+    // Listen for set-active-app event from FileManager
+    useEffect(() => {
+        const handleSetActiveApp = async (event: CustomEvent) => {
+            const { name, path } = event.detail;
+
+            // Find the folder in workspace files
+            let appFolder = workspaceFiles.find(f =>
+                f.type === 'folder' &&
+                (f.name === name || f.storagePath === path)
+            );
+
+            // If not found in workspace files, create a virtual folder entry for repo apps
+            if (!appFolder) {
+                appFolder = {
+                    id: `repo-app-${name}`,
+                    name: name,
+                    type: 'folder',
+                    storagePath: path,
+                    parentId: null,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                } as any;
+            }
+
+            // Add folder to attached files if not already attached
+            setAttachedFiles(prev => {
+                if (prev.find(f => f.id === appFolder!.id)) {
+                    toast.info(`${name} is already in context`);
+                    return prev;
+                }
+                toast.success(`Added ${name} to chat context`, {
+                    description: 'The AI will now work within this app folder'
+                });
+                return [...prev, {
+                    id: appFolder!.id,
+                    name: appFolder!.name,
+                    type: 'folder',
+                    parentId: appFolder!.parentId,
+                    storagePath: path
+                }];
+            });
+
+            // Also add a system message to the input to inform the AI
+            setInput(prev => {
+                const systemMsg = `[SYSTEM: Active app selected: "${name}" at path "${path}".
+
+                            CRITICAL: This is a REPO APP located at "apps/${path}/" (NOT the main TaskFlow codebase).
+                            When creating/editing files or running commands for this app, you MUST:
+                            1. Use the full path starting with "apps/${path}/" for ALL file operations and terminal commands
+                            2. For terminal commands (npm, vite, etc), use cwd: "apps/${path}"
+                            3. This is a SEPARATE application with its own src/, public/, and package.json
+                            4. DO NOT edit files in the main TaskFlow src/ directory
+                            5. ALWAYS check if the directory exists before running commands
+
+                            Example correct paths:
+                            - File operations: "apps/${path}/src/App.tsx", "apps/${path}/package.json"
+                            - Terminal cwd: "apps/${path}"
+                            - List directory: "apps/${path}/src"
+
+                            WRONG: cwd: "${path}" or path: "${path}/src/App.tsx"
+                            CORRECT: cwd: "apps/${path}" or path: "apps/${path}/src/App.tsx"
+
+                            Keep ALL edits and file operations within this app unless user explicitly says otherwise.]\n\n`;
+                // Only add if not already present
+                if (prev.includes('[SYSTEM: Active app selected:')) {
+                    // Replace existing system message
+                    return prev.replace(/\[SYSTEM: Active app selected:[\s\S]*?\]\n\n/, systemMsg);
+                }
+                return systemMsg + prev;
+            });
+        };
+
+        window.addEventListener('set-active-app', handleSetActiveApp as EventListener);
+
+        return () => {
+            window.removeEventListener('set-active-app', handleSetActiveApp as EventListener);
+        };
+    }, [workspaceFiles]);
+
 
     const buildSessionTitle = (text: string) => {
         const trimmed = text.trim().replace(/\s+/g, ' ');
@@ -861,6 +1437,8 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
         const fileMap = new Map(sourceFiles.map(f => [f.id, f]));
         return ids.map(id => fileMap.get(id)).filter(Boolean) as SelectedFile[];
     };
+
+    const genMsgId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     const MAX_CONTEXT_FILE_IDS = 50;
 
@@ -1103,12 +1681,24 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
         </div>
     );
 
-    // Auto-scroll
+    // Smart auto-scroll - only when user is at bottom
     useEffect(() => {
-        if (scrollRef.current) {
+        if (scrollRef.current && shouldAutoScroll && isNearBottomRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [messages, isLoading, isPinned, view]);
+    }, [messages, isLoading, isPinned, view, sessionActivities, shouldAutoScroll]);
+
+    // Check if user is near bottom on mount
+    useEffect(() => {
+        const checkPosition = () => {
+            if (scrollRef.current) {
+                const { scrollHeight, scrollTop, clientHeight } = scrollRef.current;
+                const isNear = scrollHeight - scrollTop - clientHeight < 150;
+                isNearBottomRef.current = isNear;
+            }
+        };
+        checkPosition();
+    }, []);
 
     const streamAssistantMessage = (content: string, meta: { toolUsed?: string; toolResult?: any; thinking?: string; toolArgs?: any }) => {
         const messageId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
@@ -1183,7 +1773,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
 
         setIsLoading(true);
 
-        const userMsg = { role: 'user' as const, content: text, files: [...attachedFiles] };
+        const userMsg = { id: genMsgId(), role: 'user' as const, content: text, files: [...attachedFiles] };
         setMessages(prev => [...prev, userMsg]);
         setPromptHistory(prev => [text, ...prev]);
         setInput('');
@@ -1237,7 +1827,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                         }
 
                         // Append tool output as a system note in the history
-                        if (resultStr && resultStr !== '{}') {
+                        if (resultStr && resultStr !== '{ }') {
                             content += `\n\n[System: Tool '${m.toolUsed}' output: ${resultStr}]`;
                         }
                     } catch (e) {
@@ -1261,12 +1851,21 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
 
             const expandedFileIds = await expandFileIdsWithFolders(Array.from(allFileIds));
 
+            // Warn if context is very large
+            if (expandedFileIds.length > 30) {
+                toast.warning(`Large context detected (${expandedFileIds.length} files). This may cause connection issues.`);
+            }
+
             // Build system context to help AI understand current state
             const systemContext = [];
 
             // Background job context
             if (isBackgroundBusy && backgroundJobLabel) {
                 systemContext.push(`[SYSTEM: Background agent is currently running: "${backgroundJobLabel}"]`);
+            }
+
+            if (activeAppContext?.name && activeAppContext?.path) {
+                systemContext.push(`[SYSTEM: Active app selected: "${activeAppContext.name}" at path "apps/${activeAppContext.path}". Use "apps/${activeAppContext.path}" as the base path for all file operations and terminal commands (cwd). Keep edits within this app unless user explicitly says otherwise.]`);
             }
 
             // Folder context
@@ -1281,13 +1880,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
 
             // Terminal/App running hint - based on domain knowledge
             // Note: We can't directly detect terminals from the frontend, but we can provide smart guidance
-            systemContext.push(`[SYSTEM GUIDANCE: If user says "run the app" or "start the server":
-1. First check if they mean a specific file they're previewing
-2. Common scenarios in this project:
-   - Main app runs via "npm run dev" on http://localhost:3000
-   - If they just scaffolded a new app in apps/ folder, that would be in a subdirectory
-3. If unsure which app, ask them to clarify OR check for package.json in their current folder
-4. NEVER just search for files - always provide actionable guidance or commands]`);
+            // REMOVED: System guidance polluting the context. Moved to backend system instruction if needed.
 
             const contextMsg = systemContext.length > 0
                 ? `${systemContext.join('\\n')}\\n\\n${userMsg.content}`
@@ -1295,13 +1888,20 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
 
             console.log('📤 Sending to AI:', userMsg.content);
             console.log('🧠 System Context:', systemContext.length > 0 ? systemContext : 'None');
-            console.log('📎 Files in context:', expandedFileIds);
+            console.log('📎 Files in context:', expandedFileIds.length, 'files');
             console.log('📂 Current Folder:', currentFolderContext.name, currentFolderContext.id);
             let usedStream = false;
             let streamedMessageId: string | null = null;
             let res: any = null;
 
             try {
+                // Create AbortController with timeout to prevent hanging requests
+                const abortController = new AbortController();
+                const timeoutId = setTimeout(() => abortController.abort(), 5 * 60 * 1000); // 5 minute timeout
+
+                setStreamingStatus('connecting');
+                setAiActivity('Sending request to AI...');
+
                 const streamResponse = await fetch('/api/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1312,13 +1912,21 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                         currentFolder: currentFolderContext.name,
                         currentFolderId: currentFolderContext.id || undefined,
                         sessionId: sessionId || undefined,
-                        verbosity: verbosity // Pass current verbosity setting
-                    })
+                        verbosity: verbosity, // Pass current verbosity setting
+                        activeAppName: activeAppContext?.name,
+                        activeAppPath: activeAppContext?.path
+                    }),
+                    signal: abortController.signal
                 });
+
+                clearTimeout(timeoutId);
 
                 if (!streamResponse.ok || !streamResponse.body) {
                     throw new Error('Streaming unavailable');
                 }
+
+                setStreamingStatus('streaming');
+                setAiActivity('Receiving response...');
 
                 usedStream = true;
                 streamedMessageId = createStreamingMessage();
@@ -1328,40 +1936,57 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                 let buffer = '';
                 let accumulated = '';
                 let finalMeta: { toolUsed?: string; toolResult?: any; thinking?: string; toolArgs?: any } = {};
+                let chunkCount = 0;
 
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
+                // Add timeout for stream reading to prevent infinite hangs
+                const streamTimeout = setTimeout(() => {
+                    reader.cancel();
+                    throw new Error('Stream reading timeout');
+                }, 4 * 60 * 1000); // 4 minute timeout for reading
 
-                    buffer += decoder.decode(value, { stream: true });
-                    const parts = buffer.split('\n\n');
-                    buffer = parts.pop() || '';
+                try {
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
 
-                    for (const part of parts) {
-                        const line = part.split('\n').find(l => l.startsWith('data:'));
-                        if (!line) continue;
-                        const data = line.replace(/^data:\s*/, '').trim();
-                        if (!data) continue;
+                        buffer += decoder.decode(value, { stream: true });
+                        const parts = buffer.split('\n\n');
+                        buffer = parts.pop() || '';
 
-                        const payload = JSON.parse(data);
-                        if (payload.type === 'delta' && typeof payload.text === 'string') {
-                            accumulated += payload.text;
-                            if (streamedMessageId) {
-                                updateStreamingContent(streamedMessageId, accumulated);
+                        for (const part of parts) {
+                            const line = part.split('\n').find(l => l.startsWith('data:'));
+                            if (!line) continue;
+                            const data = line.replace(/^data:\s*/, '').trim();
+                            if (!data) continue;
+
+                            const payload = JSON.parse(data);
+                            if (payload.type === 'delta' && typeof payload.text === 'string') {
+                                accumulated += payload.text;
+                                chunkCount++;
+                                setStreamProgress(prev => Math.min(prev + 5, 95));
+                                setAiActivity(`Streaming response... (${chunkCount} chunks)`);
+                                if (streamedMessageId) {
+                                    updateStreamingContent(streamedMessageId, accumulated);
+                                }
+                            }
+                            if (payload.type === 'done') {
+                                finalMeta = {
+                                    toolUsed: payload.toolUsed,
+                                    toolResult: payload.toolResult,
+                                    thinking: payload.thinking,
+                                    toolArgs: payload.toolArgs
+                                };
+                            }
+                            if (payload.type === 'error') {
+                                throw new Error(payload.message || 'Streaming failed');
                             }
                         }
-                        if (payload.type === 'done') {
-                            finalMeta = {
-                                toolUsed: payload.toolUsed,
-                                toolResult: payload.toolResult,
-                                thinking: payload.thinking,
-                                toolArgs: payload.toolArgs
-                            };
-                        }
-                        if (payload.type === 'error') {
-                            throw new Error(payload.message || 'Streaming failed');
-                        }
                     }
+                } finally {
+                    clearTimeout(streamTimeout);
+                    setStreamingStatus('processing');
+                    setAiActivity('Finalizing response...');
+                    setStreamProgress(100);
                 }
 
                 res = {
@@ -1370,11 +1995,31 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                     ...finalMeta
                 };
             } catch (streamError) {
-                console.warn('⚠️ Stream failed, falling back to direct API:', streamError);
+                const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
+                const isAbortError = errorMessage.includes('abort');
+                const isConnectionError = errorMessage.includes('ECONNRESET') || errorMessage.includes('aborted');
+
+                if (isAbortError) {
+                    console.warn('⚠️ Request timeout - context may be too large:', streamError);
+                    toast.error('Request timed out. Try reducing the number of attached files.');
+                } else if (isConnectionError) {
+                    console.warn('⚠️ Connection reset - likely due to large context:', streamError);
+                    toast.warning('Connection interrupted. Retrying with fallback method...');
+                } else {
+                    console.warn('⚠️ Stream failed, falling back to direct API:', streamError);
+                }
+
                 usedStream = false;
+
+                // Reduce context size for fallback to prevent same error
+                const reducedFileIds = expandedFileIds.slice(0, 20); // Limit to 20 files for fallback
+                if (reducedFileIds.length < expandedFileIds.length) {
+                    toast.info(`Reducing context from ${expandedFileIds.length} to ${reducedFileIds.length} files for retry`);
+                }
+
                 res = await chatWithAI(
                     contextMsg,
-                    expandedFileIds,
+                    reducedFileIds,
                     geminiHistory,
                     currentFolderContext.name,
                     currentFolderContext.id || undefined,
@@ -1395,6 +2040,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                     console.error('⚠️ AI returned empty response');
                     toast.error('AI returned an empty response');
                     setMessages(prev => [...prev, {
+                        id: genMsgId(),
                         role: 'ai',
                         content: 'I apologize, but I encountered an issue generating a response. Please try again.'
                     }]);
@@ -1424,6 +2070,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                         });
                     } else {
                         setMessages(prev => [...prev, {
+                            id: genMsgId(),
                             role: 'ai',
                             content: text,
                             toolUsed: (res as any).toolUsed,
@@ -1447,6 +2094,18 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                         });
                     }
 
+                    // Auto-open live preview for local URLs mentioned in text (dev servers)
+                    // Matches http://localhost:PORT or http://*.example.com (for potential internal domains)
+                    const urlMatch = res.text?.match(/http:\/\/(localhost:\d+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(\/[^\s]*)?/);
+                    if (urlMatch && !res.text?.includes('http://preview-not-ready')) {
+                        const url = urlMatch[0];
+                        // Don't auto-open if it's already a WorkspaceFile tool use (handled above)
+                        if ((res as any).toolUsed !== 'create_html_file') {
+                            console.log('🌐 Auto-opening live preview for URL:', url);
+                            window.dispatchEvent(new CustomEvent('open-preview-tab', { detail: url }));
+                        }
+                    }
+
                     // Auto-register created Folders
                     if ((res as any).toolUsed === 'create_folder' && (res as any).toolResult?.success && (res as any).toolResult?.folder) {
                         const folder = (res as any).toolResult.folder;
@@ -1465,6 +2124,12 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                             toast.success(`Registered ${file.name} in context`);
                             return [...prev, { id: file.id, name: file.name, type: file.type || 'file', parentId: file.parentId }];
                         });
+                    }
+
+                    // Explicit Preview URL from Tool Result (e.g., manage_app_lifecycle)
+                    if ((res as any).toolResult?.previewUrl) {
+                        console.log('🔗 Auto-opening explicit preview URL:', (res as any).toolResult.previewUrl);
+                        window.dispatchEvent(new CustomEvent('open-preview-tab', { detail: (res as any).toolResult.previewUrl }));
                     }
 
                     // @ts-ignore
@@ -1517,17 +2182,21 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                 const errorMessage = res.message || res.text || 'AI failed to respond';
                 console.error('❌ AI Error:', { success: res.success, message: res.message, text: res.text, fullResponse: res });
                 toast.error(errorMessage);
-                setMessages(prev => [...prev, { role: 'ai', content: `Error: ${errorMessage}` }]);
+                setMessages(prev => [...prev, { id: genMsgId(), role: 'ai', content: `Error: ${errorMessage}` }]);
             }
         } catch (error) {
             console.error('💥 Chat Error:', error);
             toast.error('Connection error');
             setMessages(prev => [...prev, {
+                id: genMsgId(),
                 role: 'ai',
                 content: `Connection error: ${error instanceof Error ? error.message : 'Unknown error'}`
             }]);
         } finally {
             setIsLoading(false);
+            setStreamingStatus('idle');
+            setStreamProgress(0);
+            setAiActivity('');
         }
     };
 
@@ -1547,8 +2216,8 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
         try {
             const approval = await approveLatestAgentJob(activeSessionId);
             if (approval.success) {
-                const userMsg = { role: 'user' as const, content: 'approve', files: [] as SelectedFile[] };
-                const aiMsg = { role: 'ai' as const, content: '✅ Approved. Background agent started.' };
+                const userMsg = { id: genMsgId(), role: 'user' as const, content: 'approve', files: [] as SelectedFile[] };
+                const aiMsg = { id: genMsgId(), role: 'ai' as const, content: '✅ Approved. Background agent started.' };
                 setMessages(prev => [...prev, userMsg, aiMsg]);
                 await addChatMessage(activeSessionId, 'user', userMsg.content, []);
                 await addChatMessage(activeSessionId, 'ai', aiMsg.content, [], 'enqueue_agent_job');
@@ -1730,6 +2399,12 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
 
     const slashCommands = useMemo(() => ([
         {
+            command: '/v1',
+            label: 'Cognitive Brain',
+            description: 'Activate advanced reasoning and planning mode.',
+            template: '/v1 '
+        },
+        {
             command: '/scaffold-vite',
             label: 'Scaffold Vite app',
             description: 'Create a new Vite React app template.',
@@ -1847,6 +2522,19 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
         return shuffled.slice(0, 3);
     }, [activePrompt?.name]);
 
+    useEffect(() => {
+        const handleActiveApp = (e: any) => {
+            const { name, path } = e.detail || {};
+            if (!name || !path) return;
+            setActiveAppContext({ name, path });
+            toast.success(`Active app set to ${name}`);
+            if (!isOpen && !embedded) setIsOpen(true);
+        };
+
+        window.addEventListener('set-active-app', handleActiveApp);
+        return () => window.removeEventListener('set-active-app', handleActiveApp);
+    }, [isOpen, embedded]);
+
     const applyCommand = (command: string) => {
         const matched = slashCommands.find(cmd => cmd.command === command);
         const nextValue = matched?.template || `${command} `;
@@ -1950,16 +2638,48 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                         <span className="text-[8px] text-white/20 uppercase tracking-[0.2em] font-bold">System Online</span>
                                     </div>
                                     {isBackgroundBusy && (
-                                        <div className="flex items-center gap-1.5 mt-1">
-                                            <div className="w-1 h-1 rounded-full bg-amber-400 animate-pulse" />
-                                            <span className="text-[8px] text-amber-200/80 uppercase tracking-[0.2em] font-bold">
-                                                Background Agent Active{backgroundJobLabel ? `: ${backgroundJobLabel}` : ''}
-                                            </span>
+                                        <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg animate-pulse">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-lg shadow-amber-400/50" />
+                                                    <span className="text-[10px] text-amber-300 uppercase tracking-wider font-bold">
+                                                        {backgroundJobLabel || 'Processing'}
+                                                    </span>
+                                                </div>
+                                                {elapsedTime > 0 && (
+                                                    <span className="text-[9px] font-mono text-white/50">
+                                                        {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+                                                    </span>
+                                                )}
+                                            </div>
                                             {backgroundJobMessage && (
-                                                <span className="text-[8px] text-white/40 block italic truncate max-w-[200px] pl-1">
+                                                <p className="text-[10px] text-white/70 leading-relaxed pl-4">
                                                     {backgroundJobMessage}
-                                                </span>
+                                                </p>
                                             )}
+                                            <button
+                                                onClick={() => setShowActivityPanel(!showActivityPanel)}
+                                                className="mt-1 text-[9px] text-amber-400/70 hover:text-amber-300 flex items-center gap-1 pl-4 transition-colors"
+                                            >
+                                                <Activity size={10} />
+                                                View Live Activity Log
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {activeAppContext && (
+                                        <div className="mt-1 inline-flex items-center gap-2 text-[10px] text-blue-200 bg-blue-500/10 border border-blue-500/20 rounded-lg px-2 py-1 w-fit">
+                                            <FolderOpen size={12} className="text-blue-300" />
+                                            <span className="truncate max-w-[160px]" title={activeAppContext.path}>
+                                                {activeAppContext.name}
+                                            </span>
+                                            <button
+                                                onClick={() => setActiveAppContext(null)}
+                                                className="p-1 text-white/50 hover:text-white/80"
+                                                title="Clear active app context"
+                                            >
+                                                <X size={12} />
+                                            </button>
                                         </div>
                                     )}
                                 </div>
@@ -2061,8 +2781,31 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                         className="flex-1 overflow-y-auto overflow-x-hidden p-6 custom-scrollbar relative"
                                         onScroll={(e) => {
                                             const target = e.target as HTMLDivElement;
-                                            const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 100;
+                                            const { scrollHeight, scrollTop, clientHeight } = target;
+                                            const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+
+                                            isNearBottomRef.current = isNearBottom;
                                             setShowScrollButton(!isNearBottom && messages.length > 3);
+
+                                            // User is scrolling up - lock auto-scroll
+                                            if (!isNearBottom) {
+                                                setShouldAutoScroll(false);
+                                                setIsUserScrolling(true);
+                                            } else {
+                                                // Back at bottom - re-enable auto-scroll
+                                                setShouldAutoScroll(true);
+                                                setIsUserScrolling(false);
+                                            }
+
+                                            // Clear any pending scroll timeout
+                                            if (scrollTimeoutRef.current) {
+                                                clearTimeout(scrollTimeoutRef.current);
+                                            }
+
+                                            // Debounce scroll state
+                                            scrollTimeoutRef.current = setTimeout(() => {
+                                                setIsUserScrolling(false);
+                                            }, 150);
                                         }}
                                     >
                                         <div className={cn("space-y-8 pb-8", embedded ? "max-w-3xl mx-auto" : "")}>
@@ -2125,17 +2868,12 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                             )}
                                             {messages.map((msg, i) => (
                                                 <MessageBubble
-                                                    key={i}
+                                                    key={msg.id || `${msg.role}-${i}-${String(msg.content || '').slice(0, 30)}`}
                                                     msg={msg}
                                                     attachedFiles={attachedFiles}
+                                                    onApprove={handleApproveJob}
                                                     setInput={setInput}
                                                     setActiveTool={setActiveTool}
-                                                    isBackgroundBusy={isBackgroundBusy}
-                                                    onApprove={handleApproveJob}
-                                                    hasMarkdownTable={hasMarkdownTable}
-                                                    normalizeMarkdown={normalizeMarkdown}
-                                                    remarkGfm={remarkGfm}
-                                                    ToolResultPreview={ToolResultPreview}
                                                 />
                                             ))}
 
@@ -2144,28 +2882,104 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                             )}
 
                                             {isLoading && (
-                                                <div className="flex flex-col items-start gap-2">
-                                                    <div className="relative group">
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="flex flex-col items-start gap-3"
+                                                >
+                                                    <div className="relative group w-full max-w-xl">
                                                         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-[1.5rem] blur-xl opacity-60 group-hover:opacity-100 transition-opacity" />
-                                                        <div className="relative bg-gradient-to-br from-white/[0.08] to-white/[0.03] px-6 py-5 rounded-[1.5rem] text-white/40 flex items-center gap-4 rounded-tl-none border border-white/10 backdrop-blur-xl shadow-2xl">
-                                                            <div className="flex gap-1.5">
-                                                                <div className="w-2.5 h-2.5 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full shadow-lg shadow-blue-400/50 animate-pulse" />
-                                                                <div className="w-2.5 h-2.5 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full shadow-lg shadow-purple-400/50 animate-pulse delay-75" />
-                                                                <div className="w-2.5 h-2.5 bg-gradient-to-r from-pink-400 to-blue-400 rounded-full shadow-lg shadow-pink-400/50 animate-pulse delay-150" />
-                                                            </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="text-xs font-bold tracking-widest uppercase bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
-                                                                    {isBackgroundBusy ? (backgroundJobLabel || "Computing") : "Computing"}...
-                                                                </span>
-                                                                {isBackgroundBusy && backgroundJobLabel && (
-                                                                    <span className="text-[8px] text-white/30 uppercase tracking-widest font-bold mt-0.5">
-                                                                        Background Specialist Active
-                                                                    </span>
-                                                                )}
+                                                        <div className="relative bg-gradient-to-br from-white/[0.08] to-white/[0.03] px-6 py-5 rounded-[1.5rem] rounded-tl-none border border-white/10 backdrop-blur-xl shadow-2xl">
+                                                            <div className="flex items-start gap-4">
+                                                                <div className="flex gap-1.5 pt-1">
+                                                                    <div className="w-2.5 h-2.5 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full shadow-lg shadow-blue-400/50 animate-pulse" />
+                                                                    <div className="w-2.5 h-2.5 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full shadow-lg shadow-purple-400/50 animate-pulse" style={{ animationDelay: '150ms' }} />
+                                                                    <div className="w-2.5 h-2.5 bg-gradient-to-r from-pink-400 to-blue-400 rounded-full shadow-lg shadow-pink-400/50 animate-pulse" style={{ animationDelay: '300ms' }} />
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <span className="text-xs font-bold tracking-wider uppercase bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+                                                                            {streamingStatus === 'connecting' && 'Connecting to AI...'}
+                                                                            {streamingStatus === 'streaming' && 'Receiving Response'}
+                                                                            {streamingStatus === 'processing' && 'Finalizing'}
+                                                                            {streamingStatus === 'idle' && (isBackgroundBusy ? (backgroundJobLabel || 'Processing') : 'Thinking')}
+                                                                        </span>
+                                                                        {streamingStatus === 'streaming' && (
+                                                                            <span className="text-[10px] text-blue-400/60 font-mono">
+                                                                                {streamProgress}%
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    {aiActivity && (
+                                                                        <motion.div
+                                                                            initial={{ opacity: 0, x: -10 }}
+                                                                            animate={{ opacity: 1, x: 0 }}
+                                                                            className="text-[11px] text-white/40 font-medium mb-2"
+                                                                        >
+                                                                            {aiActivity}
+                                                                        </motion.div>
+                                                                    )}
+                                                                    {streamingStatus !== 'idle' && (
+                                                                        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                                                            <motion.div
+                                                                                className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"
+                                                                                initial={{ width: '0%' }}
+                                                                                animate={{ width: `${streamProgress}%` }}
+                                                                                transition={{ duration: 0.3 }}
+                                                                            />
+                                                                        </div>
+                                                                    )}
+                                                                    {isBackgroundBusy && backgroundJobLabel && (
+                                                                        <div className="text-[8px] text-white/30 uppercase tracking-widest font-bold mt-2 flex items-center gap-1.5">
+                                                                            <div className="w-1.5 h-1.5 bg-emerald-400/70 rounded-full animate-pulse" />
+                                                                            Background Agent Active
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Live Activity Log */}
+                                                                    {(isBackgroundBusy || activityLog.length > 0) && (
+                                                                        <div className="mt-3 pt-3 border-t border-white/5">
+                                                                            <button
+                                                                                onClick={() => setShowActivityPanel(!showActivityPanel)}
+                                                                                className="flex items-center gap-2 text-[10px] text-white/60 hover:text-white/90 transition-colors mb-2 group"
+                                                                            >
+                                                                                <Activity size={12} className="group-hover:text-blue-400 transition-colors" />
+                                                                                <span>Live Activity Log ({activityLog.length})</span>
+                                                                                <ChevronRight size={12} className={cn(
+                                                                                    "transition-transform",
+                                                                                    showActivityPanel && "rotate-90"
+                                                                                )} />
+                                                                            </button>
+
+                                                                            <AnimatePresence>
+                                                                                {showActivityPanel && (
+                                                                                    <motion.div
+                                                                                        initial={{ opacity: 0, height: 0 }}
+                                                                                        animate={{ opacity: 1, height: 'auto' }}
+                                                                                        exit={{ opacity: 0, height: 0 }}
+                                                                                        className="mt-2"
+                                                                                    >
+                                                                                        <TerminalView
+                                                                                            title="Agent Timeline"
+                                                                                            content={activityLog.length > 0
+                                                                                                ? activityLog.map(log => `[${log.time}] ${log.agent}: ${log.message}`).join('\n')
+                                                                                                : "Waiting for agent activity..."
+                                                                                            }
+                                                                                            isError={false}
+                                                                                        />
+                                                                                    </motion.div>
+                                                                                )}
+                                                                            </AnimatePresence>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
+                                                    <div className="text-[10px] text-white/20 italic px-2">
+                                                        💡 You can continue typing below while I work...
+                                                    </div>
+                                                </motion.div>
                                             )}
                                         </div>
                                     </div>
@@ -2173,20 +2987,37 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                     {/* Premium Scroll Button */}
                                     <AnimatePresence>
                                         {showScrollButton && (
-                                            <motion.button
+                                            <motion.div
                                                 initial={{ opacity: 0, y: 20, scale: 0.8 }}
                                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                                 exit={{ opacity: 0, y: 20, scale: 0.8 }}
-                                                onClick={() => {
-                                                    scrollRef.current?.scrollTo({
-                                                        top: scrollRef.current.scrollHeight,
-                                                        behavior: 'smooth'
-                                                    });
-                                                }}
-                                                className="absolute bottom-32 right-8 z-20 p-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-full shadow-2xl shadow-blue-500/50 hover:shadow-blue-500/70 border border-white/20 backdrop-blur-xl transition-all duration-300 hover:scale-110 active:scale-95 group"
+                                                className="absolute bottom-32 right-8 z-20 flex flex-col items-end gap-2"
                                             >
-                                                <ArrowDown size={20} className="text-white group-hover:animate-bounce" />
-                                            </motion.button>
+                                                {(isLoading || isBackgroundBusy) && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, x: 20 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        className="px-3 py-1.5 bg-blue-500/20 border border-blue-500/30 rounded-full text-[10px] text-blue-300 font-medium backdrop-blur-xl shadow-lg flex items-center gap-2"
+                                                    >
+                                                        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
+                                                        New activity below
+                                                    </motion.div>
+                                                )}
+                                                <button
+                                                    onClick={() => {
+                                                        setShouldAutoScroll(true);
+                                                        setIsUserScrolling(false);
+                                                        scrollRef.current?.scrollTo({
+                                                            top: scrollRef.current.scrollHeight,
+                                                            behavior: 'smooth'
+                                                        });
+                                                    }}
+                                                    className="p-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-full shadow-2xl shadow-blue-500/50 hover:shadow-blue-500/70 border border-white/20 backdrop-blur-xl transition-all duration-300 hover:scale-110 active:scale-95 group"
+                                                    title="Resume auto-scroll"
+                                                >
+                                                    <ArrowDown size={20} className="text-white group-hover:animate-bounce" />
+                                                </button>
+                                            </motion.div>
                                         )}
                                     </AnimatePresence>
 
@@ -2208,9 +3039,11 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                             value={input}
                                                             onChange={(e) => setInput(e.target.value)}
                                                             onKeyDown={handleInputKeyDown}
-                                                            disabled={isLoading}
-                                                            placeholder={isBackgroundBusy ? "Background agent active. You can continue chatting..." : "Ask anything..."}
-                                                            className="relative z-20 w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 pr-14 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-black/20 font-medium"
+                                                            placeholder={isLoading ? "AI is working above... you can queue another message" : (isBackgroundBusy ? "Background agent active. You can continue chatting..." : "Ask anything...")}
+                                                            className={cn(
+                                                                "relative z-20 w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 pr-14 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none shadow-2xl shadow-black/20 font-medium",
+                                                                isLoading && "border-blue-500/20 bg-white/[0.03]"
+                                                            )}
                                                             style={{ minHeight: '52px', maxHeight: '200px' }}
                                                         />
                                                         {isCommandMenuOpen && filteredCommands.length > 0 && (
@@ -2238,15 +3071,18 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                         )}
                                                         <button
                                                             type="submit"
-                                                            disabled={isLoading || (!input.trim() && attachedFiles.length === 0)}
+                                                            disabled={!input.trim() && attachedFiles.length === 0}
                                                             className={cn(
                                                                 "absolute right-2 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-xl transition-all duration-300 shadow-lg",
                                                                 input.trim() || attachedFiles.length > 0
-                                                                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 hover:scale-110 active:scale-95 shadow-blue-500/50"
+                                                                    ? isLoading
+                                                                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 hover:scale-110 active:scale-95 shadow-emerald-500/50"
+                                                                        : "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 hover:scale-110 active:scale-95 shadow-blue-500/50"
                                                                     : "bg-white/5 text-white/20 cursor-not-allowed"
                                                             )}
+                                                            title={isLoading ? "Queue next message" : "Send message"}
                                                         >
-                                                            <Send size={16} className={input.trim() || attachedFiles.length > 0 ? "animate-pulse" : ""} />
+                                                            <Send size={16} className={(input.trim() || attachedFiles.length > 0) && !isLoading ? "animate-pulse" : ""} />
                                                         </button>
                                                     </div>
                                                     {input.length > 0 && (
@@ -2493,7 +3329,7 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                                 className="grid grid-cols-1 gap-3 w-full pt-4 relative z-10"
                                                             >
                                                                 <motion.button
-                                                                    onClick={() => setIsSuggestionsOpen(true)}
+                                                                    onClick={() => setInput('/scaffold-vite')}
                                                                     className="group p-5 bg-blue-600/10 border border-blue-500/20 rounded-2xl text-left transition-all hover:bg-blue-600/20 hover:border-blue-500/30 shadow-xl shadow-blue-500/5 backdrop-blur-xl relative overflow-hidden"
                                                                 >
                                                                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -2502,8 +3338,8 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                                             <Compass size={22} />
                                                                         </div>
                                                                         <div className="flex-1">
-                                                                            <h4 className="text-[11px] font-black text-white uppercase tracking-widest mb-1">Explore Idea Library</h4>
-                                                                            <p className="text-[10px] text-white/40 leading-relaxed font-medium">Browse high-quality strategic flows and multi-step task instructions.</p>
+                                                                            <h4 className="text-[11px] font-black text-white uppercase tracking-widest mb-1">Create New App or Feature</h4>
+                                                                            <p className="text-[10px] text-white/40 leading-relaxed font-medium">Scaffold a modern app stack from scratch with one click.</p>
                                                                         </div>
                                                                         <ChevronRight size={18} className="text-white/20 group-hover:translate-x-1 group-hover:text-blue-400 transition-all" />
                                                                     </div>
@@ -2535,14 +3371,9 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                             key={i}
                                                             msg={msg}
                                                             attachedFiles={attachedFiles}
+                                                            onApprove={handleApproveJob}
                                                             setInput={setInput}
                                                             setActiveTool={setActiveTool}
-                                                            isBackgroundBusy={isBackgroundBusy}
-                                                            onApprove={handleApproveJob}
-                                                            hasMarkdownTable={hasMarkdownTable}
-                                                            normalizeMarkdown={normalizeMarkdown}
-                                                            remarkGfm={remarkGfm}
-                                                            ToolResultPreview={ToolResultPreview}
                                                         />
                                                     ))}
 
@@ -2654,10 +3485,9 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                                     value={input}
                                                                     onChange={(e) => setInput(e.target.value)}
                                                                     onKeyDown={handleInputKeyDown}
-                                                                    disabled={isLoading}
                                                                     placeholder={isBackgroundBusy ? "Background agent active. You can continue chatting..." : "Ask anything..."}
                                                                     className={cn(
-                                                                        "relative z-20 w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-black/20 font-medium",
+                                                                        "relative z-20 w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none shadow-2xl shadow-black/20 font-medium",
                                                                         isBackgroundBusy ? "pr-24" : "pr-14"
                                                                     )}
                                                                     style={{
@@ -2700,13 +3530,16 @@ export default function AIChat({ embedded = false }: { embedded?: boolean }) {
                                                                 )}
                                                                 <button
                                                                     type="submit"
-                                                                    disabled={isLoading || (!input.trim() && attachedFiles.length === 0)}
+                                                                    disabled={!input.trim() && attachedFiles.length === 0}
                                                                     className={cn(
                                                                         "absolute right-2 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-xl transition-all duration-300 shadow-lg",
                                                                         input.trim() || attachedFiles.length > 0
-                                                                            ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 hover:scale-110 active:scale-95 shadow-blue-500/50"
+                                                                            ? isLoading
+                                                                                ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500 hover:scale-110 active:scale-95 shadow-green-500/50"
+                                                                                : "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 hover:scale-110 active:scale-95 shadow-blue-500/50"
                                                                             : "bg-white/5 text-white/20 cursor-not-allowed"
                                                                     )}
+                                                                    title={isLoading ? "Queue next message" : "Send message"}
                                                                 >
                                                                     <Send size={16} className={input.trim() || attachedFiles.length > 0 ? "animate-pulse" : ""} />
                                                                 </button>

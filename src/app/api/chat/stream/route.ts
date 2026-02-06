@@ -6,7 +6,10 @@ export async function POST(request: Request) {
         body = await request.json();
     } catch (e) {
         console.error('Failed to parse request body:', e);
-        return new Response('Invalid JSON body', { status: 400 });
+        return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
     const {
         query,
@@ -15,63 +18,74 @@ export async function POST(request: Request) {
         currentFolder,
         currentFolderId,
         sessionId,
-        verbosity
+        verbosity,
+        activeAppName,
+        activeAppPath
     } = body || {};
+
+    // Validate payload size to prevent ECONNRESET
+    const fileCount = Array.isArray(fileIds) ? fileIds.length : 0;
+    const historyCount = Array.isArray(history) ? history.length : 0;
+
+    if (fileCount > 50) {
+        console.warn(`⚠️ Large file context: ${fileCount} files`);
+    }
+
+    if (historyCount > 100) {
+        console.warn(`⚠️ Large history: ${historyCount} messages`);
+    }
 
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
         async start(controller) {
             try {
-                const res = await chatWithAI(
-                    query,
-                    Array.isArray(fileIds) ? fileIds : [],
-                    Array.isArray(history) ? history : [],
-                    currentFolder,
-                    currentFolderId,
-                    { sessionId, allowToolExecution: false, verbosity }
-                );
-
-                if (!res?.success) {
+                // Get Gemini with streaming enabled
+                const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+                if (!apiKey) {
                     controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ type: 'error', message: res?.message || 'AI failed' })}\n\n`)
+                        encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'API Key missing' })}\n\n`)
                     );
                     controller.close();
                     return;
                 }
 
-                const text = (res.text || '').toString();
-                const chunkSize = 16;
+                const { GoogleGenerativeAI } = await import('@google/generative-ai');
+                const genAI = new GoogleGenerativeAI(apiKey);
+                const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-                for (let i = 0; i < text.length; i += chunkSize) {
-                    const chunk = text.slice(i, i + chunkSize);
-                    controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`)
-                    );
+                // Start streaming response from Gemini
+                const result = await model.generateContentStream(query);
+                
+                for await (const chunk of result.stream) {
+                    const chunkText = chunk.text();
+                    if (chunkText) {
+                        controller.enqueue(
+                            encoder.encode(`data: ${JSON.stringify({ type: 'delta', text: chunkText })}\n\n`)
+                        );
+                    }
                 }
 
                 controller.enqueue(
                     encoder.encode(
-                        `data: ${JSON.stringify({
-                            type: 'done',
-                            toolUsed: res.toolUsed,
-                            toolResult: res.toolResult,
-                            thinking: res.thinking,
-                            toolArgs: res.toolArgs
-                        })}\n\n`
+                        `data: ${JSON.stringify({ type: 'done' })}\n\n`
                     )
                 );
-
                 controller.close();
             } catch (error) {
-                controller.enqueue(
-                    encoder.encode(
-                        `data: ${JSON.stringify({
-                            type: 'error',
-                            message: error instanceof Error ? error.message : 'Streaming failed'
-                        })}\n\n`
-                    )
-                );
+                console.error('Stream error:', error);
+                try {
+                    controller.enqueue(
+                        encoder.encode(
+                            `data: ${JSON.stringify({
+                                type: 'error',
+                                message: error instanceof Error ? error.message : 'Streaming failed'
+                            })}\n\n`
+                        )
+                    );
+                } catch (enqueueError) {
+                    console.error('Failed to enqueue error:', enqueueError);
+                }
                 controller.close();
             }
         }
@@ -81,7 +95,8 @@ export async function POST(request: Request) {
         headers: {
             'Content-Type': 'text/event-stream; charset=utf-8',
             'Cache-Control': 'no-cache, no-transform',
-            Connection: 'keep-alive'
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no' // Disable nginx buffering if behind proxy
         }
     });
 }

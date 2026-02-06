@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "npm run dev:all",
     "dev:all": "npm run dev:next",
-    "dev:agents": "concurrently \"npm run agent:start\" \"npm run agent:monitor\"",
+    "dev:agents": "npm run agent:start",
     "dev:next": "next dev --webpack",
     "dev:turbo": "next dev --turbo",
     "dev:safe": "next dev --webpack",
@@ -15,6 +15,7 @@
     "agent:worker": "tsx src/cli/agent-worker.ts",
     "agent:start": "tsx src/cli/start-agent-worker.ts",
     "agent:monitor": "tsx src/cli/agent-monitor.ts",
+    "shell": "tsx src/cli/interactive-shell.ts",
     "db:migrate": "prisma migrate dev",
     "sync:files": "tsx src/scripts/sync_uploads.ts"
   },
@@ -32,6 +33,7 @@
     "@lezer/highlight": "^1.2.3",
     "@modelcontextprotocol/sdk": "^1.25.3",
     "@prisma/client": "^6.19.2",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@uiw/react-codemirror": "^4.25.4",
     "ai": "^3.4.33",
     "class-variance-authority": "^0.7.1",
@@ -46,8 +48,11 @@
     "react-dom": "19.2.3",
     "react-helmet-async": "^2.0.5",
     "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^16.1.0",
+    "react-window": "^2.2.6",
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
+    "ws": "^8.19.0",
     "zod": "^3.25.76",
     "zod-validation-error": "^5.0.0"
   },

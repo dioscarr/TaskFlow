@@ -13,7 +13,15 @@ export const AI_CONFIG = {
     smartModel: 'gemini-2.0-flash',
 
     // vision: Used for image analysis
-    visionModel: 'gemini-2.0-flash'
+    visionModel: 'gemini-2.0-flash',
+
+    // Tool execution defaults
+    // 'synchronous' = run tools/agents inline during the chat turn (BLOCKS UI - NOT RECOMMENDED)
+    // 'background' = enqueue jobs to background worker (RECOMMENDED for responsiveness)
+    toolExecutionMode: process.env.TOOL_EXECUTION_MODE || 'background',
+
+    // Number of automatic retries to attempt for failed tool calls (default 1)
+    toolAutoRetry: Number(process.env.TOOL_AUTO_RETRY ?? 1)
 };
 
 export default AI_CONFIG;

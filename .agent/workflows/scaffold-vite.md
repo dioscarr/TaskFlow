@@ -1,5 +1,11 @@
 ---
 description: Scaffold a new Vite + React + TypeScript application (Token-Optimized)
+triggerKeywords:
+  - "scaffold vite"
+  - "vite scaffold"
+  - "create vite app"
+  - "new vite app"
+  - "create react app"
 ---
 
 # Scaffold Vite + React App
@@ -55,15 +61,27 @@ This workflow creates a production-ready Vite + React + TypeScript application w
 
 ## 🚀 STEP 2: Execute Scaffold
 
-Once you have collected all the information from Step 1, call the `execute_scaffold_vite` action:
+Once you have collected all the information from Step 1, use the `execute_scaffold_vite` tool to create the application. This tool handles the folder creation, Vite scaffolding, design system setup, and Docker configuration automatically.
 
+    ```json
+    {
+      "action": "execute_scaffold_vite",
+      "params": {
+        "projectName": "<project-name>",
+        "description": "<optional-description>",
+        "features": ["<optional-feature-1>", "<optional-feature-2>"]
+      }
+    }
+    ```
+
+Example for a project named "crm-dashboard":
+```javascript
+run_terminal_command({
+  command: "powershell -ExecutionPolicy Bypass -File .\\scripts\\scaffold-vite.ps1 -AppName crm-dashboard"
+})
 ```
-Action: execute_scaffold_vite
-Parameters:
-  - projectName: <user-provided-name>
-  - description: <user-provided-description> (optional)
-  - features: [<user-provided-features>] (optional)
-```
+
+**Note**: Do not worry about "features" or "description" arguments for the script; it only accepts AppName. You will implement the other requirements manually after the scaffold is created.
 
 This will automatically:
 - ✅ Create the project folder

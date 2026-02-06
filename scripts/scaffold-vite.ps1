@@ -39,7 +39,7 @@ if (Test-Path $appDir) {
 New-Item -ItemType Directory -Path $appDir | Out-Null
 Push-Location $appDir
 try {
-    & npx -y create-vite@latest ./ --template react-ts
+    & npx -y create-vite@5.2.3 ./ --template react-ts
 
     # Update package.json name
     $pkgPath = Join-Path . "package.json"

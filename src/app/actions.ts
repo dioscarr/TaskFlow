@@ -11,9 +11,10 @@ import { createServer } from 'net';
 
 import prisma from '@/lib/prisma';
 import { revalidatePath as nextRevalidatePath } from 'next/cache';
-import { memory } from '@/lib/agents/symphony/memory';
+import { memory } from '@/lib/agents/memory';
 import { ensureAgentWorkerAvailable } from '@/lib/agentWorkerBootstrap';
 import { getAvailablePort, isPortAvailable } from '@/lib/processActionsCore';
+import { manageAppLifecycle } from '@/app/processActions';
 
 /**
  * Safe wrapper for revalidatePath that doesn't crash in background/CLI contexts
@@ -36,9 +37,7 @@ import { parseMarkdownWorkflow } from '@/lib/workflowParser';
 import { TOOL_LIBRARY } from '@/lib/toolLibrary';
 import { addChatMessage } from '@/app/chatActions';
 import { SOFTWARE_ARCHITECT_PROMPT, AGENT_ROLES, ORCHESTRATOR_AGENT_PROMPT, WORKER_AGENT_PROMPT } from '@/lib/agents/prompts';
-import { AgentSymphony } from '@/lib/agents/AgentSymphony';
-import { GeminiAgentAdapter } from '@/lib/agents/symphony/adapters';
-import { SymphonyOptions } from '@/lib/agents/symphony/types';
+import { GeminiAgentAdapter } from '@/lib/agents/adapters';
 import AI_CONFIG from '@/lib/aiConfig';
 import { serializeValue, deepSerialize } from '@/lib/serialization';
 
@@ -160,70 +159,69 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
     if (actionId === 'agent_delegate') return await agentDelegate({ ...args, sessionId: args.sessionId });
     if (actionId === 'configure_magic_folder') return await configureMagicFolder({ ...args, sessionId: args.sessionId });
     if (actionId === 'synthesize_documents') return await synthesizeDocuments({ ...args, sessionId: args.sessionId });
-    if (actionId === 'run_agent_symphony') {
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+    if (actionId === 'run_agent_orchestration' || actionId === 'run_agent_symphony') {
+        const apiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
         if (!apiKey) return { success: false, message: 'API Key missing' };
 
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        // Using 2.0 Flash for orchestrator/critic for speed + reasoning
-        const orchestratorModel = genAI.getGenerativeModel({ model: AI_CONFIG.smartModel });
-        // Using 2.0 Flash for workers for cost efficiency
-        const workerModel = genAI.getGenerativeModel({ model: AI_CONFIG.fastModel });
+        // prepare tools
+        const toolSchemas = Object.values(TOOL_LIBRARY).map(t => t.schema);
+        const toolsConfig = { functionDeclarations: toolSchemas };
 
-        const symphony = new AgentSymphony({
-            orchestrator: new GeminiAgentAdapter("Orchestrator", orchestratorModel),
-            critic: new GeminiAgentAdapter("Critic", orchestratorModel),
-            workers: {
-                researcher: new GeminiAgentAdapter("Researcher", workerModel),
-                analyst: new GeminiAgentAdapter("Analyst", workerModel),
-                writer: new GeminiAgentAdapter("Writer", workerModel),
-                developer: new GeminiAgentAdapter("Developer", workerModel),
-                qa: new GeminiAgentAdapter("QA Engineer", orchestratorModel), // QA needs higher reasoning for critique
-                generic: new GeminiAgentAdapter("Generic Worker", workerModel)
-            },
-            options: {
-                logger: async (msg, type) => {
-                    console.log(`[Symphony] ${type}: ${msg}`);
-                    if (user) {
-                        try {
-                            await logAgentActivity({
-                                type: type === 'error' ? 'error' : 'info',
-                                title: type === 'thinking' ? '🧠 Agent Thought' : '🎻 Symphony Update',
-                                message: msg,
-                                toolUsed: 'run_agent_symphony',
-                                userId: user.id,
-                                sessionId: args.sessionId // Pass sessionId from args
-                            });
-                        } catch (e) {
-                            console.error('Failed to log symphony activity', e);
-                        }
-                    }
-                }
-            }
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({
+            model: AI_CONFIG.smartModel,
+            tools: [toolsConfig],
+            systemInstruction: SOFTWARE_ARCHITECT_PROMPT
         });
 
-        try {
-            console.log(`🎼 Starting Symphony for objective: ${args.objective}`);
-            const state = await symphony.run(args.objective, args.strategy);
-
-            if (state.status === 'completed') {
-                return {
-                    success: true,
-                    message: state.finalOutput || "Symphony completed but returned no output.",
-                    symphonyState: state
-                };
-            } else {
-                return {
-                    success: false,
-                    message: `Symphony failed with status: ${state.status}. Check activity feed for details.`,
-                    symphonyState: state
-                };
+        const logger = async (msg: string, type: 'info' | 'thinking' | 'error' = 'info') => {
+            console.log(`[Agent] ${type}: ${msg}`);
+            if (user) {
+                try {
+                    await logAgentActivity({
+                        type: type === 'error' ? 'error' : (type === 'thinking' ? 'info' : 'success'),
+                        title: type === 'thinking' ? '🧠 Agent Thought' : '⚡ Agent Action',
+                        message: msg,
+                        toolUsed: actionId,
+                        userId: user.id,
+                        sessionId: args.sessionId
+                    });
+                } catch (e) {
+                    console.error('Failed to log agent activity', e);
+                }
             }
-        } catch (err) {
-            console.error("Symphony Error:", err);
-            return { success: false, message: "Internal Symphony Error" };
+        };
+
+        const toolExecutor = async (name: string, args: any) => {
+            try {
+                return await executeAction(name, args);
+            } catch (e: any) {
+                return { success: false, error: e.message };
+            }
+        };
+
+        const agent = new GeminiAgentAdapter(
+            "Lead Architect",
+            model,
+            { userId: user?.id || 'demo', query: args.objective, fileIds: [] },
+            toolExecutor,
+            logger
+        );
+
+        try {
+            console.log(`🧠 Starting Agent Orchestration for objective: ${args.objective}`);
+            const finalOutput = await agent.complete(args.objective);
+
+            return {
+                success: true,
+                message: finalOutput,
+                agentOutput: finalOutput
+            };
+        } catch (err: any) {
+            console.error("Agent Orchestration Error:", err);
+            return { success: false, message: `Agent Error: ${err.message}` };
         }
     }
     if (actionId === 'batch_rename') return await batchRenameFiles(args);
@@ -234,6 +232,14 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
     if (actionId === 'focus_workspace_item') return await focusWorkspaceItem(args.itemId);
     if (actionId === 'execute_scaffold_vite') return await executeScaffoldVite(args);
     if (actionId === 'enqueue_agent_job') return await enqueueAgentJob(args);
+
+    // New High-Fidelity Tools
+    if (actionId === 'view_file') return await viewFile(args);
+    if (actionId === 'list_dir') return await listDir(args);
+    if (actionId === 'replace_in_file') return await replaceInFile(args);
+    if (actionId === 'search_codebase') return await searchCodebase(args);
+    if (actionId === 'run_terminal_command') return await runTerminalCommand(args);
+    if (actionId === 'manage_app_lifecycle') return await manageAppLifecycle(args);
 
     // Tools from library
     const tool = TOOL_LIBRARY[actionId];
@@ -251,7 +257,7 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
         if (schemaName === 'search_files') return await searchFiles(args);
         if (schemaName === 'ask_questions') return await askQuestions(args);
         if (schemaName === 'agent_delegate') return await agentDelegate(args);
-        if (schemaName === 'execute_command') return await executeCommand(args);
+        if (schemaName === 'execute_command') return await runTerminalCommand(args);
         if (schemaName === 'extract_receipt_info') return await extractReceiptInfo(args);
         if (schemaName === 'generate_markdown_report') return await generateMarkdownReport(args);
         if (schemaName === 'organize_files') return await organizeFiles(args);
@@ -274,6 +280,13 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
         if (schemaName === 'get_agent_activity') return await getAgentActivity(args);
         if (schemaName === 'create_html_file') return await createHtmlFile(args);
         if (schemaName === 'enqueue_agent_job') return await enqueueAgentJob(args);
+
+        // New Schema Mappings
+        if (schemaName === 'view_file') return await viewFile(args);
+        if (schemaName === 'list_dir') return await listDir(args);
+        if (schemaName === 'replace_in_file') return await replaceInFile(args);
+        if (schemaName === 'search_codebase') return await searchCodebase(args);
+        if (schemaName === 'run_terminal_command') return await runTerminalCommand(args);
     }
 
     // Manual catch-all and fallbacks
@@ -281,6 +294,49 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
     if (actionId === 'create_workflow') return await createWorkflow(args);
 
     return { success: false, message: `Action ${actionId} not found` };
+}
+
+/**
+ * Executes an action with a small automatic retry policy and structured logging.
+ * Uses AI_CONFIG.toolAutoRetry for retry attempts.
+ */
+export async function executeWithRetry(actionId: string, args: any) {
+    const maxRetries = Number(AI_CONFIG.toolAutoRetry ?? 1);
+    let attempt = 0;
+    let lastResult: any = null;
+
+    while (attempt <= maxRetries) {
+        attempt++;
+        console.log(`🧩 Executing tool (${actionId}) attempt ${attempt}/${maxRetries + 1}`);
+        try {
+            const res = await executeAction(actionId, args);
+            if (res && res.success) {
+                if (attempt > 1) console.log(`✅ Tool ${actionId} succeeded after ${attempt} attempts`);
+                return res;
+            }
+            lastResult = res;
+            const msg = (res && res.message) ? String(res.message).toLowerCase() : '';
+            if (msg.includes('missing api key') || msg.includes('api key missing')) {
+                console.warn(`⚠️ Fatal tool failure for ${actionId}: ${res.message}`);
+                return res;
+            }
+            if (attempt <= maxRetries) {
+                console.log(`🔁 Retrying tool ${actionId} due to failure: ${res.message || 'unknown'}`);
+                continue;
+            } else {
+                return res;
+            }
+        } catch (err) {
+            lastResult = { success: false, message: (err as any)?.message || String(err) };
+            if (attempt <= maxRetries) {
+                console.log(`🔁 Retrying tool ${actionId} after exception: ${err}`);
+                continue;
+            }
+            return lastResult;
+        }
+    }
+
+    return lastResult || { success: false, message: 'Unknown failure' };
 }
 
 /**
@@ -584,7 +640,7 @@ export async function executeWorkflow(steps: WorkflowStep[], initialContext: any
                 break;
             }
         }
-        const result = await executeAction(step.action, args);
+        const result = await executeWithRetry(step.action, args);
 
         results.push({ step: step.action, success: result.success, result });
 
@@ -896,23 +952,29 @@ const resolveStartScript = (scripts?: Record<string, string> | null) => {
     return null;
 };
 
+const REPO_IGNORE = ['node_modules', '.git', '.next', 'dist', 'build', '.agent'];
+
 export async function listRepoAppEntries(relativePath = '') {
     try {
         const root = getRepoAppsRoot();
         const targetPath = relativePath ? resolveRepoAppsPath(relativePath) : root;
         const entries = await readdir(targetPath, { withFileTypes: true });
 
-        const mapped = await Promise.all(entries.map(async (entry) => {
-            const name = entry.name;
-            const entryPath = relativePath ? `${relativePath}/${name}` : name;
-            if (entry.isDirectory()) {
-                return { name, path: entryPath, type: 'folder' as const, size: null };
-            }
-            const filePath = resolveRepoAppsPath(entryPath);
-            const fileStat = await stat(filePath);
-            const ext = name.includes('.') ? name.split('.').pop() || 'file' : 'file';
-            return { name, path: entryPath, type: ext, size: fileStat.size };
-        }));
+        const mapped = await Promise.all(
+            entries
+                .filter(entry => !REPO_IGNORE.includes(entry.name))
+                .map(async (entry) => {
+                    const name = entry.name;
+                    const entryPath = relativePath ? `${relativePath}/${name}` : name;
+                    if (entry.isDirectory()) {
+                        return { name, path: entryPath, type: 'folder' as const, size: null };
+                    }
+                    const filePath = resolveRepoAppsPath(entryPath);
+                    const fileStat = await stat(filePath);
+                    const ext = name.includes('.') ? name.split('.').pop() || 'file' : 'file';
+                    return { name, path: entryPath, type: ext, size: fileStat.size };
+                })
+        );
 
         return { success: true, entries: mapped };
     } catch (error) {
@@ -1116,7 +1178,7 @@ export async function saveFileContent(fileName: string, content: string) {
 /**
  * Execute Vite + React scaffold with user-provided details
  */
-async function executeScaffoldVite(args: { projectName: string; description?: string; features?: string[] }) {
+export async function executeScaffoldVite(args: { projectName: string; description?: string; features?: string[] }) {
     const { projectName, description, features } = args;
 
     // Validate project name
@@ -2255,10 +2317,56 @@ export async function createMarkdownFile(data: {
             }
         }
 
-        const nameParts = data.filename.split('.');
+        // Handle paths in filename (e.g., "app/Dialer.tsx" or "src\components\Button.tsx")
+        let finalFilename = data.filename;
+        let pathParts: string[] = [];
+
+        // Normalize path separators and split
+        if (data.filename.includes('/') || data.filename.includes('\\')) {
+            pathParts = data.filename.replace(/\\/g, '/').split('/');
+            finalFilename = pathParts.pop() || data.filename;
+
+            // Create folder structure if path is provided
+            if (pathParts.length > 0 && !targetParentId) {
+                let currentParentId = data.parentId || null;
+
+                for (const folderName of pathParts) {
+                    if (!folderName) continue;
+
+                    // Check if folder exists
+                    const existing = await prisma.workspaceFile.findFirst({
+                        where: {
+                            name: folderName,
+                            type: 'folder',
+                            userId: user.id,
+                            parentId: currentParentId
+                        }
+                    });
+
+                    if (existing) {
+                        currentParentId = existing.id;
+                    } else {
+                        // Create the folder
+                        const newFolder = await prisma.workspaceFile.create({
+                            data: {
+                                name: folderName,
+                                type: 'folder',
+                                userId: user.id,
+                                parentId: currentParentId
+                            }
+                        });
+                        currentParentId = newFolder.id;
+                    }
+                }
+
+                targetParentId = currentParentId;
+            }
+        }
+
+        const nameParts = finalFilename.split('.');
         const ext = nameParts.length > 1 ? nameParts.pop()?.toLowerCase() || 'md' : 'md';
         const hasExt = nameParts.length > 0;
-        const displayName = hasExt ? data.filename : `${data.filename}.${ext}`;
+        const displayName = hasExt ? finalFilename : `${finalFilename}.${ext}`;
 
         // Use unique ID to prevent collisions (e.g. app.json in different folders)
         const uniqueId = Math.random().toString(36).substring(2, 15);
@@ -3057,25 +3165,7 @@ export async function agentDelegate(data: { agentType: string, task: string }) {
     };
 }
 
-export async function executeCommand(data: { command: string, reason: string }) {
-    console.log(`💻 Executing Command: ${data.command} (Reason: ${data.reason})`);
 
-    // Security check - highly restricted in a real environment
-    if (data.command.includes('rm -rf') || data.command.includes('del /f')) {
-        return { success: false, message: 'Restricted command detected.' };
-    }
-
-    try {
-        // Mock execution
-        return {
-            success: true,
-            output: `Command executed: ${data.command}\nStatus: Success\nNote: Simulation mode.`,
-            message: 'Command executed successfully.'
-        };
-    } catch (error) {
-        return { success: false, message: 'Execution failed.' };
-    }
-}
 
 export async function extractReceiptInfo(data: { fileIds: string[] }) {
     try {
@@ -3460,7 +3550,19 @@ export async function enqueueAgentJob(data: {
 
         // Trigger execution if approved
         if (job.approved) {
-            processAgentJob(job.id).catch(err => console.error('Background job trigger failed:', err));
+            if (AI_CONFIG.toolExecutionMode === 'synchronous') {
+                console.log(`🔁 Synchronous mode: executing job ${job.id} inline`);
+                try {
+                    const processed = await processAgentJob(job.id);
+                    return { success: true, job: processed || job, executed: true };
+                } catch (err) {
+                    console.error('Synchronous job execution failed:', err);
+                    // Fallback to background trigger
+                    processAgentJob(job.id).catch(e => console.error('Background job trigger failed:', e));
+                }
+            } else {
+                processAgentJob(job.id).catch(err => console.error('Background job trigger failed:', err));
+            }
         }
 
         return { success: true, job };
@@ -3470,7 +3572,7 @@ export async function enqueueAgentJob(data: {
     }
 }
 
-async function processAgentJob(jobId: string) {
+export async function processAgentJob(jobId: string) {
     console.log(`⚙️ Processing agent job ${jobId}...`);
     try {
         const job = await prisma.agentJob.findUnique({ where: { id: jobId } });
@@ -3484,6 +3586,7 @@ async function processAgentJob(jobId: string) {
         const apiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
         const genAI = new GoogleGenerativeAI(apiKey);
 
+
         // Initialize Skills and Tools for background agents
         const payload = job.payload as any;
         const enabledSkills = payload?.proposedTools || DEFAULT_SKILLS;
@@ -3492,35 +3595,186 @@ async function processAgentJob(jobId: string) {
         const allDecls = [...skillDecls, ...toolDecls].filter((v, i, a) => a.findIndex(t => t.name === v.name) === i);
         const tools = allDecls.length > 0 ? [{ functionDeclarations: allDecls }] : undefined;
 
+        // WORKSPACE ISOLATION: Detect active repo app from attached files
+        let activeRepoApp: string | null = null;
+        if (payload?.fileIds && payload.fileIds.length > 0) {
+            // Check if any attached file is a repo app (has storagePath starting with repo app name)
+            const files = await prisma.workspaceFile.findMany({
+                where: { id: { in: payload.fileIds } }
+            });
+
+            for (const file of files) {
+                // Check if this is a virtual repo app folder (id starts with 'repo-app-')
+                if (file.id.startsWith('repo-app-')) {
+                    activeRepoApp = file.id.replace('repo-app-', '');
+                    console.log(`🔒 WORKSPACE ISOLATION ACTIVE: Restricting to repo app "${activeRepoApp}"`);
+                    break;
+                }
+                // Also check storagePath for repo apps
+                if (file.storagePath && !file.storagePath.includes('/') && !file.storagePath.includes('\\')) {
+                    // This might be a repo app name
+                    const potentialAppName = file.storagePath;
+                    const appsPath = join(process.cwd(), 'apps', potentialAppName);
+                    try {
+                        const stats = await stat(appsPath);
+                        if (stats.isDirectory()) {
+                            activeRepoApp = potentialAppName;
+                            console.log(`🔒 WORKSPACE ISOLATION ACTIVE: Restricting to repo app "${activeRepoApp}"`);
+                            break;
+                        }
+                    } catch (e) {
+                        // Not a valid repo app directory
+                    }
+                }
+            }
+        }
+
         // Shared context for tool execution
         const skillContext = {
             userId: job.userId,
             sessionId: job.sessionId || undefined,
             fileIds: payload?.fileIds || [],
-            query: payload?.query || ''
+            query: payload?.query || '',
+            activeRepoApp // Add to context
+        };
+
+
+        // Workspace validator for repo apps
+        const validateWorkspace = (toolName: string, args: any): { valid: boolean; error?: string } => {
+            if (!activeRepoApp) return { valid: true }; // No restriction if no repo app is active
+
+            // List of file operation tools that need validation
+            const fileOperationTools = [
+                'create_file', 'edit_file', 'replace_in_file', 'view_file',
+                'delete_file', 'move_file', 'copy_file', 'write_file',
+                'createMarkdownFile' // Also check our custom action
+            ];
+
+            if (!fileOperationTools.includes(toolName)) {
+                return { valid: true }; // Non-file operations are allowed
+            }
+
+            // Extract file path from arguments
+            let filePath: string | undefined;
+            if (args.fileId) filePath = args.fileId;
+            else if (args.path) filePath = args.path;
+            else if (args.filename) filePath = args.filename;
+            else if (args.file) filePath = args.file;
+            else if (args.targetFile) filePath = args.targetFile;
+
+            if (!filePath) {
+                // If we can't find a file path, allow it (might be a different tool)
+                return { valid: true };
+            }
+
+            // Normalize path
+            const normalizedPath = filePath.replace(/\\/g, '/').toLowerCase();
+
+            // Check if path is within the allowed repo app
+            const allowedPrefixes = [
+                `${activeRepoApp}/`,
+                `apps/${activeRepoApp}/`,
+                `./${activeRepoApp}/`,
+                `./apps/${activeRepoApp}/`
+            ];
+
+            const isAllowed = allowedPrefixes.some(prefix => normalizedPath.startsWith(prefix.toLowerCase()));
+
+            if (!isAllowed) {
+                return {
+                    valid: false,
+                    error: `🚫 WORKSPACE VIOLATION: Cannot edit "${filePath}". Active repo app is "${activeRepoApp}". All file operations must be within "apps/${activeRepoApp}/" or "${activeRepoApp}/". Example: "${activeRepoApp}/src/App.tsx"`
+                };
+            }
+
+            return { valid: true };
         };
 
         const skillExecutor = async (name: string, args: any) => {
+            // WORKSPACE ISOLATION: Validate file operations
+            const validation = validateWorkspace(name, args);
+            if (!validation.valid) {
+                console.error(`❌ ${validation.error}`);
+                await logger(validation.error!, 'error');
+                return { success: false, error: validation.error };
+            }
+
             // First try specialized skills
             const result = await executeSkill(name, args, skillContext);
             if (result.success !== false || result.error !== `Unknown skill: ${name}`) {
                 return result;
             }
 
-            // Fallback: If it's an atomic tool, we can potentially add a tool-to-skill bridge here
-            // For now, most things are covered by skills or are already in the skillExecution router.
-            return { success: false, error: `Tool ${name} not yet implemented in Symphony bridge.` };
+            // Fallback: Execute as atomic tool (e.g. run_terminal_command, list_dir)
+            try {
+                // Reuse the main action router which contains all tool implementations
+                const actionResult = await executeAction(name, args);
+
+                // If executeAction returns a valid object, it was handled
+                if (actionResult && (actionResult.success !== undefined || Object.keys(actionResult).length > 0)) {
+                    return actionResult;
+                }
+            } catch (err: any) {
+                console.error(`Tool execution failed for ${name}:`, err);
+                return { success: false, error: `Failed to execute tool ${name}: ${err.message}` };
+            }
+
+            return { success: false, error: `Tool ${name} not yet implemented in agent bridge.` };
         };
 
         // Initialize Gemini Models with System Instructions and Tools
-        const orchestratorModel = genAI.getGenerativeModel({
-            model: AI_CONFIG.smartModel,
-            systemInstruction: ORCHESTRATOR_AGENT_PROMPT,
-            tools
-        });
+        // Add workspace restriction to system prompt if repo app is active
+        let systemInstruction = SOFTWARE_ARCHITECT_PROMPT;
+        if (activeRepoApp) {
+            systemInstruction = `${SOFTWARE_ARCHITECT_PROMPT}
+
+🔒 CRITICAL WORKSPACE RESTRICTION 🔒
+You are currently working on the REPO APP: "${activeRepoApp}"
+
+ABSOLUTE RULES:
+1. ALL file operations MUST use paths starting with "apps/${activeRepoApp}/"
+2. ALL terminal commands MUST use cwd: "apps/${activeRepoApp}"
+3. ALWAYS check if "apps/${activeRepoApp}" exists using list_dir BEFORE any operations
+4. You are FORBIDDEN from editing ANY files in:
+   - src/ (TaskFlow core)
+   - components/ (TaskFlow core)
+   - app/ (TaskFlow core)
+   - lib/ (TaskFlow core)
+   - Any other TaskFlow directories
+5. This is a SEPARATE application located at "apps/${activeRepoApp}/"
+6. The repo app has its own src/, public/, package.json, etc.
+
+CORRECT file path examples:
+✅ apps/${activeRepoApp}/src/App.tsx
+✅ apps/${activeRepoApp}/src/components/Button.tsx
+✅ apps/${activeRepoApp}/package.json
+✅ apps/${activeRepoApp}/README.md
+
+CORRECT terminal command examples:
+✅ {command: "npm run dev", cwd: "apps/${activeRepoApp}"}
+✅ {command: "npm install", cwd: "apps/${activeRepoApp}"}
+✅ {command: "vite build", cwd: "apps/${activeRepoApp}"}
+
+FORBIDDEN examples:
+❌ ${activeRepoApp}/src/App.tsx (missing "apps/" prefix)
+❌ {command: "npm run dev", cwd: "${activeRepoApp}"} (missing "apps/" prefix)
+❌ src/components/Dashboard.tsx (TaskFlow core)
+❌ components/AIChat.tsx (TaskFlow core)
+❌ app/actions.ts (TaskFlow core)
+❌ Dashboard.tsx (no path prefix)
+
+BEFORE ANY OPERATION:
+1. Run list_dir to verify "apps/${activeRepoApp}" exists
+2. If it doesn't exist, inform the user and offer to scaffold it
+3. NEVER assume a directory exists without checking
+
+If you attempt to edit files outside "apps/${activeRepoApp}/", your operation will be REJECTED.
+Always prefix file paths with "apps/${activeRepoApp}/" and use cwd: "apps/${activeRepoApp}" for terminal commands.`;
+        }
+
         const workerModel = genAI.getGenerativeModel({
             model: AI_CONFIG.fastModel,
-            systemInstruction: WORKER_AGENT_PROMPT,
+            systemInstruction,
             tools
         });
 
@@ -3531,7 +3785,7 @@ async function processAgentJob(jobId: string) {
             // Hook into live terminal (Persistent Log)
             try {
                 await mkdir('logs', { recursive: true });
-                await writeFile('logs/symphony.log', logEntry, { flag: 'a' });
+                await writeFile('logs/agent.log', logEntry, { flag: 'a' });
             } catch (e) {
                 // Ignore logging errors to prevent crash
             }
@@ -3547,38 +3801,72 @@ async function processAgentJob(jobId: string) {
             }
         };
 
-        // Initialize Agents with Skill execution capabilities and logger
-        const orchestrator = new GeminiAgentAdapter(AGENT_ROLES.orchestrator.name, orchestratorModel, skillContext, skillExecutor, logger);
-        const critic = new GeminiAgentAdapter("Critic", orchestratorModel, skillContext, skillExecutor, logger);
-
-        const workers = {
-            researcher: new GeminiAgentAdapter(AGENT_ROLES.researcher.name, workerModel, skillContext, skillExecutor, logger),
-            developer: new GeminiAgentAdapter(AGENT_ROLES.developer.name, workerModel, skillContext, skillExecutor, logger),
-            designer: new GeminiAgentAdapter(AGENT_ROLES.designer.name, workerModel, skillContext, skillExecutor, logger),
-            writer: new GeminiAgentAdapter("Technical Writer", workerModel, skillContext, skillExecutor, logger)
-        };
-
-
-        const symphony = new AgentSymphony({
-            orchestrator,
-            critic,
-            workers,
-            options: {
-                maxIterations: job.maxIterations || 3,
-                logger
-            }
-        });
+        // Initialize Primary Agent
+        const agent = new GeminiAgentAdapter(
+            AGENT_ROLES.developer.name,
+            workerModel,
+            skillContext,
+            skillExecutor,
+            logger
+        );
 
         // Parse payload for objective
-        const objective = (job.payload as any).objective || JSON.stringify(job.payload);
-        const strategy = (job.payload as any).strategy;
+        const objective = (job.payload as any).objective || (job.payload as any).query || JSON.stringify(job.payload);
 
-        const result = await symphony.run(objective, strategy, jobId);
+        // WORKFLOW DETECTION: Check if the objective matches any existing workflows
+        let workflowMatched = false;
+        let workflowResult: any = null;
+
+        try {
+            // TODO: Fix - matchWorkflow function is not defined
+            const matchedWorkflow = null; // await matchWorkflow(objective);
+
+            if (matchedWorkflow?.workflow) {
+                console.log(`🎯 Background job matched workflow: ${matchedWorkflow.workflow.name}`);
+
+                // If it's a scaffold-vite workflow, use the optimized script
+                if (matchedWorkflow.workflow.name?.toLowerCase().includes('scaffold') &&
+                    matchedWorkflow.workflow.name?.toLowerCase().includes('vite')) {
+
+                    // Extract project name from objective
+                    const projectNameMatch = objective.match(/(?:scaffold|create|build|new)\s+(?:vite\s+)?(?:app\s+)?(?:called\s+)?["\']?([a-z0-9-]+)["\']?/i);
+                    const projectName = projectNameMatch ? projectNameMatch[1] : `vite-app-${Date.now()}`;
+
+                    console.log(`🚀 Executing scaffold-vite workflow for: ${projectName}`);
+
+                    // Execute the scaffold function directly (it's in this file)
+                    workflowResult = await executeScaffoldVite({ projectName });
+                    workflowMatched = true;
+
+                    await logger(`Workflow executed: ${matchedWorkflow.workflow.name} for project "${projectName}"`, 'info');
+                }
+            }
+        } catch (err: any) {
+            console.error('Workflow detection failed:', err);
+            // Continue with normal agent execution
+        }
+
+        let finalOutput: string;
+
+        if (workflowMatched && workflowResult) {
+            // Use the workflow result as the final output
+            finalOutput = workflowResult.message || workflowResult.output ||
+                `✅ Workflow completed successfully: ${workflowResult.success ? 'Success' : 'Failed'}`;
+        } else {
+            // Execute the agent task normally
+            finalOutput = await agent.complete(objective);
+        }
+
+        const result = {
+            objective,
+            status: 'completed',
+            finalOutput
+        };
 
         await prisma.agentJob.update({
             where: { id: jobId },
             data: {
-                status: result.status === 'completed' ? 'succeeded' : 'failed',
+                status: 'succeeded',
                 finishedAt: new Date(),
                 result: result as any
             }
@@ -3592,7 +3880,7 @@ async function processAgentJob(jobId: string) {
                         sessionId: job.sessionId,
                         role: 'ai',
                         content: result.finalOutput,
-                        toolUsed: 'agent_symphony_result'
+                        toolUsed: 'agent_result'
                     }
                 });
             }
@@ -3600,6 +3888,10 @@ async function processAgentJob(jobId: string) {
             // Refresh UI status
             // (Client polls, so this is passive)
         }
+
+        // Return the final job record for synchronous callers
+        const updatedJob = await prisma.agentJob.findUnique({ where: { id: jobId } });
+        return updatedJob;
 
     } catch (error) {
         console.error(`❌ Job ${jobId} failed:`, error);
@@ -3611,6 +3903,9 @@ async function processAgentJob(jobId: string) {
                 error: String(error)
             }
         });
+
+        // Return the failed job record for synchronous callers
+        return await prisma.agentJob.findUnique({ where: { id: jobId } });
     }
 }
 
@@ -3634,10 +3929,22 @@ export async function approveLatestAgentJob(sessionId: string) {
 
         ensureAgentWorkerAvailable().catch(err => console.error('Worker bootstrap failed:', err));
 
-        // Trigger execution
-        processAgentJob(job.id).catch(err => console.error('Background job trigger failed:', err));
-
-        return { success: true, job: updated };
+        // Trigger execution (synchronous or background depending on config)
+        if (AI_CONFIG.toolExecutionMode === 'synchronous') {
+            console.log(`🔁 Synchronous mode: executing approved job ${job.id} inline`);
+            try {
+                const processed = await processAgentJob(job.id);
+                return { success: true, job: processed || updated, executed: true };
+            } catch (err) {
+                console.error('Synchronous job execution failed:', err);
+                // Fallback to background trigger
+                processAgentJob(job.id).catch(e => console.error('Background job trigger failed:', e));
+                return { success: true, job: updated, executed: false };
+            }
+        } else {
+            processAgentJob(job.id).catch(err => console.error('Background job trigger failed:', err));
+            return { success: true, job: updated };
+        }
     } catch (error) {
         return { success: false, message: 'Failed to approve job' };
     }
@@ -3928,9 +4235,17 @@ export async function chatWithAI(
     history: { role: 'user' | 'model'; parts: { text: string }[] }[] = [],
     currentFolder?: string,
     currentFolderId?: string,
-    options?: { sessionId?: string; allowToolExecution?: boolean; agentMode?: 'chat' | 'tool-agent'; verbosity?: 'concise' | 'normal' | 'verbose' }
+    options?: {
+        sessionId?: string;
+        allowToolExecution?: boolean;
+        agentMode?: 'chat' | 'tool-agent';
+        verbosity?: 'concise' | 'normal' | 'verbose';
+        activeAppPath?: string;
+        activeAppName?: string;
+    }
 ) {
     try {
+        console.log(`💬 chatWithAI called with query: "${query}"`);
         let allowToolExecution = options?.allowToolExecution !== false;
         const agentMode = options?.agentMode || 'chat';
         const verbosity = options?.verbosity || 'concise'; // Default to concise
@@ -3941,14 +4256,17 @@ export async function chatWithAI(
 
         const genAI = new GoogleGenerativeAI(apiKey);
 
-        const [taskCount, fileCount, folders, allFiles, activePromptSet, demoUser] = await Promise.all([
+        const [taskCount, fileCount, folders, allFiles, activePromptSet, demoUser, processesRes] = await Promise.all([
             prisma.task.count(),
             prisma.workspaceFile.count({ where: { type: { not: 'folder' } } }),
             prisma.workspaceFile.findMany({ where: { type: 'folder' }, select: { name: true, id: true } }),
             prisma.workspaceFile.findMany({ select: { id: true, name: true, type: true, parentId: true, order: true } }),
             prisma.aIPromptSet.findFirst({ where: { isActive: true } }),
-            prisma.user.findUnique({ where: { email: 'demo@example.com' } })
+            prisma.user.findUnique({ where: { email: 'demo@example.com' } }),
+            prisma.processRegistry.findMany({ where: { status: 'running' } })
         ]);
+
+        const activeProcesses = processesRes || [];
 
         const contextFileIds = demoUser
             ? await resolveAttachmentFileIds(demoUser.id, fileIds)
@@ -3960,6 +4278,33 @@ export async function chatWithAI(
             ? await ensureToolAgentPrompt(demoUser.id)
             : null;
         const selectedPromptSet = (isToolAgent && toolAgentPrompt) ? toolAgentPrompt : activePromptSet;
+
+        // Extract App DNA if activeAppPath is provided
+        let appContextDNA: any = null;
+        if (options?.activeAppPath) {
+            try {
+                // Ensure path is absolute; options.activeAppPath is usually absolute from frontend
+                const pkgPath = options.activeAppPath.includes(process.cwd())
+                    ? join(options.activeAppPath, 'package.json')
+                    : resolve(process.cwd(), options.activeAppPath, 'package.json');
+
+                // Only try to read if it exists to avoid error logs
+                if (await stat(pkgPath).then(() => true).catch(() => false)) {
+                    const pkgContent = await readFileFS(pkgPath, 'utf-8');
+                    const pkg = JSON.parse(pkgContent);
+                    appContextDNA = {
+                        name: pkg.name,
+                        scripts: pkg.scripts,
+                        dependencies: pkg.dependencies ? Object.keys(pkg.dependencies) : [],
+                        devDependencies: pkg.devDependencies ? Object.keys(pkg.devDependencies) : [],
+                        main: pkg.main
+                    };
+                    console.log('🧬 App DNA extracted:', pkg.name);
+                }
+            } catch (e) {
+                console.warn('Failed to read App DNA package.json (ignoring):', e);
+            }
+        }
 
         const isApprovalMessage = (text: string) => {
             const normalized = text.trim().toLowerCase();
@@ -4017,6 +4362,59 @@ export async function chatWithAI(
                 /i will use/i.test(normalized) ||
                 /plan:|steps:|approach:/i.test(normalized);
         };
+
+        // Greeting detector: short, casual messages (e.g., "hi", "hello") should be
+        // handled inline and not trigger workflows or background agents. This prevents
+        // noisy orchestration for trivial conversational turns.
+        const isCasualGreeting = (text: string) => {
+            if (!text) return false;
+            const normalized = text.trim().toLowerCase();
+            if (normalized.length > 50) return false; // too long to be a simple greeting
+            // Common greetings (strict start match)
+            return /^(hi|hello|hey|hiya|yo|sup|howdy|good\s(morning|afternoon|evening|day))([!.,\s]*(\?|!)?|$)/i.test(normalized) &&
+                !normalized.includes("run") &&
+                !normalized.includes("create") &&
+                !normalized.includes("start");
+        };
+
+        // Sanitize Query: Remove [SYSTEM] prefixes injected by frontend (e.g. background agent status)
+        // This prevents approval messages like "approve" from being missed because they are prefixed with "[SYSTEM: ...]"
+        let cleanQuery = query;
+        if (cleanQuery.startsWith('[SYSTEM:')) {
+            // Find the end of the system block(s) - handle multiple if necessary
+            // Format is usually [SYSTEM: ...]\n\nUser Content
+            // or just [SYSTEM: ...] if no user content? (Unlikely for chat)
+
+            // Simple approach: split by double newline first
+            const parts = cleanQuery.split('\n\n');
+            // If the first part is a system message, take the rest
+            if (parts.length > 1 && parts[0].startsWith('[SYSTEM:')) {
+                cleanQuery = parts.slice(1).join('\n\n').trim();
+            } else if (cleanQuery.includes(']')) {
+                // Fallback for single line or different formatting
+                cleanQuery = cleanQuery.substring(cleanQuery.lastIndexOf(']') + 1).trim();
+            }
+        }
+
+        // Use cleanQuery for logic checks, but keep original query for context if needed (though usually we want the user's actual intent)
+        const isCasual = isCasualGreeting(cleanQuery);
+        const isApprove = isApprovalMessage(cleanQuery);
+        const isShort = (cleanQuery || '').trim().length <= 50;
+
+        console.log(`🔎 Greeting Check: "${cleanQuery}" (Original: "${query.substring(0, 50)}...") -> isCasual=${isCasual}, isApprove=${isApprove}, isShort=${isShort}`);
+
+        // Command detection: /v1 triggers the heavy Cognitive Architecture
+        const isCognitiveCommand = cleanQuery.trim().startsWith('/v1');
+        const effectiveQuery = isCognitiveCommand ? cleanQuery.replace('/v1', '').trim() : cleanQuery;
+
+        // Short-circuit casual greetings: quick in-session response, no tools or background work
+        if (!isCognitiveCommand && isShort && isCasual && !isApprove) {
+            console.log('👋 Fast-pathing casual greeting');
+            return {
+                success: true,
+                text: "Hi there! 👋 I'm ready to help. You can ask me to run an app, create files, or explore the codebase. Just let me know what you need."
+            };
+        }
 
         const buildPlanSummary = (tools: string[], query: string) => {
             // If no tools, provide generic but clear plan
@@ -4112,7 +4510,7 @@ export async function chatWithAI(
         };
 
         const isLowRiskTools = (tools: string[]) => {
-            const lowRisk = new Set(['focus_workspace_item', 'search_files', 'read_file']);
+            const lowRisk = new Set(['focus_workspace_item', 'search_files', 'read_file', 'ask_questions', 'create_task', 'list_files', 'get_agent_activity']);
             return tools.length > 0 && tools.every(tool => lowRisk.has(tool));
         };
 
@@ -4126,7 +4524,7 @@ export async function chatWithAI(
             return tools.length > 0 && tools.every(tool => safe.has(tool));
         };
 
-        if (sessionId && isApprovalMessage(query)) {
+        if (sessionId && isApprovalMessage(cleanQuery)) {
             const approval = await approveLatestAgentJob(sessionId);
             if (approval.success) {
                 if (demoUser) {
@@ -4247,7 +4645,9 @@ export async function chatWithAI(
 
         let workflowInstructions = '';
 
-        if (demoUser) {
+        // Standard Flow: Check for deterministic regex/intent matches
+        // /v1 (Cognitive Mode) skips this to allow full LLM planning
+        if (!isCognitiveCommand && demoUser) {
             await ensureIntentRules(demoUser.id);
             const rules = await prisma.intentRule.findMany({ where: { userId: demoUser.id, enabled: true } });
 
@@ -4313,16 +4713,20 @@ export async function chatWithAI(
 
             if (!matchedWorkflow) {
                 matchedWorkflow = keywordCandidates
-                    .map(candidate => ({
-                        workflow: candidate.workflow,
-                        keyword: candidate.keyword,
-                        match: scoreKeywordMatch(query, candidate.keyword)
-                    }))
-                    .filter(match => match.match)
+                    .map(candidate => {
+                        const match = scoreKeywordMatch(query, candidate.keyword);
+                        return {
+                            workflow: candidate.workflow,
+                            keyword: candidate.keyword,
+                            match
+                        };
+                    })
+                    .filter(item => item.match !== null)
                     .sort((a, b) => {
-                        if (b.match!.score !== a.match!.score) return b.match!.score - a.match!.score;
-                        return (b.keyword?.length || 0) - (a.keyword?.length || 0);
-                    })[0];
+                        const scoreA = a.match ? a.match.score : 0;
+                        const scoreB = b.match ? b.match.score : 0;
+                        return scoreB - scoreA;
+                    })[0] as unknown as { workflow: any; keyword: string; match: { score: number; matched: string; reason: string } };
             }
 
             const matchedWorkflowValue = matchedWorkflow?.workflow;
@@ -4335,40 +4739,12 @@ export async function chatWithAI(
                 });
                 const lastAssistantText = getLastAssistantText();
                 const table = extractLastMarkdownTable(lastAssistantText);
-                const content = table || lastAssistantText || `Workflow triggered: ${matchedWorkflowValue.name}\nQuery: ${query}`;
+                const content = table || lastAssistantText || `Workflow triggered: ${matchedWorkflowValue.name}\nQuery: ${cleanQuery}`;
 
                 const filename = getAutoFilename({ autoFilename: 'timestamp' });
                 const folderName = getAutoFolderName({ autoFolder: 'auto' });
 
                 if (matchedWorkflowValue.content) {
-                    // Check if this is a scaffold-vite workflow
-                    const isScaffoldVite = matchedWorkflowValue.name?.toLowerCase().includes('scaffold') &&
-                        matchedWorkflowValue.name?.toLowerCase().includes('vite');
-
-                    if (isScaffoldVite) {
-                        // Extract project name from query
-                        const projectNameMatch = query.match(/\/scaffold-vite\s+([a-z0-9-]+)/i);
-                        const projectName = projectNameMatch ? projectNameMatch[1] : null;
-
-                        if (!projectName) {
-                            return {
-                                success: false,
-                                text: `❌ **Project name required**\n\nUsage: \`/scaffold-vite <project-name>\`\n\nExample: \`/scaffold-vite my-restaurant-app\`\n\nProject name must be kebab-case (lowercase with hyphens).`
-                            };
-                        }
-
-                        console.log(`🚀 Executing scaffold-vite for project: ${projectName}`);
-                        // Execute the scaffold immediately
-                        const result = await executeScaffoldVite({ projectName });
-                        console.log(`📦 Scaffold result:`, JSON.stringify(result, null, 2));
-
-                        return {
-                            success: result.success,
-                            text: result.message || (result.success ? '✅ Scaffold completed' : '❌ Scaffold failed'),
-                            toolUsed: result.success ? `workflow:${matchedWorkflowValue.name}` : undefined
-                        };
-                    }
-
                     // Not a scaffold-vite workflow, proceed normally
                     let workflowContent = matchedWorkflowValue.content;
                     workflowInstructions = `\n\n═══════════════════════════════════════════════════════════════════\nSYSTEM OVERRIDE: ACTIVE WORKFLOW: ${matchedWorkflowValue.name}\n═══════════════════════════════════════════════════════════════════\n${workflowContent}\n\nFOLLOW THESE INSTRUCTIONS EXACTLY TO COMPLETE THE WORKFLOW.`;
@@ -4383,10 +4759,10 @@ export async function chatWithAI(
                         });
                     }
                 } else {
-                    const scaffoldViteAppName = parseScaffoldViteAppName(query) || generateScaffoldViteDefaultName();
+                    const scaffoldViteAppName = parseScaffoldViteAppName(cleanQuery) || generateScaffoldViteDefaultName();
                     const res = await executeWorkflow(matchedWorkflowValue.steps as WorkflowStep[], {
                         content,
-                        query,
+                        query: cleanQuery,
                         lastResponse: lastAssistantText,
                         filename,
                         folderName,
@@ -4587,6 +4963,22 @@ OPERATIONAL RULES:
          3. An 'index.html' entry point exists.
      ${backgroundRule}
 14. COMMAND EXECUTION: For any terminal commands (npm, docker, npx, git, etc.), ALWAYS use the 'execute_command' tool.
+
+15. LIVE SERVERS & PREVIEWS:
+     - PREVIEWING: If a dev server or container is running (see 'activeProcesses'), you can tell the user to "Open the Preview tab" to see the live site at the provided URL.
+     - AUTO-START: If the user creates or modifies a project and wants to see it, and no process is running, suggest starting the dev server via 'execute_command'.
+     - PREMIUM EXPERIENCE: If you make a visual change (CSS/UI), proactively mention that the preview is available.
+
+ACTIVE PROCESSES (LIVE):
+${JSON.stringify(activeProcesses.map(p => ({
+            name: p.name,
+            type: p.type,
+            port: p.port,
+            url: p.port ? `http://localhost:${p.port}` : undefined
+        })))}
+
+ACTIVE APP DNA (CONTEXT):
+${appContextDNA ? JSON.stringify(appContextDNA) : 'None'}
    `;
 
         // Load skills dynamically from skills library
@@ -4597,11 +4989,12 @@ OPERATIONAL RULES:
         const baseInstruction = selectedPromptSet ? selectedPromptSet.prompt : defaultInstruction;
 
         // --- COGNITIVE PLANNING (Multi-Agent Architecture) ---
+        // Only active if explicitly requested via /v1 command
         let planText = '';
-        if (!isToolAgent) {
+        if (!isToolAgent && isCognitiveCommand) {
             const { CognitiveAgent } = await import('@/lib/agents/CognitiveAgent');
             const cognitiveAgent = new CognitiveAgent(apiKey);
-            const plan = await cognitiveAgent.generateExecutionPlan(query, {
+            const plan = await cognitiveAgent.generateExecutionPlan(effectiveQuery, {
                 history,
                 currentFolder,
                 availableTools: enabledSkills
@@ -4609,7 +5002,7 @@ OPERATIONAL RULES:
 
             if (plan && demoUser) {
                 // CONSULTATION: Provide constructive critique to strengthen the plan
-                const doubts = await cognitiveAgent.critiquePlan(plan, query);
+                const doubts = await cognitiveAgent.critiquePlan(plan, effectiveQuery);
                 plan.doubts = [...(plan.doubts || []), ...doubts];
 
                 await logAgentActivity({
@@ -4662,29 +5055,31 @@ ${plan.suggestedSpecialist && plan.suggestedSpecialist !== 'none' ? `SPECIALIST 
             });
         }
 
-        const systemInstruction = baseInstruction + "\n" + toolInstructions + planText +
-            "\n\nCOGNITIVE ARCHITECTURE: ENABLED." +
-            (isToolAgent
-                ? "\nVERBOSITY: LOW. Keep responses concise and focused on tool results."
-                : verbosity === 'verbose'
-                    ? "\nVERBOSITY: HIGH. Be detailed. Share your internal roadmap and reasoning explicitly."
-                    : verbosity === 'concise'
-                        ? "\nVERBOSITY: LOW. Be straight to the point. Minimal explanation, focus on action and results. Do not repeat the plan if it's obvious."
-                        : "\nVERBOSITY: NORMAL. Provide reasonable context but avoid excessive fluff.") +
-            (isToolAgent
-                ? "\nTHINKING PROTOCOL: Do not include <thinking> tags in responses."
-                : `
+        let systemInstruction = "";
+
+        if (isCognitiveCommand) {
+            // --- HEAVY /v1 MODE: Full Cognitive Architecture ---
+            systemInstruction = baseInstruction + "\n" + toolInstructions + planText +
+                "\n\nCOGNITIVE ARCHITECTURE: ENABLED." +
+                (isToolAgent
+                    ? "\nVERBOSITY: LOW. Keep responses concise and focused on tool results."
+                    : verbosity === 'verbose'
+                        ? "\nVERBOSITY: HIGH. Be detailed. Share your internal roadmap and reasoning explicitly."
+                        : verbosity === 'concise'
+                            ? "\nVERBOSITY: LOW. Be straight to the point. Minimal explanation, focus on action and results. Do not repeat the plan if it's obvious."
+                            : "\nVERBOSITY: NORMAL. Provide reasonable context but avoid excessive fluff.") +
+                (isToolAgent
+                    ? "\nTHINKING PROTOCOL: Do not include <thinking> tags in responses."
+                    : `
 ═══════════════════════════════════════════════════════════════════
 THINKING PROTOCOL (MANDATORY)
 ═══════════════════════════════════════════════════════════════════
 You MUST include a <thinking>...</thinking> block at the START of EVERY response.
-
 This block should contain:
 1. Your analysis of the user's request
 2. Your approach/strategy
 3. Tools or skills you plan to use (if any)
 4. Potential challenges or considerations
-
 Example format:
 <thinking>
 The user wants me to [understand request].
@@ -4693,13 +5088,22 @@ My approach:
 - Step 2: [action]
 I will use [tool/skill] because [reason].
 </thinking>
-
 [Your actual response here]
-
 IMPORTANT: The thinking block helps users understand your reasoning process.
 ═══════════════════════════════════════════════════════════════════
-`) +
-            "\nWEB/PREVIEW CAPABILITY: You can create full HTML web pages using 'create_html_file'. When you do this, the system will AUTOMATICALLY open a live preview for the user side-by-side with the chat. Use this for landing pages, reports, or any visual data representation." +
+`);
+        } else {
+            // --- STANDARD MODE: Clean, Direct, Tool-Capable ---
+            // We still include instructions and tools, but remove the "Cognitive Brain" branding and forced thinking blocks.
+            // This relies on the model's native ability to decide when to use tools.
+            systemInstruction = baseInstruction + "\n" + toolInstructions +
+                "\n\nMODE: STANDARD ASSISTANT." +
+                "\nRESPONSE STYLE: Direct, helpful, and concise. You have access to tools and should use them when requested or necessary, but you do not need to over-explain your planning process unless asked." +
+                "\n\nNOTE: If the user asks for complex multi-step planning, suggest they use the '/v1' command to activate the Cognitive Brain.";
+        }
+
+        // Shared capabilities for both modes
+        systemInstruction += "\nWEB/PREVIEW CAPABILITY: You can create full HTML web pages using 'create_html_file'. When you do this, the system will AUTOMATICALLY open a live preview for the user side-by-side with the chat. Use this for landing pages, reports, or any visual data representation." +
             "\nPROACTIVE SEARCH RULE: Always use 'search_files' if you are unsure which files to use for a report or task. Never ask the user for file IDs if you can find them yourself.";
 
         console.log('🧠 Loading capabilities for agent:', enabledSkills);
@@ -4730,7 +5134,7 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
         }
 
         const model = genAI.getGenerativeModel({ model: AI_CONFIG.fastModel, systemInstruction, tools });
-        let promptParts: any[] = [query + workflowInstructions];
+        let promptParts: any[] = [effectiveQuery + workflowInstructions];
 
         // Resolve all file IDs (including those inside folders)
         const resolvedFileIds = new Set<string>(fileIds);
@@ -4903,7 +5307,8 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
             } else {
 
                 const recentApproval = await getRecentApproval();
-                if (recentApproval && isLowRiskTools(proposedTools)) {
+                // Less guardrails: Auto-approve low risk tools regardless of recent approval history
+                if (isLowRiskTools(proposedTools)) {
                     if (sessionId) {
                         await enqueueAgentJob({
                             sessionId,
@@ -4935,7 +5340,7 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
                         sessionId,
                         type: 'chat_task',
                         payload: {
-                            query,
+                            query: effectiveQuery,
                             fileIds,
                             history,
                             currentFolder,
@@ -4963,7 +5368,7 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
 
                 return {
                     success: true,
-                    text: `${buildPlanSummary(proposedTools, query)}\n\nPlease approve this action to proceed.`,
+                    text: `${buildPlanSummary(proposedTools, effectiveQuery)}\n\nPlease approve this action to proceed.`,
                     toolUsed: 'enqueue_agent_job',
                     toolResult: { requiresApproval: true, jobId }
                 };
@@ -4989,7 +5394,7 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
                 const skillContext = {
                     userId: demoUser?.id || '',
                     fileIds: Array.from(resolvedFileIds),
-                    query,
+                    query: effectiveQuery,
                     lastResponse: getLastAssistantText(),
                     workspaceFiles: allFiles
                 };
@@ -5007,7 +5412,7 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
                 // If skill unknown, try basic tool execution
                 if (!res.success && res.error && res.error.includes('Unknown skill')) {
                     console.log(`🔧 Skill not found, attempting tool execution: ${call.name}`);
-                    const toolRes = await executeAction(call.name, call.args);
+                    const toolRes = await executeWithRetry(call.name, call.args);
                     if (toolRes.success || toolRes.message !== `Action ${call.name} not found`) {
                         res = toolRes;
                     }
@@ -5351,5 +5756,167 @@ export async function cancelAllAgentJobs() {
     } catch (error) {
         console.error('Failed to cancel jobs:', error);
         return { success: false, message: 'Failed to cancel agent jobs' };
+    }
+}
+
+// ------------------------------------------------------------------
+// NEW ANTIGRAVITY TOOLS IMPLEMENTATION
+// ------------------------------------------------------------------
+
+async function resolvePath(input: string, useAbsolute: boolean): Promise<string> {
+    if (useAbsolute || input.includes('/') || input.includes('\\')) {
+        return resolve(input);
+    }
+    // Fallback: try to resolve as File ID (Legacy support)
+    // For now, if we can't find a DB record, we assume it's a relative path from cwd
+    return resolve(process.cwd(), input);
+}
+
+export async function viewFile(args: { fileId: string, startLine?: number, endLine?: number, useAbsolutePath?: boolean }) {
+    try {
+        const filePath = await resolvePath(args.fileId, args.useAbsolutePath || false);
+        const content = await readFileFS(filePath, 'utf-8');
+        const lines = content.split('\n');
+
+        const start = (args.startLine || 1) - 1;
+        const end = args.endLine ? args.endLine : (start + 500); // 500 line default limit
+
+        const snippet = lines.slice(start, end).join('\n');
+        const totalLines = lines.length;
+
+        return {
+            success: true,
+            path: filePath,
+            content: snippet,
+            meta: {
+                totalLines,
+                viewingLiknes: `${start + 1}-${Math.min(end, totalLines)}`
+            }
+        };
+    } catch (e: any) {
+        return { success: false, message: `Failed to read file: ${e.message}` };
+    }
+}
+
+export async function listDir(args: { path: string, recursive?: boolean }) {
+    try {
+        const targetPath = resolve(process.cwd(), args.path);
+        const entries = await readdir(targetPath, { withFileTypes: true });
+
+        const result = entries.map(e => ({
+            name: e.name,
+            type: e.isDirectory() ? 'dir' : 'file',
+            path: join(args.path, e.name)
+        }));
+
+        // Limit to 100 entries to avoid token explosion
+        const truncated = result.slice(0, 100);
+
+        return {
+            success: true,
+            entries: truncated,
+            total: result.length,
+            isTruncated: result.length > 100
+        };
+    } catch (e: any) {
+        return { success: false, message: `Failed to list directory: ${e.message}` };
+    }
+}
+
+export async function replaceInFile(args: { fileId: string, target: string, replacement: string, useAbsolutePath?: boolean }) {
+    try {
+        const filePath = await resolvePath(args.fileId, args.useAbsolutePath || false);
+        const content = await readFileFS(filePath, 'utf-8');
+
+        if (content.indexOf(args.target) === -1) {
+            return { success: false, message: `Target text not found in file: ${filePath}. Please verify whitespace.` };
+        }
+
+        // Exact replacement
+        if (content.split(args.target).length > 2) {
+            return { success: false, message: `Target text is not unique (found multiple times). Please provide more context in the target string.` };
+        }
+
+        const newContent = content.replace(args.target, args.replacement);
+        await writeFile(filePath, newContent);
+
+        return { success: true, message: `Successfully updated ${filePath}` };
+    } catch (e: any) {
+        return { success: false, message: `Editor error: ${e.message}` };
+    }
+}
+
+export async function searchCodebase(args: { query: string, dir?: string, extensions?: string[] }) {
+    try {
+        // Naive Node implementation for portability
+        const rootDir = resolve(process.cwd(), args.dir || './src');
+        const results: any[] = [];
+
+        async function walk(dir: string) {
+            if (results.length > 20) return; // Hard limit
+            const list = await readdir(dir, { withFileTypes: true });
+            for (const item of list) {
+                const fullPath = join(dir, item.name);
+                if (item.isDirectory()) {
+                    if (item.name !== 'node_modules' && item.name !== '.git') {
+                        await walk(fullPath);
+                    }
+                } else {
+                    if (args.extensions && !args.extensions.some(ext => item.name.endsWith(ext))) continue;
+
+                    const content = await readFileFS(fullPath, 'utf-8');
+                    if (content.includes(args.query) || new RegExp(args.query).test(content)) {
+                        results.push({
+                            file: fullPath.replace(process.cwd(), ''),
+                            match: 'Found pattern' // simplified for now
+                        });
+                    }
+                }
+            }
+        }
+
+        await walk(rootDir);
+        return { success: true, count: results.length, matches: results };
+
+    } catch (e: any) {
+        return { success: false, message: `Search failed: ${e.message}` };
+    }
+}
+
+export async function runTerminalCommand(args: { command: string, cwd?: string, background?: boolean }) {
+    try {
+        const targetCwd = args.cwd ? resolve(process.cwd(), args.cwd) : process.cwd();
+
+        // Validate directory exists
+        const fs = require('fs');
+        if (!fs.existsSync(targetCwd)) {
+            return {
+                success: false,
+                stdout: '',
+                stderr: `Directory does not exist: ${targetCwd}`,
+                message: `Directory does not exist: ${targetCwd}. Check if the path is correct. For apps in the 'apps/' folder, use 'apps/appname' as the cwd.`
+            };
+        }
+
+        const options = {
+            cwd: targetCwd,
+            shell: true, // Required for Windows to properly spawn cmd.exe
+            windowsHide: true
+        };
+        console.log(`$> Running: ${args.command} in ${options.cwd}`);
+
+        if (args.background) {
+            exec(args.command, options); // Fire and forget
+            return { success: true, message: "Command execution started in background." };
+        }
+
+        const { stdout, stderr } = await execAsync(args.command, options);
+        return {
+            success: true,
+            stdout,
+            stderr
+        };
+    } catch (e: any) {
+        return { success: false, stdout: e.stdout || '', stderr: e.stderr || '', message: `Command failed: ${e.message}` };
     }
 }

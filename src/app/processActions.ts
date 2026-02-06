@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma';
 import { deepSerialize } from '@/lib/serialization';
 import { writeFile, readFile } from 'fs/promises';
+import { exec } from 'child_process';
 import { join } from 'path';
 import {
     ProcessInput,
@@ -216,33 +217,50 @@ export async function startProcess(id: string) {
         }
 
         if (isDockerProcess(process)) {
-            const containerName = process.metadata?.containerName as string | undefined;
-            const appPath = process.metadata?.appPath as string | undefined;
-            const imageName = process.metadata?.imageName as string | undefined;
+            const meta = process.metadata as any || {};
+            const containerName = meta?.containerName as string | undefined;
+            const appPath = meta?.appPath as string | undefined;
+            const imageName = meta?.imageName as string | undefined;
 
-            if (process.metadata?.source === 'repo-app' && appPath && containerName && imageName) {
+            if (meta?.source === 'repo-app' && appPath && containerName && imageName) {
                 let internalPort = 3000;
                 let dockerFileName = 'Dockerfile.taskflow';
                 let useExistingDockerfile = false;
 
-                // Check if a custom Dockerfile exists
-                try {
-                    const existingDockerfileContent = await readFile(join(appPath, 'Dockerfile'), 'utf-8');
-                    useExistingDockerfile = true;
-                    dockerFileName = 'Dockerfile';
+                const forcedDockerFile = (meta?.dockerFile as string | undefined);
 
-                    // Try to detect exposed port
-                    const exposeMatch = existingDockerfileContent.match(/EXPOSE\s+(\d+)/);
-                    if (exposeMatch) {
-                        internalPort = parseInt(exposeMatch[1]);
-                    } else if (existingDockerfileContent.includes('nginx')) {
-                        internalPort = 80;
+                if (forcedDockerFile) {
+                    dockerFileName = forcedDockerFile;
+                    useExistingDockerfile = true;
+                    try {
+                        const content = await readFile(join(appPath, forcedDockerFile), 'utf-8');
+                        const exposeMatch = content.match(/EXPOSE\s+(\d+)/);
+                        if (exposeMatch) {
+                            internalPort = parseInt(exposeMatch[1]);
+                        }
+                    } catch (e) {
+                        console.error('Error reading forced dockerfile:', e);
                     }
-                } catch {
-                    // No existing Dockerfile, proceed with generation logic
+                } else {
+                    // Check if a custom Dockerfile exists
+                    try {
+                        const existingDockerfileContent = await readFile(join(appPath, 'Dockerfile'), 'utf-8');
+                        useExistingDockerfile = true;
+                        dockerFileName = 'Dockerfile';
+
+                        // Try to detect exposed port
+                        const exposeMatch = existingDockerfileContent.match(/EXPOSE\s+(\d+)/);
+                        if (exposeMatch) {
+                            internalPort = parseInt(exposeMatch[1]);
+                        } else if (existingDockerfileContent.includes('nginx')) {
+                            internalPort = 80;
+                        }
+                    } catch {
+                        // No existing Dockerfile, proceed with generation logic
+                    }
                 }
 
-                let startScript = process.metadata?.startScript as string | undefined;
+                let startScript = meta?.startScript as string | undefined;
 
                 if (!useExistingDockerfile) {
                     if (!startScript) {
@@ -642,5 +660,169 @@ export async function reconfigureProcessPort(processId: string) {
     } catch (error: any) {
         console.error('Failed to reconfigure port:', error);
         return { success: false, error: error?.message || 'Failed to reconfigure port' };
+    }
+}
+// ...existing exports...
+
+/**
+ * Manage App Lifecycle (Start/Stop/Restart)
+ * Optimized for local web apps (Vite, Next.js, etc.)
+ */
+export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'restart' | 'status', target?: string, script?: string }) {
+    try {
+        const user = await getDemoUser();
+        const root = process.cwd();
+        let appPath = root;
+        let appName = 'Root App';
+
+        // Resolve Target Path
+        if (args.target) {
+            if (!args.target.startsWith('/') && !args.target.includes(':') && !args.target.startsWith('.')) {
+                // Try Repo App first
+                const repoAppPath = join(root, 'apps', args.target);
+                try {
+                    await readFile(join(repoAppPath, 'package.json')); // Check existence
+                    appPath = repoAppPath;
+                    appName = args.target;
+                } catch {
+                    // Fallback to relative from root
+                    appPath = join(root, args.target);
+                    appName = args.target.split(/[\\/]/).pop() || 'App';
+                }
+            } else {
+                appPath = join(root, args.target); // Absolute or relative
+                appName = args.target.split(/[\\/]/).pop() || 'App';
+            }
+        }
+
+        const processName = `App: ${appName}`;
+
+        // Find existing process registry
+        let proc = await prisma.processRegistry.findFirst({
+            where: { userId: user.id, path: appPath }
+        });
+
+        if (args.action === 'status') {
+            return { success: true, status: proc?.status || 'stopped', process: deepSerialize(proc) };
+        }
+
+        if (args.action === 'stop') {
+            if (proc) return await stopProcess(proc.id);
+            return { success: false, message: 'Process not running' };
+        }
+
+        if (args.action === 'restart') {
+            if (proc) return await restartProcess(proc.id);
+            return { success: false, message: 'Process not running' };
+        }
+
+        if (args.action === 'start') {
+            if (proc && proc.status === 'running') {
+                return {
+                    success: true,
+                    message: `App is already running on port ${proc.port}`,
+                    previewUrl: `http://localhost:${proc.port}`,
+                    process: deepSerialize(proc)
+                };
+            }
+
+            // 1. Delegate to startProcess if already registered (handles Docker correctly)
+            if (proc) {
+                const result = await startProcess(proc.id);
+                if (result.success && result.process) {
+                    return {
+                        success: true,
+                        message: `Started ${appName}`,
+                        previewUrl: result.process.port ? `http://localhost:${result.process.port}` : undefined,
+                        process: result.process
+                    };
+                }
+                return result;
+            }
+
+            // 2. Read package.json to find script
+            const pkgPath = join(appPath, 'package.json');
+            let pkg: any;
+            try {
+                const pkgRaw = await readFile(pkgPath, 'utf-8');
+                pkg = JSON.parse(pkgRaw);
+            } catch (e) {
+                return { success: false, message: `No package.json found at ${appPath}` };
+            }
+
+            // 3. Determine Script
+            const script = args.script || (pkg.scripts?.dev ? 'dev' : pkg.scripts?.start ? 'start' : null);
+            if (!script) return { success: false, message: 'No "dev" or "start" script found in package.json' };
+
+            // 4. Find Port
+            const port = await getAvailablePort(5000, 5999);
+
+            // 5. Construct Command (Framework Aware)
+            let actualCmd = `npm run ${script}`;
+            let env = { ...process.env, PORT: port.toString(), BROWSER: 'none' };
+
+            if (pkg.devDependencies?.vite || pkg.dependencies?.vite) {
+                // Vite needs --port and --host
+                actualCmd = `npm run ${script} -- --port ${port} --host`;
+            } else if (pkg.dependencies?.next) {
+                // Next.js needs -p
+                actualCmd = `npm run ${script} -- -p ${port}`;
+            } else {
+                // Fallback for generic Node apps
+                actualCmd = `npm run ${script}`;
+                // Hope they respect PORT env var
+            }
+
+            // 6. Register/Update DB (Pending)
+            if (!proc) {
+                proc = await prisma.processRegistry.create({
+                    data: {
+                        name: processName,
+                        type: 'dev-server',
+                        path: appPath,
+                        command: actualCmd,
+                        userId: user.id,
+                        status: 'pending',
+                        metadata: { appName }
+                    }
+                });
+            }
+
+            // 7. Execute (Background)
+            console.log(`🚀 Starting ${appName} with: ${actualCmd} (Port ${port})`);
+            const child = exec(actualCmd, { cwd: appPath, env: env as any });
+
+            if (!child.pid) throw new Error('Failed to spawn process');
+
+            // Log output for debugging
+            child.stdout?.on('data', (data) => console.log(`[${appName}]`, data));
+            child.stderr?.on('data', (data) => console.error(`[${appName}]`, data));
+
+            // 8. Update DB to Running
+            const updated = await prisma.processRegistry.update({
+                where: { id: proc.id },
+                data: {
+                    pid: child.pid,
+                    port: port,
+                    status: 'running',
+                    startedAt: new Date(),
+                    stoppedAt: null,
+                    command: actualCmd
+                }
+            });
+
+            return {
+                success: true,
+                message: `Started ${appName} on port ${port}`,
+                previewUrl: `http://localhost:${port}`,
+                process: deepSerialize(updated)
+            };
+        }
+
+        return { success: false, message: `Invalid action: ${args.action}` };
+
+    } catch (e: any) {
+        console.error('manageAppLifecycle error:', e);
+        return { success: false, message: `Error: ${e.message}` };
     }
 }

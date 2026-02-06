@@ -49,17 +49,30 @@ const startDockerWorker = async (composeCommand: string) => {
 };
 
 const startLocalWorker = () => {
-    const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-    const child = spawn(npmCommand, ['run', 'agent:start'], {
-        cwd: process.cwd(),
-        stdio: 'ignore',
-        detached: true,
-        env: {
-            ...process.env,
-            AGENT_CONCURRENCY: '1'
-        }
-    });
-    child.unref();
+    try {
+        const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+        console.log(`🚀 Starting local agent worker: ${npmCommand} run agent:start`);
+        
+        const child = spawn(npmCommand, ['run', 'agent:start'], {
+            cwd: process.cwd(),
+            stdio: 'ignore',
+            detached: true,
+            shell: true, // Required for Windows to properly spawn npm.cmd
+            env: {
+                ...process.env,
+                AGENT_CONCURRENCY: '1'
+            }
+        });
+        
+        child.on('error', (error) => {
+            console.error('❌ Failed to start agent worker:', error);
+        });
+        
+        child.unref();
+        console.log('✅ Agent worker process started');
+    } catch (error) {
+        console.error('❌ Error starting local agent worker:', error);
+    }
 };
 
 export const ensureAgentWorkerAvailable = async () => {

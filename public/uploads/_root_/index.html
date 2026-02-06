@@ -1,23 +1,65 @@
-<div class="flex items-center justify-center min-h-screen bg-gray-900">
-  <div class="relative w-full max-w-md bg-clip-padding backdrop-filter backdrop-blur-md bg-opacity-10 border border-gray-700 rounded-xl shadow-lg p-6 text-white font-inter">
-    <div class="absolute -top-10 left-1/2 transform -translate-x-1/2">
-      <img class="h-20 w-20 rounded-full object-cover border-4 border-purple-500" src="https://source.unsplash.com/100x100/?portrait" alt="User Avatar">
-    </div>
-    <div class="mt-12 text-center">
-      <h2 class="text-2xl font-semibold">John Doe</h2>
-      <p class="text-gray-400">UI/UX Designer</p>
-    </div>
-    <div class="mt-4">
-      <p class="text-gray-300">
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-      </p>
-    </div>
-    <div class="mt-6 flex justify-around">
-      <a href="#" class="text-purple-400 hover:text-purple-300"><i class="fab fa-twitter fa-2x"></i></a>
-      <a href="#" class="text-purple-400 hover:text-purple-300"><i class="fab fa-linkedin fa-2x"></i></a>
-      <a href="#" class="text-purple-400 hover:text-purple-300"><i class="fab fa-github fa-2x"></i></a>
-    </div>
-  </div>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-semibold mb-4">CRM Dashboard</h1>
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <!-- Sales Performance -->
+        <div class="bg-white shadow-md rounded-md p-4 mb-4">
+            <h2 class="text-xl font-semibold mb-2">Sales Performance</h2>
+            <img src="https://via.placeholder.com/800x300" alt="Sales Chart" class="w-full">
+        </div>
+
+        <!-- Customer Activity -->
+        <div class="bg-white shadow-md rounded-md p-4 mb-4">
+            <h2 class="text-xl font-semibold mb-2">Customer Activity</h2>
+            <table class="w-full">
+                <thead>
+                    <tr>
+                        <th class="text-left">Name</th>
+                        <th class="text-left">Email</th>
+                        <th class="text-left">Activity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>John Doe</td>
+                        <td>john.doe@example.com</td>
+                        <td>Last contacted: 2024-01-20</td>
+                    </tr>
+                    <tr>
+                        <td>Jane Smith</td>
+                        <td>jane.smith@example.com</td>
+                        <td>Sent quote: 2024-01-22</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="bg-white shadow-md rounded-md p-4">
+            <h2 class="text-xl font-semibold mb-2">Key Metrics</h2>
+            <div class="grid grid-cols-3 gap-4">
+                <div class="bg-gray-200 p-2 rounded-md">
+                    <h3>Total Sales</h3>
+                    <p>10,000</p>
+                </div>
+                <div class="bg-gray-200 p-2 rounded-md">
+                    <h3>New Customers</h3>
+                    <p>100</p>
+                </div>
+                <div class="bg-gray-200 p-2 rounded-md">
+                    <h3>Customer Retention</h3>
+                    <p>80%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
