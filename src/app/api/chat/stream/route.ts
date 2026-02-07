@@ -1,4 +1,9 @@
-import { chatWithAI } from '@/app/actions';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getToolSchemas, DEFAULT_TOOLS } from '@/lib/toolLibrary';
+import { executeWithRetry } from '@/app/actions';
+import { SOFTWARE_ARCHITECT_PROMPT } from '@/lib/agents/prompts';
+import AI_CONFIG from '@/lib/aiConfig';
+import { deepSerialize } from '@/lib/serialization';
 
 export async function POST(request: Request) {
     let body;
@@ -11,81 +16,159 @@ export async function POST(request: Request) {
             headers: { 'Content-Type': 'application/json' }
         });
     }
+
     const {
         query,
         fileIds,
-        history,
+        history = [],
         currentFolder,
         currentFolderId,
         sessionId,
-        verbosity,
+        verbosity = 'normal',
         activeAppName,
         activeAppPath
     } = body || {};
-
-    // Validate payload size to prevent ECONNRESET
-    const fileCount = Array.isArray(fileIds) ? fileIds.length : 0;
-    const historyCount = Array.isArray(history) ? history.length : 0;
-
-    if (fileCount > 50) {
-        console.warn(`⚠️ Large file context: ${fileCount} files`);
-    }
-
-    if (historyCount > 100) {
-        console.warn(`⚠️ Large history: ${historyCount} messages`);
-    }
 
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
         async start(controller) {
+            const enqueue = (data: any) => {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+            };
+
             try {
-                // Get Gemini with streaming enabled
                 const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
                 if (!apiKey) {
-                    controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'API Key missing' })}\n\n`)
-                    );
+                    enqueue({ type: 'error', message: 'API Key missing' });
                     controller.close();
                     return;
                 }
 
-                const { GoogleGenerativeAI } = await import('@google/generative-ai');
                 const genAI = new GoogleGenerativeAI(apiKey);
-                const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-                // Start streaming response from Gemini
-                const result = await model.generateContentStream(query);
-                
-                for await (const chunk of result.stream) {
-                    const chunkText = chunk.text();
-                    if (chunkText) {
-                        controller.enqueue(
-                            encoder.encode(`data: ${JSON.stringify({ type: 'delta', text: chunkText })}\n\n`)
-                        );
+                // Construct System Instruction matching actions.ts logic
+                const toolInstructions = "\n\nYou have access to a rich library of TOOLS. Use them whenever necessary to fulfill the request.";
+                const systemInstruction = SOFTWARE_ARCHITECT_PROMPT + toolInstructions +
+                    "\n\nMODE: STREAMING ASSISTANT." +
+                    "\nTHINKING PROTOCOL: Use <thinking>...</thinking> tags at the start of your response for complex plans." +
+                    (activeAppName ? `\nACTIVE APP: ${activeAppName} at ${activeAppPath}` : "");
+
+                const tools = [{ functionDeclarations: getToolSchemas(DEFAULT_TOOLS) }];
+                const model = genAI.getGenerativeModel({
+                    model: AI_CONFIG.fastModel || 'gemini-2.0-flash',
+                    systemInstruction,
+                    tools
+                });
+
+                const chat = model.startChat({
+                    history: history,
+                    generationConfig: {
+                        temperature: 0.7,
+                        topP: 0.95,
+                        topK: 40,
+                        maxOutputTokens: 8192,
+                    }
+                });
+
+                let currentQuery = query;
+                let maxTurns = 5;
+                let lastToolResult = null;
+                let lastToolUsed = '';
+                let lastToolArgs = null;
+                let thinking = '';
+
+                while (maxTurns > 0) {
+                    const result = await chat.sendMessageStream(currentQuery);
+                    let fullText = '';
+
+                    for await (const chunk of result.stream) {
+                        const text = chunk.text();
+                        if (text) {
+                            fullText += text;
+
+                            // Extract thinking on the fly or after completion
+                            // For simplicity in streaming, we'll send the raw text and let the UI handle the tags
+                            // but if we want to explicitly send 'thought' chunks, we can.
+                            enqueue({ type: 'delta', text });
+                        }
+                    }
+
+                    const response = await result.response;
+                    const calls = response.functionCalls();
+
+                    if (calls && calls.length > 0) {
+                        maxTurns--;
+                        const toolResults = [];
+
+                        for (const call of calls) {
+                            enqueue({ type: 'status', message: `Executing ${call.name}...` });
+                            console.log(`🔧 [Stream] Executing tool: ${call.name}`, call.args);
+
+                            const res = await executeWithRetry(call.name, call.args);
+
+                            lastToolUsed = call.name;
+                            lastToolArgs = call.args;
+                            lastToolResult = res;
+
+                            toolResults.push({
+                                functionResponse: {
+                                    name: call.name,
+                                    response: res
+                                }
+                            });
+                        }
+
+                        // Check if we should keep going or if the model will talk next
+                        // In Gemini Chat, after tool results, you MUST send them back to continue
+                        const feedbackResult = await chat.sendMessageStream(toolResults);
+
+                        // Continue loop to stream the AI's reaction to tool results
+                        currentQuery = toolResults as any; // Not used because we already called sendMessageStream above
+
+                        // We need to re-assign currentQuery or handle the next stream in this loop
+                        // but actually sendMessageStream already triggered the next turn.
+                        // So we should just continue the loop with the new feedbackResult.
+
+                        // Wait, my loop structure is slightly off for manual recursion. 
+                        // Let's refactor to handle the "Reaction" turn.
+
+                        for await (const chunk of feedbackResult.stream) {
+                            const text = chunk.text();
+                            if (text) {
+                                fullText += text;
+                                enqueue({ type: 'delta', text });
+                            }
+                        }
+
+                        const finalResponse = await feedbackResult.response;
+                        const nextCalls = finalResponse.functionCalls();
+                        if (!nextCalls || nextCalls.length === 0) {
+                            // No more tools, we are done
+                            break;
+                        }
+                        // If there are more tools, the loop will continue
+                    } else {
+                        // No tools called, we are done
+                        break;
                     }
                 }
 
-                controller.enqueue(
-                    encoder.encode(
-                        `data: ${JSON.stringify({ type: 'done' })}\n\n`
-                    )
-                );
+                // Final payload
+                enqueue({
+                    type: 'done',
+                    toolUsed: lastToolUsed || undefined,
+                    toolResult: deepSerialize(lastToolResult) || undefined,
+                    toolArgs: deepSerialize(lastToolArgs) || undefined
+                });
+
                 controller.close();
             } catch (error) {
-                console.error('Stream error:', error);
-                try {
-                    controller.enqueue(
-                        encoder.encode(
-                            `data: ${JSON.stringify({
-                                type: 'error',
-                                message: error instanceof Error ? error.message : 'Streaming failed'
-                            })}\n\n`
-                        )
-                    );
-                } catch (enqueueError) {
-                    console.error('Failed to enqueue error:', enqueueError);
-                }
+                console.error('💥 Stream Route Error:', error);
+                enqueue({
+                    type: 'error',
+                    message: error instanceof Error ? error.message : 'Streaming failed'
+                });
                 controller.close();
             }
         }
@@ -96,7 +179,7 @@ export async function POST(request: Request) {
             'Content-Type': 'text/event-stream; charset=utf-8',
             'Cache-Control': 'no-cache, no-transform',
             'Connection': 'keep-alive',
-            'X-Accel-Buffering': 'no' // Disable nginx buffering if behind proxy
+            'X-Accel-Buffering': 'no'
         }
     });
 }

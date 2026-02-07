@@ -14,10 +14,62 @@ import {
     execAsync,
     getAvailablePort,
     isPortAvailable,
-    resolveStartScript
+    resolveStartScript,
+    checkDockerAvailability
 } from '@/lib/processActionsCore';
 
 export { type ProcessInput };
+
+const DEFAULT_PREVIEW_PORT = 5050;
+
+const ensureEnvValue = async (key: string, value: string) => {
+    try {
+        const envPath = join(process.cwd(), '.env');
+        let raw = '';
+        try { raw = await readFile(envPath, 'utf-8'); } catch { /* file may not exist */ }
+        const lines = raw ? raw.split(/\r?\n/) : [];
+        let updated = false;
+        const next = lines.map(line => {
+            if (line.startsWith(`${key}=`)) {
+                updated = true;
+                return `${key}=${value}`;
+            }
+            return line;
+        });
+        if (!updated) next.push(`${key}=${value}`);
+        await writeFile(envPath, next.filter(Boolean).join('\n'));
+    } catch { /* best-effort only */ }
+};
+
+// Detect common Docker daemon unavailable errors so we can degrade gracefully.
+const isDockerDaemonUnavailable = (error: any) => {
+    const msg = (error?.stderr || error?.message || '').toString().toLowerCase();
+    return msg.includes('pipe/docker_engine') || msg.includes('daemon') || msg.includes('failed to connect to the docker api');
+};
+
+const ensurePreviewPortDefaults = async (preferredPort: number = DEFAULT_PREVIEW_PORT) => {
+    const normalized = Number.isFinite(preferredPort) && preferredPort > 0 ? preferredPort : DEFAULT_PREVIEW_PORT;
+
+    if (process.env.PREVIEW_PORT !== normalized.toString()) process.env.PREVIEW_PORT = normalized.toString();
+    if (process.env.NGROK_PORT !== normalized.toString()) process.env.NGROK_PORT = normalized.toString();
+
+    await ensureEnvValue('PREVIEW_PORT', process.env.PREVIEW_PORT);
+    await ensureEnvValue('NGROK_PORT', process.env.NGROK_PORT);
+
+    try {
+        await execAsync(`powershell -Command "Stop-Process -Id (Get-NetTCPConnection -LocalPort ${normalized}).OwningProcess -Force"`);
+    } catch { /* port already free */ }
+
+    return normalized;
+};
+
+const ensurePublicAccess = async (processId: string, targetPort?: number) => {
+    try {
+        return await togglePublicAccess(processId, { mode: 'ensure', targetPort });
+    } catch (e: any) {
+        return { success: false, message: e?.message || 'Failed to ensure public access' };
+    }
+};
 
 /**
  * List all processes for the current user
@@ -25,8 +77,18 @@ export { type ProcessInput };
 export async function listProcesses() {
     try {
         const user = await getDemoUser();
-        await syncDockerAppProcesses(user.id);
-        await syncRepoAppProcesses(user.id);
+        try {
+            await Promise.allSettled([
+                syncDockerAppProcesses(user.id),
+                syncRepoAppProcesses(user.id)
+            ]);
+        } catch (e: any) {
+            if (isDockerDaemonUnavailable(e)) {
+                console.warn('Docker daemon unavailable; skipping docker process sync');
+            } else {
+                throw e;
+            }
+        }
         const processes = await prisma.processRegistry.findMany({
             where: { userId: user.id },
             orderBy: { createdAt: 'desc' }
@@ -61,7 +123,7 @@ export async function registerProcess(data: ProcessInput) {
             }
         });
 
-        return { success: true, process: deepSerialize(process) };
+        return { success: true, message: 'Process registered successfully', process: deepSerialize(process) };
     } catch (error: any) {
         console.error('Error registering process:', error);
         return { success: false, message: error.message };
@@ -83,12 +145,26 @@ export async function stopProcess(id: string) {
         }
 
         if (isDockerProcess(process)) {
-            const containerName = (process.metadata as any)?.containerName as string | undefined;
+            const meta = (process.metadata as any) || {};
+            const containerName = meta?.containerName as string | undefined;
+            const ngrokName = `ngrok-${process.id}`;
+
             if (containerName) {
                 try {
                     await execAsync(`docker stop ${containerName}`);
                 } catch (dockerError: any) {
-                    console.error('Error stopping docker container:', dockerError);
+                    if (!isDockerDaemonUnavailable(dockerError)) {
+                        console.error('Error stopping docker container:', dockerError);
+                    }
+                }
+            }
+
+            // Also stop and remove ngrok container
+            try {
+                await execAsync(`docker rm -f ${ngrokName}`);
+            } catch (e: any) {
+                if (!isDockerDaemonUnavailable(e)) {
+                    console.error('Error removing ngrok container:', e);
                 }
             }
         } else {
@@ -103,14 +179,23 @@ export async function stopProcess(id: string) {
                 }
             }
 
-            // Kill by port if no PID
-            if (process.port && !process.pid) {
-                try {
-                    const cmd = `Stop-Process -Id (Get-NetTCPConnection -LocalPort ${process.port}).OwningProcess -Force`;
-                    await execAsync(`powershell -Command "${cmd}"`);
-                } catch (portError: any) {
-                    console.error('Error killing process by port:', portError);
+            // Cleanup ngrok for local processes too
+            try {
+                const ngrokName = `ngrok-${process.id}`;
+                await execAsync(`docker rm -f ${ngrokName}`);
+            } catch (e: any) {
+                if (!isDockerDaemonUnavailable(e)) {
+                    console.error('Error removing ngrok container:', e);
                 }
+            }
+        }
+        // Kill by port if no PID
+        if (process.port && !process.pid) {
+            try {
+                const cmd = `Stop-Process -Id (Get-NetTCPConnection -LocalPort ${process.port}).OwningProcess -Force`;
+                await execAsync(`powershell -Command "${cmd}"`);
+            } catch (portError: any) {
+                console.error('Error killing process by port:', portError);
             }
         }
 
@@ -123,7 +208,7 @@ export async function stopProcess(id: string) {
             }
         });
 
-        return { success: true, process: deepSerialize(updated) };
+        return { success: true, message: 'Process stopped successfully', process: deepSerialize(updated) };
     } catch (error: any) {
         console.error('Error stopping process:', error);
         return { success: false, message: error.message };
@@ -169,7 +254,7 @@ export async function restartProcess(id: string) {
             }
         });
 
-        return { success: true, process: deepSerialize(updated) };
+        return { success: true, message: 'Process restarted successfully', process: deepSerialize(updated) };
     } catch (error: any) {
         console.error('Error restarting process:', error);
         return { success: false, message: error.message };
@@ -216,6 +301,8 @@ export async function startProcess(id: string) {
         if (!process) {
             return { success: false, message: 'Process not found' };
         }
+
+        const enforcedPreviewPort = await ensurePreviewPortDefaults();
 
         if (isDockerProcess(process)) {
             const meta = process.metadata as any || {};
@@ -312,9 +399,12 @@ CMD ["npm", "run", "${startScript}"]
                 }
 
                 // 4. Find Port (prefer reserved preview port when configured)
-                const previewPort = Number((global as any).process.env.PREVIEW_PORT || '');
+                const previewPort = Number((global as any).process.env.PREVIEW_PORT || enforcedPreviewPort);
                 const usePreviewPort = Number.isFinite(previewPort) && previewPort > 0;
-                let port = process.port || (usePreviewPort ? previewPort : await getAvailablePort(5000, 5999));
+                let port = usePreviewPort ? previewPort : (process.port || await getAvailablePort(5000, 5999));
+                if (usePreviewPort && process.port && process.port !== previewPort) {
+                    port = previewPort;
+                }
 
                 if (usePreviewPort) {
                     try {
@@ -333,18 +423,53 @@ CMD ["npm", "run", "${startScript}"]
 
                 const dockerfilePath = join(absAppPath, dockerFileName);
 
+                const dockerIsUp = await checkDockerAvailability();
+                if (!dockerIsUp) {
+                    console.warn(`[${process.name}] Skipping Docker commands (daemon marked as down)`);
+                    // Trigger the same error that would lead to fallback
+                    throw { message: 'daemon' };
+                }
+
                 try {
                     await execAsync(`docker rm -f ${containerName}`).catch(() => { });
                     // Try to build/run
                     await execAsync(`docker build -t ${imageName} -f "${dockerfilePath}" "${absAppPath}"`);
                     await execAsync(`docker run -d --name ${containerName} -p ${port}:${internalPort} ${imageName}`);
-                } catch (dockerError: any) {
-                    console.error('Error starting docker container:', dockerError);
 
+                    const updated = await prisma.processRegistry.update({
+                        where: { id },
+                        data: {
+                            port,
+                            status: 'running',
+                            startedAt: new Date(),
+                            stoppedAt: null,
+                            command: `docker run -d --name ${containerName} -p ${port}:${internalPort} ${imageName}`,
+                            metadata: { ...(process.metadata as any) }
+                        }
+                    });
+
+                    const tunnel = await ensurePublicAccess(updated.id, port);
+                    const publicUrl = (tunnel as any)?.publicUrl || (tunnel as any)?.process?.metadata?.publicUrl;
+                    const finalProcess = publicUrl
+                        ? await prisma.processRegistry.findUnique({ where: { id: updated.id } })
+                        : updated;
+
+                    return {
+                        success: true,
+                        message: `Started ${process.name}`,
+                        previewUrl: publicUrl || `http://localhost:${port}`,
+                        publicUrl,
+                        process: deepSerialize(finalProcess)
+                    };
+                } catch (dockerError: any) {
                     // Check for Docker Daemon failure
                     const isDaemonError = dockerError.message?.includes('pipe') ||
                         dockerError.message?.includes('connect') ||
                         dockerError.message?.includes('daemon');
+
+                    if (!isDaemonError) {
+                        console.error('Error starting docker container:', dockerError);
+                    }
 
                     if (isDaemonError && (meta?.source === 'repo-app' || process.type === 'docker-dev')) {
                         console.log('⚠️ Docker Daemon unreachable. Falling back to local execution...');
@@ -391,7 +516,19 @@ CMD ["npm", "run", "${startScript}"]
                                     }
                                 }
                             });
-                            return { success: true, message: 'Docker unreachable. Started in Local Fallback mode.', process: deepSerialize(updated) };
+                            const tunnel = await ensurePublicAccess(updated.id, port);
+                            const publicUrl = (tunnel as any)?.publicUrl || (tunnel as any)?.process?.metadata?.publicUrl;
+                            const finalProcess = publicUrl
+                                ? await prisma.processRegistry.findUnique({ where: { id: updated.id } })
+                                : updated;
+
+                            return {
+                                success: true,
+                                message: 'Docker unreachable. Started in Local Fallback mode.',
+                                previewUrl: publicUrl || `http://localhost:${port}`,
+                                publicUrl,
+                                process: deepSerialize(finalProcess)
+                            };
                         }
                     }
 
@@ -443,8 +580,9 @@ export async function checkProcessHealth(id: string) {
         // Port check
         if (process.healthCheckType === 'port' && process.port) {
             try {
-                const { stdout } = await execAsync(`netstat -ano | findstr :${process.port}`);
-                healthStatus = stdout.includes(`${process.port}`) ? 'healthy' : 'unhealthy';
+                // Return 'healthy' if port is IN USE
+                const available = await isPortAvailable(process.port);
+                healthStatus = available ? 'unhealthy' : 'healthy';
                 responseTime = Date.now() - startTime;
             } catch (error) {
                 healthStatus = 'unhealthy';
@@ -477,8 +615,16 @@ export async function discoverProcesses() {
     try {
         const user = await getDemoUser();
         // Sync docker apps first
-        await syncDockerAppProcesses(user.id);
-        await syncRepoAppProcesses(user.id); // Also sync repo apps
+        try {
+            await syncDockerAppProcesses(user.id);
+            await syncRepoAppProcesses(user.id); // Also sync repo apps
+        } catch (e: any) {
+            if (isDockerDaemonUnavailable(e)) {
+                console.warn('Docker daemon unavailable; skipping docker discovery');
+            } else {
+                throw e;
+            }
+        }
 
         const commonPorts = [3000, 3001, 5173, 5174, 5175, 5176, 8080, 8081, 4200, 4100, 4101, 4102, 4103, 4104, 4105, 5000, 5001];
         const discovered = [];
@@ -766,14 +912,14 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
         }
 
         if (args.action === 'start') {
+            const enforcedPreviewPort = await ensurePreviewPortDefaults();
             // STOP OTHERS IF REQUESTED
             if (args.stopOthers) {
                 const runningApps = await prisma.processRegistry.findMany({
                     where: {
                         userId: user.id,
                         status: 'running',
-                        type: { in: ['docker-dev', 'repo-app', 'dev-server'] }, // Only stop apps, not system services
-                        NOT: { name: { contains: 'ngrok', mode: 'insensitive' } } // Don't stop tunnel services
+                        type: { in: ['docker-dev', 'repo-app', 'dev-server', 'docker-app'] }
                     }
                 });
 
@@ -791,7 +937,7 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
                 }
             }
 
-            const previewPort = Number(process.env.PREVIEW_PORT || '');
+            const previewPort = Number(process.env.PREVIEW_PORT || enforcedPreviewPort);
             const usePreviewPort = Number.isFinite(previewPort) && previewPort > 0;
 
             if (proc && proc.status === 'running') {
@@ -802,10 +948,13 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
                     await stopProcess(proc.id);
                     // proc is now stopped, fall through to start logic
                 } else {
+                    const meta = proc.metadata as any;
+                    const publicUrl = meta?.publicUrl as string | undefined;
                     return {
                         success: true,
                         message: `App is already running on port ${proc.port}`,
-                        previewUrl: `http://localhost:${proc.port}`,
+                        previewUrl: publicUrl || `http://localhost:${proc.port}`,
+                        publicUrl,
                         process: deepSerialize(proc)
                     };
                 }
@@ -815,10 +964,13 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
             if (proc) {
                 const result = await startProcess(proc.id);
                 if (result.success && result.process) {
+                    const meta = (result.process as any).metadata || {};
+                    const publicUrl = meta.publicUrl as string | undefined;
                     return {
                         success: true,
                         message: `Started ${appName}`,
-                        previewUrl: result.process.port ? `http://localhost:${result.process.port}` : undefined,
+                        previewUrl: publicUrl || (result.process.port ? `http://localhost:${result.process.port}` : undefined),
+                        publicUrl,
                         process: result.process
                     };
                 }
@@ -913,11 +1065,18 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
                 }
             });
 
+            const tunnel = await ensurePublicAccess(updated.id, port);
+            const publicUrl = (tunnel as any)?.publicUrl || (tunnel as any)?.process?.metadata?.publicUrl;
+            const finalProcess = publicUrl
+                ? await prisma.processRegistry.findUnique({ where: { id: updated.id } })
+                : updated;
+
             return {
                 success: true,
                 message: `Started ${appName} on port ${port}`,
-                previewUrl: `http://localhost:${port}`,
-                process: deepSerialize(updated)
+                previewUrl: publicUrl || `http://localhost:${port}`,
+                publicUrl,
+                process: deepSerialize(finalProcess)
             };
         }
 
@@ -932,7 +1091,7 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
 /**
  * Toggle Public Access (Ngrok Tunnel)
  */
-export async function togglePublicAccess(id: string) {
+export async function togglePublicAccess(id: string, options?: { mode?: 'toggle' | 'ensure', targetPort?: number }) {
     try {
         const user = await getDemoUser();
         const process = await prisma.processRegistry.findFirst({
@@ -944,11 +1103,17 @@ export async function togglePublicAccess(id: string) {
         }
 
         const meta = (process.metadata as any) || {};
+        const mode = options?.mode || 'toggle';
+        const targetPort = options?.targetPort || process.port;
         const currentPublicUrl = meta.publicUrl;
         const ngrokContainerName = `ngrok-${process.id}`;
 
-        // IF PUBLIC URL EXISTS -> STOP TUNNEL
+        // IF PUBLIC URL EXISTS
         if (currentPublicUrl) {
+            if (mode === 'ensure') {
+                return { success: true, isPublic: true, publicUrl: currentPublicUrl, process: deepSerialize(process) };
+            }
+
             try {
                 await execAsync(`docker rm -f ${ngrokContainerName}`);
             } catch (e) {
@@ -970,8 +1135,23 @@ export async function togglePublicAccess(id: string) {
         }
 
         // IF NO PUBLIC URL -> START TUNNEL
-        if (!process.port) {
+        if (!targetPort) {
             return { success: false, message: 'Process has no port assigned' };
+        }
+
+        // If an ngrok tunnel is already running (manual or external), reuse it.
+        const existingTunnel = await getNgrokUrl(`http://localhost:${targetPort}`);
+        if (existingTunnel.success && existingTunnel.url) {
+            const updated = await prisma.processRegistry.update({
+                where: { id },
+                data: {
+                    metadata: {
+                        ...meta,
+                        publicUrl: existingTunnel.url
+                    }
+                }
+            });
+            return { success: true, isPublic: true, publicUrl: existingTunnel.url, process: deepSerialize(updated) };
         }
 
         const authToken = (global as any).process.env.NGROK_AUTHTOKEN;
@@ -980,70 +1160,66 @@ export async function togglePublicAccess(id: string) {
         }
 
         // 1. Start Ngrok Container
-        // We look for host.docker.internal to access the app on the host machine
-        // We use -P to publish the API port (4040) to a random host port
+        // Prefer fixed 4040 mapping; fall back to random if busy
+        let apiPort = 4040;
         try {
-            // Clean up any stale container
             await execAsync(`docker rm -f ${ngrokContainerName}`).catch(() => { });
-
             await execAsync(
-                `docker run -d --name ${ngrokContainerName} -P -e NGROK_AUTHTOKEN=${authToken} ngrok/ngrok http host.docker.internal:${process.port}`
+                `docker run -d --name ${ngrokContainerName} -p 4040:4040 -e NGROK_AUTHTOKEN=${authToken} ngrok/ngrok http host.docker.internal:${targetPort}`
             );
         } catch (e: any) {
-            console.error('Failed to start ngrok container', e);
-            return { success: false, message: 'Failed to start tunnel container' };
-        }
-
-        // 2. Wait for it to initialize
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
-        // 3. Find the API port
-        let apiPort = 0;
-        try {
-            const { stdout } = await execAsync(`docker port ${ngrokContainerName} 4040`);
-            // Output format depends on OS, usually 0.0.0.0:32768
-            const match = stdout.match(/:(\d+)/);
-            if (match) {
-                apiPort = parseInt(match[1]);
+            if (isDockerDaemonUnavailable(e)) {
+                return { success: false, message: 'Docker daemon unavailable; tunnel not started' };
             }
-        } catch (e) {
-            await execAsync(`docker rm -f ${ngrokContainerName}`);
-            return { success: false, message: 'Failed to detect tunnel port' };
-        }
-
-        if (!apiPort) {
-            await execAsync(`docker rm -f ${ngrokContainerName}`);
-            return { success: false, message: 'Failed to detect tunnel port' };
-        }
-
-        // 4. Query Ngrok API for Public URL
-        let publicUrl = '';
-        try {
-            const res = await fetch(`http://localhost:${apiPort}/api/tunnels`);
-            const data = await res.json();
-            publicUrl = data.tunnels?.[0]?.public_url;
-        } catch (e) {
-            console.error('Failed to fetch tunnels from ngrok api', e);
-        }
-
-        if (!publicUrl) {
-            // Try one more time with a slightly longer delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
             try {
-                const res = await fetch(`http://localhost:${apiPort}/api/tunnels`);
-                const data = await res.json();
-                publicUrl = data.tunnels?.[0]?.public_url;
-            } catch (e) { }
+                apiPort = 0; // we'll resolve the random published port below
+                await execAsync(
+                    `docker run -d --name ${ngrokContainerName} -P -e NGROK_AUTHTOKEN=${authToken} ngrok/ngrok http host.docker.internal:${targetPort}`
+                );
+            } catch (fallbackError: any) {
+                if (!isDockerDaemonUnavailable(fallbackError)) {
+                    console.error('Failed to start ngrok container', fallbackError);
+                }
+                return { success: false, message: 'Failed to start tunnel container' };
+            }
+        }
+
+        // 2. Wait for it to initialize (Polling with timeout)
+        let publicUrl = '';
+        const pollStart = Date.now();
+        const MAX_POLL = 10000; // 10s max
+
+        while (Date.now() - pollStart < MAX_POLL) {
+            try {
+                // If random port, resolve it first
+                if (apiPort === 0) {
+                    const { stdout } = await execAsync(`docker port ${ngrokContainerName} 4040`).catch(() => ({ stdout: '' }));
+                    const match = stdout.match(/:(\d+)/);
+                    if (match) apiPort = parseInt(match[1]);
+                }
+
+                if (apiPort !== 0) {
+                    const res = await fetch(`http://localhost:${apiPort}/api/tunnels`).catch(() => null);
+                    if (res && res.ok) {
+                        const data = await res.json();
+                        publicUrl = data.tunnels?.[0]?.public_url;
+                        if (publicUrl) break;
+                    }
+                }
+            } catch (queryError) {
+                // Ignore query errors during startup
+            }
+            await new Promise(r => setTimeout(r, 500));
         }
 
         if (!publicUrl) {
-            await execAsync(`docker rm -f ${ngrokContainerName}`);
-            return { success: false, message: 'Failed to obtain public URL from tunnel' };
+            await execAsync(`docker rm -f ${ngrokContainerName}`).catch(() => { });
+            return { success: false, message: 'Tunnel failed to initialize or provide public URL' };
         }
 
         // 5. Update Registry
         const updated = await prisma.processRegistry.update({
-            where: { id },
+            where: { id: process.id },
             data: {
                 metadata: {
                     ...meta,
@@ -1060,4 +1236,87 @@ export async function togglePublicAccess(id: string) {
         console.error('Error toggling public access:', error);
         return { success: false, message: error.message };
     }
+}
+
+/**
+ * Get the global ngrok URL if running
+ */
+/**
+ * Get the ngrok URL for a given process or the first active one
+ */
+export async function getNgrokUrl(localUrl?: string) {
+    const logs: string[] = [];
+    logs.push(`[${new Date().toLocaleTimeString()}] Starting ngrok detection...`);
+
+    try {
+        // 1. Check Database Registry (Most reliable)
+        logs.push('Querying database process registry...');
+        const processes = await prisma.processRegistry.findMany({
+            where: {
+                status: 'running'
+            }
+        });
+
+        for (const proc of processes) {
+            const meta = proc.metadata as any;
+            if (meta?.publicUrl) {
+                // If localUrl is provided, try to match by port
+                if (localUrl) {
+                    const portMatch = localUrl.match(/:(\d+)/);
+                    const targetPort = portMatch ? parseInt(portMatch[1]) : null;
+                    if (targetPort && proc.port === targetPort) {
+                        logs.push(`SUCCESS: Found matching tunnel in DB: ${meta.publicUrl} for port ${targetPort}`);
+                        return { success: true, url: meta.publicUrl, logs };
+                    }
+                } else {
+                    // Return first available if no filter
+                    logs.push(`SUCCESS: Found tunnel in DB: ${meta.publicUrl}`);
+                    return { success: true, url: meta.publicUrl, logs };
+                }
+            }
+        }
+    } catch (dbError: any) {
+        logs.push(`Database check failed: ${dbError.message}`);
+    }
+
+    // 2. Fallback: Check local dashboard endpoints (Standard ngrok)
+    // This is useful if ngrok was started manually or registry is stale
+    const endpoints = [
+        'http://localhost:4040/api/tunnels',
+        'http://127.0.0.1:4040/api/tunnels',
+        'http://host.docker.internal:4040/api/tunnels',
+        'http://ngrok:4040/api/tunnels'
+    ];
+
+    for (const endpoint of endpoints) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1000);
+
+        try {
+            logs.push(`Checking fallback endpoint: ${endpoint}`);
+            const res = await fetch(endpoint, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                signal: controller.signal,
+                cache: 'no-store'
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                const tunnel = data.tunnels?.find((t: any) => t.public_url && t.public_url.startsWith('https'));
+                if (tunnel?.public_url) {
+                    logs.push(`SUCCESS: Found tunnel ${tunnel.public_url} at ${endpoint}`);
+                    clearTimeout(timeoutId);
+                    return { success: true, url: tunnel.public_url, logs };
+                }
+            }
+        } catch (e: any) {
+            // Silently continue
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+
+    logs.push('Final: No active ngrok tunnel detected in DB or local endpoints.');
+    return { success: false, url: null, logs };
 }

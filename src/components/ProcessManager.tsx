@@ -459,74 +459,141 @@ export default function ProcessManager() {
         onHealthCheck: (id: string) => void;
         onDelete: (id: string) => void;
     }) {
+        const isRunning = process.status === 'running' || process.status === 'healthy';
+        const isError = process.status === 'error' || process.status === 'unhealthy';
+
         return (
             <motion.div
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                key={process.id}
-                className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 hover:border-white/20 transition-all space-y-4"
-            >
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                    <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-3">
-                            <h3 className="text-base font-bold text-white">{process.name}</h3>
-                            <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${process.type === 'docker-app' ? 'bg-purple-500/10 text-purple-300 border border-purple-500/20' : process.type === 'dev-server' ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'bg-white/5 text-white/40 border border-white/10'}`}>{process.type === 'docker-app' ? 'Container' : process.type === 'dev-server' ? 'Local' : (process.metadata?.source || 'Unknown')}</span>
-                            {process.port && (
-                                <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400 font-mono">:{process.port}</span>
-                            )}
-                            <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-xs font-bold uppercase tracking-wider ${getStatusColor(process.status)}`}>
-                                {getStatusIcon(process.status)}
-                                <span>{process.status}</span>
-                            </span>
-                        </div>
-
-                        <div className="flex items-center gap-4 text-xs text-white/40">
-                            <span className="font-mono truncate max-w-md">{process.path}</span>
-                            {process.pid && <span className="font-mono">PID: {process.pid}</span>}
-                        </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => onHealthCheck(process.id)} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-white border border-white/10 hover:border-white/20 transition-all" title="Check Health"><RefreshCw size={14} /></button>
-                        {((process.port) || process.metadata?.internalDomain) && (
-                            <button onClick={() => { const url = process.port ? `http://localhost:${process.port}` : `http://${process.metadata?.internalDomain}`; window.open(url, '_blank', 'noopener,noreferrer'); }} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg text-blue-300 border border-blue-500/20 transition-all" title="Open App"><Activity size={14} /></button>
-                        )}
-                        {process.type === 'docker-app' && (
-                            <>
-                                <button onClick={() => onRebuild(process.id)} disabled={isActioning} className="p-2 bg-purple-500/10 hover:bg-purple-500/20 rounded-lg text-purple-400 border border-purple-500/20 hover:border-purple-500/30 transition-all disabled:opacity-50" title="Rebuild & Start"><RefreshCw size={14} /></button>
-                                <button onClick={() => onFixPort(process.id)} disabled={isActioning} className="p-2 bg-amber-500/10 hover:bg-amber-500/20 rounded-lg text-amber-400 border border-amber-500/20 hover:border-amber-500/30 transition-all disabled:opacity-50" title="Fix Port Conflict"><Zap size={14} /></button>
-                                <button onClick={() => onGetLogs(process.id)} disabled={isActioning} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-white border border-white/10 hover:border-white/20 transition-all disabled:opacity-50" title="View Logs"><Activity size={14} /></button>
-                            </>
-                        )}
-
-                        {/* Per-type start/stop */}
-                        {process.type === 'dev-server' && (
-                            <button onClick={() => process.status === 'running' ? onStop(process.id) : onStartLocal(process.id)} disabled={isActioning} className={cn("h-9 px-4 text-sm font-semibold rounded-2xl transition-all min-w-[120px] flex items-center justify-center gap-2", process.status === 'running' ? 'text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20' : 'text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20')}>{isActioning ? <Loader2 className="animate-spin" size={14} /> : (process.status === 'running' ? 'Stop Dev' : 'Start Dev')}</button>
-                        )}
-
-                        {(['docker-app', 'repo-app', 'deployment'].includes(process.type) || ['docker', 'repo-app', 'deployment'].includes(process.metadata?.source)) && (
-                            <button onClick={() => process.status === 'running' ? onStop(process.id) : onStartContainer(process.id)} disabled={isActioning} className={cn("h-9 px-4 text-sm font-semibold rounded-2xl transition-all min-w-[120px] flex items-center justify-center gap-2", process.status === 'running' ? 'text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20' : 'text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20')}>{isActioning ? <Loader2 className="animate-spin" size={14} /> : (process.status === 'running' ? 'Stop Ctnr' : 'Start Ctnr')}</button>
-                        )}
-
-                        <button onClick={() => onDelete(process.id)} disabled={isActioning} className="p-2 bg-white/5 hover:bg-red-500/20 rounded-lg text-white/40 hover:text-red-400 border border-white/10 hover:border-red-500/20 transition-all" title="Remove from Registry"><Trash2 size={14} /></button>
-                    </div>
-                </div>
-
-                {/* Metrics */}
-                {process.status === 'running' && (
-                    <div className="flex items-center gap-6 pt-3 border-t border-white/5 text-xs">
-                        <div className="flex items-center gap-2 text-white/40"><Clock size={12} /><span>Uptime: <span className="text-white/60 font-mono">{formatUptime(process.startedAt)}</span></span></div>
-                        {process.responseTime !== null && process.responseTime !== undefined && (<div className="flex items-center gap-2 text-white/40"><CheckCircle2 size={12} /><span>Response: <span className="text-white/60 font-mono">{process.responseTime}ms</span></span></div>)}
-                        {process.lastHealthCheck && (<div className="flex items-center gap-2 text-white/40"><Activity size={12} /><span>Last check: <span className="text-white/60 font-mono">{new Date(process.lastHealthCheck).toLocaleTimeString()}</span></span></div>)}
-                    </div>
+                exit={{ opacity: 0, scale: 0.95 }}
+                className={cn(
+                    "group relative p-8 rounded-[2rem] bg-slate-950/40 border transition-all duration-500 overflow-hidden",
+                    isRunning ? "border-emerald-500/20 shadow-[0_0_40px_-20px_rgba(16,185,129,0.3)]" :
+                        isError ? "border-red-500/20 shadow-[0_0_40px_-20px_rgba(239,68,68,0.3)]" :
+                            "border-white/5"
                 )}
+            >
+                {/* Immersive background glow */}
+                <div className={cn(
+                    "absolute -top-24 -right-24 w-48 h-48 blur-[80px] opacity-20 transition-opacity duration-1000",
+                    isRunning ? "bg-emerald-500" : isError ? "bg-red-500" : "bg-violet-500"
+                )} />
+
+                <div className="relative z-10 space-y-6">
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-6">
+                        <div className="flex-1 space-y-4">
+                            <div className="flex items-center flex-wrap gap-4">
+                                <h3 className="text-xl font-black text-white tracking-tight">{process.name}</h3>
+                                <div className="flex items-center gap-2">
+                                    <span className={cn(
+                                        "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border",
+                                        process.type === 'docker-app' ? "bg-violet-500/10 text-violet-400 border-violet-500/20" :
+                                            process.type === 'dev-server' ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20" :
+                                                "bg-white/5 text-white/40 border-white/10"
+                                    )}>
+                                        {process.type === 'docker-app' ? 'Container' : process.type === 'dev-server' ? 'Local' : 'External'}
+                                    </span>
+                                    {process.port && (
+                                        <span className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-400 font-black font-mono tracking-tighter">
+                                            :{process.port}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className={cn(
+                                    "flex items-center gap-2 px-4 py-1.5 rounded-full border text-[11px] font-black uppercase tracking-[0.15em] shadow-lg",
+                                    getStatusColor(process.status)
+                                )}>
+                                    {getStatusIcon(process.status)}
+                                    <span>{process.status}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                                <span className="text-xs text-white/20 font-black uppercase tracking-widest">Execution Path</span>
+                                <span className="text-[13px] text-white/50 font-mono truncate max-w-2xl bg-white/[0.03] px-3 py-1.5 rounded-xl border border-white/5">
+                                    {process.path}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Control Actions */}
+                        <div className="flex items-center gap-3 bg-black/40 p-2 rounded-[1.5rem] border border-white/5 backdrop-blur-xl">
+                            <button onClick={() => onHealthCheck(process.id)} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-white/40 hover:text-white border border-white/5 transition-all" title="Check Health"><RefreshCw size={18} /></button>
+
+                            {process.type === 'docker-app' && (
+                                <>
+                                    <button onClick={() => onRebuild(process.id)} disabled={isActioning} className="p-2.5 bg-violet-500/10 hover:bg-violet-500/20 rounded-xl text-violet-400 border border-violet-500/20 transition-all disabled:opacity-50" title="Rebuild System"><RefreshCw size={18} /></button>
+                                    <button onClick={() => onGetLogs(process.id)} disabled={isActioning} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-white/40 hover:text-white border border-white/5 transition-all disabled:opacity-50" title="System Logs"><Activity size={18} /></button>
+                                </>
+                            )}
+
+                            <div className="w-[1px] h-8 bg-white/10 mx-1" />
+
+                            {process.type === 'dev-server' && (
+                                <button
+                                    onClick={() => isRunning ? onStop(process.id) : onStartLocal(process.id)}
+                                    disabled={isActioning}
+                                    className={cn(
+                                        "h-11 px-6 text-[13px] font-black uppercase tracking-widest rounded-xl transition-all min-w-[140px] flex items-center justify-center gap-3 shadow-xl",
+                                        isRunning ? "text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20" :
+                                            "text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 shadow-emerald-500/10"
+                                    )}
+                                >
+                                    {isActioning ? <Loader2 className="animate-spin" size={16} /> : (isRunning ? 'Terminate' : 'Initialize')}
+                                </button>
+                            )}
+
+                            {(['docker-app', 'repo-app', 'deployment'].includes(process.type) || ['docker', 'repo-app', 'deployment'].includes(process.metadata?.source)) && (
+                                <button
+                                    onClick={() => isRunning ? onStop(process.id) : onStartContainer(process.id)}
+                                    disabled={isActioning}
+                                    className={cn(
+                                        "h-11 px-6 text-[13px] font-black uppercase tracking-widest rounded-xl transition-all min-w-[140px] flex items-center justify-center gap-3 shadow-xl",
+                                        isRunning ? "text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20" :
+                                            "text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 shadow-emerald-500/10"
+                                    )}
+                                >
+                                    {isActioning ? <Loader2 className="animate-spin" size={16} /> : (isRunning ? 'Terminate' : 'Initialize')}
+                                </button>
+                            )}
+
+                            <button onClick={() => onDelete(process.id)} disabled={isActioning} className="p-2.5 bg-white/5 hover:bg-red-500/20 rounded-xl text-white/20 hover:text-red-400 border border-white/5 transition-all" title="Purge Record"><Trash2 size={18} /></button>
+                        </div>
+                    </div>
+
+                    {/* Performance & Status Metrics */}
+                    {isRunning && (
+                        <div className="flex items-center gap-8 pt-6 border-t border-white/5">
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[10px] text-white/20 font-black uppercase tracking-widest">Uptime Trace</span>
+                                <div className="flex items-center gap-2 text-[13px] text-white/70 font-mono font-bold">
+                                    <Clock size={12} className="text-emerald-400" />
+                                    {formatUptime(process.startedAt)}
+                                </div>
+                            </div>
+                            {process.responseTime !== null && process.responseTime !== undefined && (
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-[10px] text-white/20 font-black uppercase tracking-widest">Latency</span>
+                                    <div className="flex items-center gap-2 text-[13px] text-white/70 font-mono font-bold">
+                                        <Zap size={12} className="text-amber-400" />
+                                        {process.responseTime}ms
+                                    </div>
+                                </div>
+                            )}
+                            <div className="flex flex-col gap-1 ml-auto items-end">
+                                <span className="text-[10px] text-white/20 font-black uppercase tracking-widest">Last Intelligence Check</span>
+                                <div className="flex items-center gap-2 text-[11px] text-white/40 font-mono italic">
+                                    {process.lastHealthCheck ? new Date(process.lastHealthCheck).toLocaleTimeString() : 'Awaiting synchronization...'}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </motion.div>
         );
     }, (a, b) => {
-        // Custom compare: only re-render when relevant properties change
         const pA = a.process;
         const pB = b.process;
         return pA.id === pB.id && pA.status === pB.status && pA.port === pB.port && pA.responseTime === pB.responseTime && pA.lastHealthCheck === pB.lastHealthCheck && a.isActioning === b.isActioning;

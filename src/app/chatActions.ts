@@ -141,3 +141,11 @@ export async function clearChatSession(sessionId: string) {
 
     return { success: true };
 }
+
+/**
+ * Delete all chat sessions
+ */
+export async function deleteAllChatSessions() {
+    await prisma.chatSession.deleteMany({});
+    return { success: true };
+}

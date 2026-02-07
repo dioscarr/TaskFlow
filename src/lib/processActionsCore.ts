@@ -7,6 +7,21 @@ import { promisify } from 'util';
 
 export const execAsync = promisify(exec);
 
+export const isDockerDaemonUnavailable = (error: any) => {
+    const msg = (error?.stderr || error?.message || '').toString().toLowerCase();
+    return msg.includes('pipe/docker_engine') || msg.includes('daemon') || msg.includes('failed to connect to the docker api');
+};
+
+export const checkDockerAvailability = async () => {
+    const now = Date.now();
+    if (!isDockerAvailable && now - lastDockerCheck < DOCKER_RECHECK_INTERVAL) {
+        return false;
+    }
+    // If we haven't checked in a while, trigger a sync in background or just return current known state
+    // For now, return what we know.
+    return isDockerAvailable;
+};
+
 export interface ProcessInput {
     name: string;
     type: 'dev-server' | 'background-job' | 'external-tool' | 'docker-app';
@@ -26,12 +41,17 @@ export const isDockerProcess = (process: { type?: string; metadata?: any }) => {
 export const getRepoAppsRoot = () => join(process.cwd(), 'apps');
 
 export const isPortAvailable = async (port: number) => {
-    try {
-        const { stdout } = await execAsync(`netstat -ano | findstr :${port}`);
-        return !stdout.includes(`${port}`);
-    } catch (error) {
-        return true;
-    }
+    return new Promise((resolve) => {
+        const server = require('net').createServer();
+        server.once('error', () => {
+            resolve(false);
+        });
+        server.once('listening', () => {
+            server.close();
+            resolve(true);
+        });
+        server.listen(port);
+    });
 };
 
 export const getAvailablePort = async (start = 5000, end = 5999) => {
@@ -91,31 +111,72 @@ export const resolveStartScript = (scripts: Record<string, string> | null) => {
 const lastSync: { [key: string]: number } = {};
 const SYNC_COOLDOWN = 120000; // 2 minutes
 
-export const syncDockerAppProcesses = async (userId: string) => {
+// Track docker availability to avoid hanging on slow failures
+let lastDockerCheck = 0;
+let isDockerAvailable = true;
+const DOCKER_RECHECK_INTERVAL = 30000; // 30 seconds
+let sharedContainerInfoPromise: Promise<Map<string, any> | null> | null = null;
+
+async function getSharedContainerInfo() {
+    const now = Date.now();
+
+    // If we're already fetching, return that promise
+    if (sharedContainerInfoPromise) return sharedContainerInfoPromise;
+
+    if (!isDockerAvailable && now - lastDockerCheck < DOCKER_RECHECK_INTERVAL) {
+        return null;
+    }
+
+    sharedContainerInfoPromise = (async () => {
+        try {
+            const { stdout: psOutput } = await execAsync('docker ps -a --format "{{.Names}}|{{.Status}}|{{.Ports}}"');
+            isDockerAvailable = true;
+            lastDockerCheck = Date.now();
+            return new Map(psOutput.split('\n').filter(Boolean).map(line => {
+                const [name, status, ports] = line.trim().split('|');
+                return [name, { status: status?.startsWith('Up') ? 'running' as const : 'stopped' as const, ports }];
+            }));
+        } catch (error) {
+            lastDockerCheck = Date.now();
+            if (isDockerDaemonUnavailable(error)) {
+                isDockerAvailable = false;
+                return null;
+            }
+            throw error;
+        } finally {
+            sharedContainerInfoPromise = null;
+        }
+    })();
+
+    return sharedContainerInfoPromise;
+}
+
+export const syncDockerAppProcesses = async (userId: string, sharedInfo?: Map<string, any>) => {
     const now = Date.now();
     if (lastSync[`docker-${userId}`] && now - lastSync[`docker-${userId}`] < SYNC_COOLDOWN) {
         return; // Skip if synced recently
     }
 
     try {
-        // 1. Fetch all deployments and process registries in one go
+        // 1. Fetch container statuses early or use shared
+        const containerInfo = sharedInfo || await getSharedContainerInfo();
+        if (containerInfo === null) {
+            // Docker unavailable - still optionally sync generic registries but they'll be 'unknown' or 'stopped'
+            // We'll skip for now to save time
+            return;
+        }
+
+        // 2. Fetch all deployments and process registries in one go
         const [deployments, existingProcesses] = await Promise.all([
             prisma.appDeployment.findMany({ where: { userId } }),
             prisma.processRegistry.findMany({ where: { userId, type: 'docker-app' } })
         ]);
 
         if (!deployments.length && !existingProcesses.length) {
-            await discoverGenericContainers(userId, existingProcesses);
+            await discoverGenericContainers(userId, existingProcesses, containerInfo);
             lastSync[`docker-${userId}`] = now;
             return;
         }
-
-        // 2. Fetch all container statuses in ONE docker call
-        const { stdout: psOutput } = await execAsync('docker ps -a --format "{{.Names}}|{{.Status}}|{{.Ports}}"');
-        const containerInfo = new Map(psOutput.split('\n').filter(Boolean).map(line => {
-            const [name, status, ports] = line.trim().split('|');
-            return [name, { status: status?.startsWith('Up') ? 'running' as const : 'stopped' as const, ports }];
-        }));
 
         // 3. Sync deployments
         const workspaceFiles = await prisma.workspaceFile.findMany({
@@ -169,16 +230,14 @@ export const syncDockerAppProcesses = async (userId: string) => {
         await discoverGenericContainers(userId, existingProcesses, containerInfo);
         lastSync[`docker-${userId}`] = now;
     } catch (error) {
+        if (isDockerDaemonUnavailable(error)) return;
         console.error('syncDockerAppProcesses error:', error);
     }
 };
 
-async function discoverGenericContainers(userId: string, existingProcesses: any[], containerInfo?: Map<string, any>) {
+async function discoverGenericContainers(userId: string, existingProcesses: any[], containerInfo: Map<string, any>) {
     try {
-        const info = containerInfo || new Map((await execAsync('docker ps -a --format "{{.Names}}|{{.Status}}|{{.Ports}}"')).stdout.split('\n').filter(Boolean).map(line => {
-            const [name, status, ports] = line.trim().split('|');
-            return [name, { status: status?.startsWith('Up') ? 'running' as const : 'stopped' as const, ports }];
-        }));
+        const info = containerInfo;
 
         for (const [containerName, details] of info.entries()) {
             if (containerName.includes('supabase') || containerName.includes('agent-worker') || containerName === 'a-agent-worker-1') continue;
@@ -218,13 +277,17 @@ async function discoverGenericContainers(userId: string, existingProcesses: any[
     }
 }
 
-export const syncRepoAppProcesses = async (userId: string) => {
+export const syncRepoAppProcesses = async (userId: string, sharedInfo?: Map<string, any>) => {
     const now = Date.now();
     if (lastSync[`repo-${userId}`] && now - lastSync[`repo-${userId}`] < SYNC_COOLDOWN) {
         return;
     }
 
     try {
+        // 1. Fetch container statuses early or use shared
+        const containerInfo = sharedInfo || await getSharedContainerInfo();
+        if (containerInfo === null) return;
+
         const root = getRepoAppsRoot();
         const items = await readdir(root, { withFileTypes: true });
         const entries = items.filter(item => item.isDirectory()).map(item => item.name);
@@ -233,13 +296,6 @@ export const syncRepoAppProcesses = async (userId: string) => {
             lastSync[`repo-${userId}`] = now;
             return;
         }
-
-        // 1. Fetch all container statuses in ONE call
-        const { stdout: psOutput } = await execAsync('docker ps -a --format "{{.Names}}|{{.Status}}|{{.Ports}}"');
-        const containerInfo = new Map(psOutput.split('\n').filter(Boolean).map(line => {
-            const [name, status, ports] = line.trim().split('|');
-            return [name, { status: status?.startsWith('Up') ? 'running' as const : 'stopped' as const, ports }];
-        }));
 
         // 2. Fetch all relevant registries
         const existingProcesses = await prisma.processRegistry.findMany({
@@ -304,6 +360,7 @@ export const syncRepoAppProcesses = async (userId: string) => {
         }
         lastSync[`repo-${userId}`] = now;
     } catch (error) {
+        if (isDockerDaemonUnavailable(error)) return;
         console.error('syncRepoAppProcesses error:', error);
     }
 };

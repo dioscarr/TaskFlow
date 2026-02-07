@@ -13,7 +13,7 @@ import prisma from '@/lib/prisma';
 import { revalidatePath as nextRevalidatePath } from 'next/cache';
 import { memory } from '@/lib/agents/memory';
 import { ensureAgentWorkerAvailable } from '@/lib/agentWorkerBootstrap';
-import { getAvailablePort, isPortAvailable } from '@/lib/processActionsCore';
+import { getAvailablePort, isPortAvailable, checkDockerAvailability, isDockerProcess, getDemoUser as getCoreDemoUser } from '@/lib/processActionsCore';
 import { manageAppLifecycle } from '@/app/processActions';
 
 /**
@@ -149,6 +149,9 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
     }
     if (actionId === 'cancel_all_jobs') return await cancelAllAgentJobs();
     if (actionId === 'stop_all_agents') return await cancelAllAgentJobs();
+    if (actionId === 'execute_command_in_app') return await executeCommandInApp(args);
+    if (actionId === 'get_app_logs') return await getAppLogs(args);
+    if (actionId === 'apply_batch') return await applyBatch(args);
     if (actionId === 'highlight_file') return await highlightWorkspaceFile(args);
     if (actionId === 'move_attachments_to_folder') return await moveFilesToFolder(args.fileIds || [], args.folderId, args.nameConflictStrategy);
     if (actionId === 'copy_attachments_to_folder') return await copyFilesToFolder(args.fileIds || [], args.folderId, args.nameConflictStrategy);
@@ -287,6 +290,9 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
         if (schemaName === 'replace_in_file') return await replaceInFile(args);
         if (schemaName === 'search_codebase') return await searchCodebase(args);
         if (schemaName === 'run_terminal_command') return await runTerminalCommand(args);
+        if (schemaName === 'execute_command_in_app') return await executeCommandInApp(args);
+        if (schemaName === 'get_app_logs') return await getAppLogs(args);
+        if (schemaName === 'apply_batch') return await applyBatch(args);
     }
 
     // Manual catch-all and fallbacks
@@ -1030,7 +1036,10 @@ export async function installRepoApp(relativePath: string) {
             return { success: false, error: 'package.json is missing a start/preview/dev script' };
         }
 
-        await execAsync('docker version');
+        const dockerIsUp = await checkDockerAvailability();
+        if (!dockerIsUp) {
+            return { success: false, error: 'Docker daemon is unavailable. Local installation not yet implemented for this path.' };
+        }
 
         const safeName = folderName.replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase();
         const internalDomain = `repo-${safeName}.internal`;
@@ -2359,7 +2368,7 @@ export async function createMarkdownFile(data: {
                     }
                 }
 
-                targetParentId = currentParentId;
+                targetParentId = currentParentId ?? undefined;
             }
         }
 
@@ -3819,7 +3828,7 @@ Always prefix file paths with "apps/${activeRepoApp}/" and use cwd: "apps/${acti
 
         try {
             // TODO: Fix - matchWorkflow function is not defined
-            const matchedWorkflow = null; // await matchWorkflow(objective);
+            const matchedWorkflow: any = null; // await matchWorkflow(objective);
 
             if (matchedWorkflow?.workflow) {
                 console.log(`🎯 Background job matched workflow: ${matchedWorkflow.workflow.name}`);
@@ -5790,7 +5799,7 @@ export async function viewFile(args: { fileId: string, startLine?: number, endLi
             content: snippet,
             meta: {
                 totalLines,
-                viewingLiknes: `${start + 1}-${Math.min(end, totalLines)}`
+                viewingLines: `${start + 1}-${Math.min(end, totalLines)}`
             }
         };
     } catch (e: any) {
@@ -5898,7 +5907,7 @@ export async function runTerminalCommand(args: { command: string, cwd?: string, 
             };
         }
 
-        const options = {
+        const options: any = {
             cwd: targetCwd,
             shell: true, // Required for Windows to properly spawn cmd.exe
             windowsHide: true
@@ -5918,5 +5927,106 @@ export async function runTerminalCommand(args: { command: string, cwd?: string, 
         };
     } catch (e: any) {
         return { success: false, stdout: e.stdout || '', stderr: e.stderr || '', message: `Command failed: ${e.message}` };
+    }
+}
+
+export async function executeCommandInApp(args: { appName: string, command: string, background?: boolean }) {
+    try {
+        const user = await getCoreDemoUser();
+        // Search by name (Repo App adev, Docker Container adev, etc.)
+        const proc = await prisma.processRegistry.findFirst({
+            where: {
+                userId: user.id,
+                OR: [
+                    { name: { contains: args.appName } },
+                    { path: { contains: args.appName } }
+                ]
+            }
+        });
+
+        if (!proc) return { success: false, message: `Application "${args.appName}" not found in process registry.` };
+
+        if (isDockerProcess(proc)) {
+            const containerName = (proc.metadata as any)?.containerName;
+            if (!containerName) return { success: false, message: "Container name not found in app metadata" };
+
+            // For Docker, we use 'docker exec' to run inside the container
+            const dockerCmd = `docker exec ${containerName} ${args.command}`;
+            console.log(`🐳 Executing in Docker Container (${containerName}): ${args.command}`);
+            return await runTerminalCommand({ command: dockerCmd, background: args.background });
+        } else {
+            // For Local apps, we use the app's path as CWD
+            console.log(`💻 Executing in Local App (${proc.name}) at ${proc.path}: ${args.command}`);
+            return await runTerminalCommand({ command: args.command, cwd: proc.path, background: args.background });
+        }
+    } catch (e: any) {
+        return { success: false, message: `Failed to execute command in app: ${e.message}` };
+    }
+}
+
+export async function getAppLogs(args: { appName: string, limit?: number }) {
+    try {
+        const user = await getCoreDemoUser();
+        const proc = await prisma.processRegistry.findFirst({
+            where: {
+                userId: user.id,
+                OR: [
+                    { name: { contains: args.appName } },
+                    { path: { contains: args.appName } }
+                ]
+            }
+        });
+
+        if (!proc) return { success: false, message: `Application "${args.appName}" not found.` };
+
+        if (isDockerProcess(proc)) {
+            const containerName = (proc.metadata as any)?.containerName;
+            if (!containerName) return { success: false, message: "Container name not found in metadata" };
+
+            const { stdout, stderr } = await execAsync(`docker logs --tail ${args.limit || 100} ${containerName}`);
+            return { success: true, logs: stdout + stderr };
+        } else {
+            // Local logs - if we don't have a log file, we might not be able to get them easily
+            // unless they were captured by a manager. For now, return a placeholder or try to read from a standard location if known.
+            return { success: false, message: "Log retrieval for local (non-docker) processes is not yet implemented." };
+        }
+    } catch (e: any) {
+        return { success: false, message: `Failed to get logs: ${e.message}` };
+    }
+}
+
+export async function applyBatch(args: { fileId: string, edits: { target: string, replacement: string }[], useAbsolutePath?: boolean }) {
+    try {
+        const filePath = await resolvePath(args.fileId, args.useAbsolutePath || false);
+        const originalContent = await readFileFS(filePath, 'utf-8');
+        let currentContent = originalContent;
+        const diffs = [];
+
+        for (const edit of args.edits) {
+            if (currentContent.indexOf(edit.target) === -1) {
+                return { success: false, message: `Target text not found for edit: "${edit.target.substring(0, 50)}..." in ${filePath}` };
+            }
+
+            if (currentContent.split(edit.target).length > 2) {
+                return { success: false, message: `Target text is not unique for edit: "${edit.target.substring(0, 50)}..."` };
+            }
+
+            currentContent = currentContent.replace(edit.target, edit.replacement);
+            diffs.push({
+                target: edit.target,
+                replacement: edit.replacement
+            });
+        }
+
+        await writeFile(filePath, currentContent);
+
+        return {
+            success: true,
+            message: `Successfully applied ${args.edits.length} edits to ${filePath}`,
+            filePath,
+            diffs
+        };
+    } catch (e: any) {
+        return { success: false, message: `Batch editor error: ${e.message}` };
     }
 }

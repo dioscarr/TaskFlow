@@ -139,6 +139,33 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
     useEffect(() => {
         const loadRepoContent = async () => {
             if (!vibeRepoEntry) return;
+
+            // Project Switch Cleanup: If we moved to a new folder in apps/, stop previous processes
+            const pathParts = vibeRepoEntry.path.split(/[\\/]/);
+            const appsIdx = pathParts.indexOf('apps');
+            if (appsIdx !== -1 && pathParts[appsIdx + 1]) {
+                const projectRoot = pathParts.slice(0, appsIdx + 2).join('/');
+                const lastRoot = (window as any)._lastVibeRoot;
+
+                if (lastRoot && lastRoot !== projectRoot) {
+                    console.log(`🔄 Project switch detected: ${lastRoot} -> ${projectRoot}. Cleaning up...`);
+                    // We don't want to block, so we fire and forget
+                    import('@/app/processActions').then(async ({ listProcesses, stopProcess }) => {
+                        const { processes } = await listProcesses();
+                        // Find processes matching the old root
+                        const toStop = processes.filter((p: any) =>
+                            p.status === 'running' &&
+                            (p.path?.includes(lastRoot) || p.metadata?.appPath?.includes(lastRoot))
+                        );
+                        for (const proc of toStop) {
+                            console.log(`🛑 Auto-stopping ${proc.name} from previous project...`);
+                            await stopProcess(proc.id);
+                        }
+                    });
+                }
+                (window as any)._lastVibeRoot = projectRoot;
+            }
+
             try {
                 const res = await getRepoAppFileContent(vibeRepoEntry.path);
                 if (res.success && typeof res.content === 'string') {

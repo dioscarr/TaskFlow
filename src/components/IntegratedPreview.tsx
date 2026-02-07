@@ -19,7 +19,9 @@ import {
     RotateCcw,
     Maximize2,
     Settings,
-    Loader2
+    Loader2,
+    Cloud,
+    Wifi
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -62,7 +64,40 @@ export default function IntegratedPreview({
     const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
     const [currentStep, setCurrentStep] = useState(0);
     const [showLogs, setShowLogs] = useState(false);
+    const [urlType, setUrlType] = useState<'local' | 'public'>('local');
+    const [publicUrl, setPublicUrl] = useState<string | null>(null);
     const iframeRef = useRef<HTMLIFrameElement>(null);
+
+    // Fetch ngrok public URL using server action
+    useEffect(() => {
+        const fetchUrl = async () => {
+            try {
+                // @ts-ignore
+                const { getNgrokUrl } = await import('@/app/processActions');
+                // @ts-ignore - The function signature has changed but types might lag
+                const result = await getNgrokUrl(url);
+
+                if (result?.success && result.url) {
+                    console.log('Ngrok URL detected:', result.url);
+                    setPublicUrl(result.url);
+                } else {
+                    if (result?.logs) {
+                        console.log('Ngrok detection failed logs:', result.logs);
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to fetch ngrok url via server action', e);
+            }
+        };
+
+        if (isOpen || embedded) {
+            fetchUrl(); // Initial fetch
+            const timer = setInterval(fetchUrl, 8000); // Poll every 8s
+            return () => clearInterval(timer);
+        }
+    }, [isOpen, embedded]);
+
+    const activeUrl = urlType === 'public' && publicUrl ? publicUrl : url;
 
     // Simulated boot sequence progress
     useEffect(() => {
@@ -122,7 +157,7 @@ export default function IntegratedPreview({
                             </h3>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                             <div className={cn(
                                 "w-1.5 h-1.5 rounded-full animate-pulse",
                                 status === 'ready' ? "bg-emerald-500" : status === 'starting' ? "bg-amber-500" : "bg-red-500"
@@ -133,6 +168,53 @@ export default function IntegratedPreview({
                             )}>
                                 {status === 'ready' ? 'Active' : status === 'starting' ? 'Booting' : 'Offline'}
                             </span>
+
+                            {status === 'ready' && publicUrl ? (
+                                <div className="ml-2 flex items-center bg-white/5 rounded-lg p-0.5 border border-white/10">
+                                    <button
+                                        onClick={() => setUrlType('local')}
+                                        className={cn(
+                                            "px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1",
+                                            urlType === 'local' ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
+                                        )}
+                                    >
+                                        <Wifi size={10} />
+                                        Local
+                                    </button>
+                                    <button
+                                        onClick={() => setUrlType('public')}
+                                        className={cn(
+                                            "px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1",
+                                            urlType === 'public' ? "bg-blue-500/20 text-blue-300" : "text-white/40 hover:text-white"
+                                        )}
+                                    >
+                                        <Cloud size={10} />
+                                        Public
+                                    </button>
+                                </div>
+                            ) : (status === 'ready' && embedded) ? (
+                                <div className="ml-2 flex items-center gap-2">
+                                    <button
+                                        onClick={async () => {
+                                            // @ts-ignore
+                                            const { getNgrokUrl } = await import('@/app/processActions');
+                                            // @ts-ignore
+                                            const result = await getNgrokUrl(url);
+                                            console.log('Manual Ngrok Check:', result);
+                                            // @ts-ignore
+                                            import('sonner').then(({ toast }) => {
+                                                if (result.success) toast.success('Ngrok Tunnel Found: ' + result.url);
+                                                else toast.error('Ngrok not detected. Check console for details.');
+                                            });
+                                        }}
+                                        className="text-[10px] font-bold text-red-400 uppercase tracking-wider flex items-center gap-1 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/30 hover:bg-red-500/20 transition-colors"
+                                        title="Public access not detected. Click to retry detection or check logs."
+                                    >
+                                        <Cloud size={10} className="opacity-50" />
+                                        Private
+                                    </button>
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 </div>
@@ -173,7 +255,7 @@ export default function IntegratedPreview({
                     </button>
                     {status === 'ready' && (
                         <button
-                            onClick={() => window.open(url, '_blank')}
+                            onClick={() => window.open(activeUrl, '_blank')}
                             className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-colors"
                             title="Open in new tab"
                         >
@@ -327,10 +409,10 @@ export default function IntegratedPreview({
                                     <div className="w-full h-full relative bg-white overflow-auto">
                                         {children}
                                     </div>
-                                ) : url ? (
+                                ) : activeUrl ? (
                                     <iframe
                                         ref={iframeRef}
-                                        src={url}
+                                        src={activeUrl}
                                         className="w-full h-full border-0"
                                         title="Live App Preview"
                                     />

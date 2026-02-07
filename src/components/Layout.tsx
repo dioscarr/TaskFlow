@@ -37,11 +37,14 @@ export default function Layout({ children, headerCenter }: { children: React.Rea
         <FocusContext.Provider value={{ isFocused, focusedItem, setFocusedItem }}>
             <div className="relative min-h-screen overflow-hidden bg-background text-foreground transition-colors duration-500 font-sans selection:bg-primary/30">
 
-                {/* Background Ambient Glows */}
+                {/* Background Ambient Glows - Nano Banana Influence */}
                 <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-                    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] max-w-[100vw] bg-blue-600/10 rounded-full blur-[120px] opacity-40 animate-pulse pointer-events-none" />
-                    <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] max-w-[100vw] bg-purple-600/10 rounded-full blur-[120px] opacity-40 animate-pulse delay-1000 pointer-events-none" />
-                    <div className="absolute top-[40%] left-[40%] w-[20%] h-[20%] bg-emerald-500/5 rounded-full blur-[100px] opacity-30" />
+                    <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-violet-600/10 rounded-full blur-[160px] opacity-40 animate-[neural-pulse_8s_infinite_ease-in-out] pointer-events-none" />
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-600/10 rounded-full blur-[140px] opacity-30 animate-[neural-pulse_12s_infinite_ease-in-out_delay-1000] pointer-events-none" />
+                    <div className="absolute top-[30%] left-[30%] w-[30%] h-[30%] bg-cyan-400/5 rounded-full blur-[120px] opacity-20 animate-pulse" />
+
+                    {/* Floating Mesh Dots */}
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
                 </div>
 
                 {/* Focus Mode Overlay Backdrop */}
@@ -49,10 +52,10 @@ export default function Layout({ children, headerCenter }: { children: React.Rea
                     {isFocused && (
                         <motion.div
                             initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-                            animate={{ opacity: 1, backdropFilter: 'blur(16px)' }}
+                            animate={{ opacity: 1, backdropFilter: 'blur(32px)' }}
                             exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-                            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                            className="fixed inset-0 z-40 bg-background/80 pointer-events-none"
+                            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                            className="fixed inset-0 z-40 bg-slate-950/60 pointer-events-none"
                         />
                     )}
                 </AnimatePresence>
@@ -62,15 +65,19 @@ export default function Layout({ children, headerCenter }: { children: React.Rea
                     {/* Main Content Layer */}
                     <div className={cn(
                         "flex-1 relative z-10 transition-all duration-700 h-full flex flex-col",
-                        isFocused ? "scale-90 opacity-40 pointer-events-none blur-sm" : "opacity-100"
+                        isFocused ? "scale-[0.98] opacity-20 pointer-events-none blur-xl" : "opacity-100"
                     )}>
-                        {/* Navbar */}
-                        <header className="relative flex items-center justify-between px-6 py-4 sticky top-0 z-20 border-b border-white/5 bg-black/5 backdrop-blur-sm overflow-hidden max-w-full">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg shadow-blue-500/20 flex items-center justify-center font-bold text-white">
+                        {/* Navbar - Premium High-Blur */}
+                        <header className="relative flex items-center justify-between px-8 py-5 sticky top-0 z-20 border-b border-white/5 bg-slate-950/20 backdrop-blur-3xl overflow-hidden max-w-full">
+                            <div className="flex items-center gap-4 group cursor-pointer">
+                                <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-cyan-400 shadow-[0_0_20px_rgba(139,92,246,0.5)] flex items-center justify-center font-black text-white text-xl transition-all group-hover:scale-110 group-active:scale-95">
+                                    <div className="absolute inset-0 bg-white/20 blur-sm rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
                                     T
                                 </div>
-                                <span className="text-lg font-bold tracking-tight text-white">TaskFlow</span>
+                                <div className="flex flex-col">
+                                    <span className="text-xl font-black tracking-[-0.03em] text-white leading-none">TaskFlow</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30 leading-none mt-1">Intelligence OS</span>
+                                </div>
                             </div>
 
                             {/* Centered Content Injection */}

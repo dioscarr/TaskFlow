@@ -1908,7 +1908,6 @@ export default function FileManager({ files }: FileManagerProps) {
                         previewFile={editingFile}
                         previewContent={previewContent}
                         chatContext={chatContext}
-                        onModeToggle={() => setEditorMode(m => m === 'edit' ? 'preview' : 'edit')}
                     />
                 )
             }

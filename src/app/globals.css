@@ -34,8 +34,37 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --shadow-3xl: 0 35px 60px -15px rgba(0, 0, 0, 0.5);
+
+  @keyframes agentic-glow {
+
+    0%,
+    100% {
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+      border-color: rgba(139, 92, 246, 0.3);
+    }
+
+    50% {
+      box-shadow: 0 0 40px rgba(139, 92, 246, 0.4);
+      border-color: rgba(139, 92, 246, 0.6);
+    }
+  }
+
+  @keyframes neural-pulse {
+
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.3;
+      filter: blur(2px);
+    }
+
+    50% {
+      transform: scale(1.1);
+      opacity: 0.5;
+      filter: blur(4px);
+    }
+  }
 
   @keyframes accordion-down {
     from {
@@ -60,58 +89,79 @@
 
 /* Custom Utilities */
 @utility glass {
-  @apply bg-white/10 backdrop-blur-lg border border-white/20 shadow-xl;
+  @apply bg-white/[0.03] backdrop-blur-2xl border border-white/10;
+  box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.5);
 }
 
 @utility glass-card {
-  @apply bg-black/40 backdrop-blur-md border border-white/10 shadow-2xl;
+  @apply bg-slate-950/40 backdrop-blur-3xl border border-white/5;
+  box-shadow: 0 32px 64px -16px rgba(0, 0, 0, 0.6);
 }
 
-/* Base Styles */
+@utility vibe-glow {
+  @apply relative overflow-hidden;
+
+  &::after {
+    @apply content-[''] absolute inset-0 bg-gradient-to-tr from-violet-500/10 via-fuchsia-500/5 to-cyan-500/10 opacity-30 pointer-events-none;
+  }
+}
+
+/* Base Styles and Premium Color Palette (Nano Banana) */
 :root {
   color-scheme: dark;
-  --background: #0f172a;
-  /* Slate 900 - Deep, rich background */
+  --background: #020617;
+  /* Slate 950 - Deep Space */
   --foreground: #f8fafc;
-  /* Slate 50 */
 
-  --primary: #3b82f6;
-  /* Blue 500 */
+  --primary: #8b5cf6;
+  /* Violet 500 */
+  --primary-glow: rgba(139, 92, 246, 0.4);
   --primary-foreground: #ffffff;
 
-  --card: #1e293b;
-  /* Slate 800 */
+  --card: rgba(15, 23, 42, 0.6);
+  /* Translucent Slate 900 */
   --card-foreground: #f8fafc;
 
   --popover: #0f172a;
   --popover-foreground: #f8fafc;
 
-  --muted: #334155;
-  /* Slate 700 */
+  --muted: rgba(30, 41, 59, 0.8);
   --muted-foreground: #94a3b8;
-  /* Slate 400 */
 
-  --accent: #1e293b;
+  --accent: #d946ef;
+  /* Fuchsia 500 */
+  --accent-glow: rgba(217, 70, 239, 0.4);
   --accent-foreground: #f8fafc;
 
-  --destructive: #ef4444;
-  /* Red 500 */
-  --destructive-foreground: #f8fafc;
+  --destructive: #f43f5e;
+  --destructive-foreground: #ffffff;
 
-  --border: #334155;
-  --input: #334155;
-  --ring: #3b82f6;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.05);
+  --ring: #8b5cf6;
 
-  --radius: 0.75rem;
+  --radius: 1.25rem;
+  /* Larger, softer radius for premium feel */
+
+  /* Nano Banana Special Accents */
+  --neon-cyan: #22d3ee;
+  --neon-yellow: #fbbf24;
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.1);
 }
 
 body {
   background-color: var(--background);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(217, 70, 239, 0.1) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(34, 211, 238, 0.05) 0px, transparent 50%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-weight: 500;
   font-size: 14px;
-  line-height: 1.7em;
+  line-height: 1.6em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -124,20 +174,24 @@ h4,
 h5,
 h6 {
   font-family: var(--font-display);
-  color: #FFFFFF;
+  background: linear-gradient(135deg, #FFF 0%, rgba(255, 255, 255, 0.7) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   line-height: 1.2em;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 h1 {
-  font-size: 50px;
-  letter-spacing: -2px;
+  font-size: 64px;
+  letter-spacing: -0.04em;
+  font-weight: 800;
 }
 
 h2 {
-  font-weight: 600;
-  font-size: 44px;
-  letter-spacing: -2px;
+  font-size: 48px;
+  letter-spacing: -0.03em;
+  font-weight: 700;
 }
 
 /* Scrollbar Styling */
@@ -229,7 +283,6 @@ h2 {
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
-  /* Ensures long URLs wrap at any character */
 }
 
 .markdown-content code {
@@ -258,14 +311,11 @@ h2 {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
   scrollbar-width: none;
-  /* Firefox */
   -ms-overflow-style: none;
-  /* IE/Edge */
 }
 
 .markdown-content .table-container::-webkit-scrollbar {
   display: none;
-  /* Hide scrollbar for Chrome/Safari/Edge */
 }
 
 .markdown-content table {
@@ -305,41 +355,6 @@ h2 {
   margin-bottom: 1rem;
 }
 
-/* Agentic UI Animations */
-@keyframes neural-pulse {
-  0% {
-    transform: scale(1);
-    opacity: 0.5;
-    filter: blur(2px);
-  }
-
-  50% {
-    transform: scale(1.1);
-    opacity: 0.8;
-    filter: blur(4px);
-  }
-
-  100% {
-    transform: scale(1);
-    opacity: 0.5;
-    filter: blur(2px);
-  }
-}
-
-@keyframes agentic-glow {
-  0% {
-    box-shadow: 0 0 5px rgba(59, 130, 246, 0.1);
-  }
-
-  50% {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-  }
-
-  100% {
-    box-shadow: 0 0 5px rgba(59, 130, 246, 0.1);
-  }
-}
-
 .neural-glow {
   animation: neural-pulse 4s infinite ease-in-out;
 }
@@ -369,7 +384,6 @@ h2 {
   box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
 }
 
-/* Premium scrollbar for Firefox */
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(59, 130, 246, 0.3) rgba(255, 255, 255, 0.02);

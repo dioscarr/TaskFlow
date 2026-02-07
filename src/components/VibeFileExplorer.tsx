@@ -27,10 +27,8 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
     const loadEntries = async (path: string = '') => {
         setIsLoading(true);
         try {
-            const [filesRes, procRes] = await Promise.all([
-                listRepoAppEntries(path),
-                listProcesses()
-            ]);
+            // Step 1: Load file entries first for immediate UI feedback
+            const filesRes = await listRepoAppEntries(path);
 
             if (filesRes.success && filesRes.entries) {
                 const sorted = (filesRes.entries as RepoEntry[]).sort((a, b) => {
@@ -38,16 +36,18 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
                     return a.type === 'folder' ? -1 : 1;
                 });
                 setEntries(sorted);
-            } else {
-                setEntries([]);
+                // If we have entries, we can hide the main loader even if processes are still loading
+                setIsLoading(false);
             }
 
+            // Step 2: Load processes in background to avoid blocking the file list
+            const procRes = await listProcesses();
             if (procRes.success && procRes.processes) {
                 setProcesses(procRes.processes);
             }
         } catch (error) {
             console.error('Failed to load data:', error);
-            toast.error('Failed to load explorer data');
+            // toast.error('Failed to load explorer data');
         } finally {
             setIsLoading(false);
         }
@@ -76,7 +76,7 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
         }
 
         toast.info(stopOthers ? `Stopping others and starting ${appName}...` : `Starting ${appName}...`);
-        const res = await manageAppLifecycle({ action: 'start', target: appName, stopOthers });
+        const res = await manageAppLifecycle({ action: 'start', target: appName, stopOthers }) as any;
 
         if (res.success) {
             toast.success(`Started ${appName}`);
@@ -84,7 +84,7 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
                 window.dispatchEvent(new CustomEvent('set-vibe-preview', { detail: res.previewUrl }));
             }
         } else {
-            toast.error(`Failed to start: ${res.message}`);
+            toast.error(`Failed to start: ${res.message || 'Unknown error'}`);
         }
         await loadEntries(); // Refresh
     };

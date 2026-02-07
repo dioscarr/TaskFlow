@@ -2,9 +2,9 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Bot, Command, Copy, CornerDownLeft, Eye, File, FileCode, FileText, Image, Layout, Loader2, MessageSquare, MoreHorizontal, Paperclip, Play, Plus, RefreshCw, Send, Settings, Sparkles, Terminal, Trash2, X, Maximize2, Minimize2, CheckCircle2, ChevronDown, List, FolderOpen, Folder, FileJson, Square, BrainCircuit, Image as ImageIcon, ExternalLink, Check, ChevronRight, Edit2, Pin, PinOff, Search, Receipt, DollarSign, Save, AlignLeft, Lightbulb, Compass, Activity, Zap, ArrowDown, AlertTriangle, Globe, Monitor } from 'lucide-react';
+import { ArrowRight, Bot, Command, Copy, CornerDownLeft, Eye, File, FileCode, FileText, Image, Layout, Loader2, MessageSquare, MoreHorizontal, Paperclip, Play, Plus, RefreshCw, Send, Settings, Sparkles, Terminal, Trash2, X, Maximize2, Minimize2, CheckCircle2, ChevronDown, List, FolderOpen, Folder, FileJson, Square, BrainCircuit, Image as ImageIcon, ExternalLink, Check, ChevronRight, Edit2, Pin, PinOff, Search, Receipt, DollarSign, Save, AlignLeft, Lightbulb, Compass, Activity, Zap, ArrowDown, AlertTriangle, Globe, Monitor, GitBranch, Split } from 'lucide-react';
 import { chatWithAI, chatWithAIStream, getPrompts, createPrompt, updatePrompt, setActivePrompt, deletePrompt, generateSystemPrompt, getIntentRules, getWorkspaceFiles, getChatSessionAgentStatus, approveLatestAgentJob, getAgentActivitiesForSession, cancelAllAgentJobs } from '@/app/actions';
-import { createChatSession, getChatSessions, getChatSession, addChatMessage, updateChatSessionTitle, deleteChatSession } from '@/app/chatActions';
+import { createChatSession, getChatSessions, getChatSession, addChatMessage, updateChatSessionTitle, deleteChatSession, deleteAllChatSessions } from '@/app/chatActions';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { TOOL_LIBRARY, DEFAULT_TOOLS } from '@/lib/toolLibrary';
@@ -305,21 +305,103 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
                     colorClass={isReplace ? "text-emerald-400" : "text-purple-400"}
                     dotColor={isReplace ? "bg-emerald-500" : "bg-purple-500"}
                 />
-                <div className="rounded-xl border border-white/10 bg-[#1e1e1e] p-4 flex items-center gap-4 shadow-xl">
-                    <div className={cn(
-                        "p-3 rounded-full",
-                        isReplace ? "bg-emerald-500/10 text-emerald-400" : "bg-purple-500/10 text-purple-400"
-                    )}>
-                        {isReplace ? <Edit2 size={16} /> : <Search size={16} />}
+                <div className="rounded-xl border border-white/10 bg-[#1e1e1e] p-4 flex flex-col gap-3 shadow-xl">
+                    <div className="flex items-center gap-4">
+                        <div className={cn(
+                            "p-3 rounded-full",
+                            isReplace ? "bg-emerald-500/10 text-emerald-400" : "bg-purple-500/10 text-purple-400"
+                        )}>
+                            {isReplace ? <Edit2 size={16} /> : <Search size={16} />}
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold uppercase text-white/40 tracking-wider mb-1">
+                                {isReplace ? 'Patch Applied' : 'Index Result'}
+                            </p>
+                            <p className="text-xs text-white/90 font-mono leading-relaxed">
+                                {tool === 'replace_in_file' ? result.message : `Found ${result.count} matches in codebase.`}
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-[10px] font-bold uppercase text-white/40 tracking-wider mb-1">
-                            {isReplace ? 'Patch Applied' : 'Index Result'}
-                        </p>
-                        <p className="text-xs text-white/90 font-mono leading-relaxed">
-                            {tool === 'replace_in_file' ? result.message : `Found ${result.count} matches in codebase.`}
-                        </p>
+                    {isReplace && result.diffs && result.diffs.length > 0 && (
+                        <div className="mt-2 space-y-4 border-t border-white/5 pt-4">
+                            {result.diffs.map((diff: any, idx: number) => (
+                                <div key={idx} className="space-y-2">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Split size={10} className="text-white/20" />
+                                        <span className="text-[9px] font-mono text-white/20 uppercase tracking-widest">Change #{idx + 1}</span>
+                                    </div>
+                                    <div className="rounded-lg overflow-hidden border border-white/5 flex flex-col">
+                                        <div className="bg-red-500/10 p-2 text-[11px] font-mono border-b border-red-500/10 flex gap-2">
+                                            <span className="text-red-400/50 select-none">-</span>
+                                            <code className="text-red-300/80 line-through truncate whitespace-pre">{diff.target}</code>
+                                        </div>
+                                        <div className="bg-emerald-500/10 p-2 text-[11px] font-mono flex gap-2">
+                                            <span className="text-emerald-400/50 select-none">+</span>
+                                            <code className="text-emerald-300 whitespace-pre">{diff.replacement}</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    if (tool === 'apply_batch' || tool === 'applyBatch') {
+        const diffs = result.diffs || [];
+        return (
+            <div className="mt-3">
+                <TraceLabel
+                    icon={Layers}
+                    label="Batch File Edit"
+                    colorClass="text-emerald-400"
+                    dotColor="bg-emerald-500"
+                />
+                <div className="rounded-xl border border-white/10 bg-[#1e1e1e] overflow-hidden shadow-xl">
+                    <div className="p-4 bg-white/5 border-b border-white/5 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
+                                <Split size={16} />
+                            </div>
+                            <div>
+                                <h4 className="text-white font-medium text-sm">Batch Patch Applied</h4>
+                                <p className="text-white/30 text-[10px] font-mono truncate max-w-[200px]">{result.filePath}</p>
+                            </div>
+                        </div>
+                        <div className="text-[10px] text-white/30 font-mono">
+                            {diffs.length} EDITS
+                        </div>
                     </div>
+
+                    <div className="max-h-[400px] overflow-y-auto p-4 space-y-4 custom-scrollbar bg-black/20">
+                        {diffs.map((diff: any, idx: number) => (
+                            <div key={idx} className="space-y-2">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Variation {idx + 1}</span>
+                                </div>
+                                <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0a0a0a] flex flex-col group shadow-lg">
+                                    <div className="relative">
+                                        <div className="bg-red-500/5 px-4 py-3 text-[11px] font-mono border-b border-white/5 flex gap-3 group-hover:bg-red-500/10 transition-colors">
+                                            <span className="text-red-500/40 select-none font-bold">-</span>
+                                            <code className="text-red-400/70 whitespace-pre scrollbar-none overflow-x-auto">{diff.target}</code>
+                                        </div>
+                                        <div className="bg-emerald-500/10 px-4 py-3 text-[11px] font-mono flex gap-3 group-hover:bg-emerald-500/20 transition-colors">
+                                            <span className="text-emerald-400 select-none font-bold">+</span>
+                                            <code className="text-emerald-300 whitespace-pre scrollbar-none overflow-x-auto">{diff.replacement}</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {result.message && (
+                        <div className="px-4 py-2 bg-emerald-500/5 text-emerald-400/70 text-[10px] italic border-t border-white/5">
+                            {result.message}
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -455,37 +537,25 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
 
 const ThinkingProcess = ({ content }: { content: string }) => {
     const [isExpanded, setIsExpanded] = useState(false);
-    const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
+    const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
 
-    // Parse structured thinking into sections
     const parseSections = (text: string) => {
-        const sections: Array<{ title: string; content: string; icon: any; color: string }> = [];
         const lines = text.split('\n');
+        const sections: { title: string; content: string; icon: any; color: string }[] = [];
         let currentSection: { title: string; content: string[]; icon: any; color: string } | null = null;
 
-        // Section mappings with icons and colors
         const sectionTypes: Record<string, { icon: any; color: string }> = {
-            'analysis': { icon: Search, color: 'text-blue-400' },
-            'strategy': { icon: Compass, color: 'text-purple-400' },
-            'consultation': { icon: Compass, color: 'text-purple-400' },
-            'constructive critique': { icon: Lightbulb, color: 'text-amber-400' },
-            'critique': { icon: Lightbulb, color: 'text-amber-400' },
-            'research gap': { icon: FileText, color: 'text-pink-400' },
-            'orchestration': { icon: Zap, color: 'text-emerald-400' },
-            'thinking': { icon: BrainCircuit, color: 'text-indigo-400' },
-            'risk': { icon: AlertTriangle, color: 'text-red-400' }
+            'research': { icon: Search, color: 'text-cyan-400' },
+            'analysis': { icon: Activity, color: 'text-amber-400' },
+            'coding': { icon: FileCode, color: 'text-blue-400' },
+            'plan': { icon: List, color: 'text-indigo-400' },
+            'execution': { icon: Zap, color: 'text-emerald-400' },
+            'reasoning': { icon: BrainCircuit, color: 'text-fuchsia-400' }
         };
 
         for (const line of lines) {
             const trimmed = line.trim();
-            if (!trimmed) continue;
-
-            // Check if this is a section header (number followed by period or starts with **)
-            const sectionMatch = trimmed.match(/^\d+\.\s*\*?\*?(.+?)[:*]*$/i) ||
-                trimmed.match(/^\*\*(.+?)\*\*:?$/i);
-
-            if (sectionMatch) {
-                // Save previous section
+            if (trimmed.startsWith('###') || (trimmed.startsWith('**') && trimmed.endsWith('**'))) {
                 if (currentSection) {
                     sections.push({
                         title: currentSection.title,
@@ -494,12 +564,10 @@ const ThinkingProcess = ({ content }: { content: string }) => {
                         color: currentSection.color
                     });
                 }
-
-                // Start new section
-                const title = sectionMatch[1].trim();
+                const title = trimmed.replace(/###|\*\*/g, '').trim();
                 const titleLower = title.toLowerCase();
                 const matchedType = Object.keys(sectionTypes).find(key => titleLower.includes(key));
-                const sectionInfo = matchedType ? sectionTypes[matchedType] : { icon: FileText, color: 'text-white/60' };
+                const sectionInfo = matchedType ? sectionTypes[matchedType] : { icon: FileText, color: 'text-white/40' };
 
                 currentSection = {
                     title,
@@ -508,22 +576,19 @@ const ThinkingProcess = ({ content }: { content: string }) => {
                     color: sectionInfo.color
                 };
             } else if (currentSection) {
-                // Add to current section
                 currentSection.content.push(line);
             } else {
-                // No section yet, create default
-                if (!currentSection) {
+                if (!currentSection && trimmed) {
                     currentSection = {
-                        title: 'Thinking',
+                        title: 'Cognitive Baseline',
                         content: [line],
                         icon: BrainCircuit,
-                        color: 'text-blue-400'
+                        color: 'text-violet-400'
                     };
                 }
             }
         }
 
-        // Save last section
         if (currentSection && currentSection.content.length > 0) {
             sections.push({
                 title: currentSection.title,
@@ -534,10 +599,10 @@ const ThinkingProcess = ({ content }: { content: string }) => {
         }
 
         return sections.length > 0 ? sections : [{
-            title: 'Thinking',
+            title: 'Neural Reasoning',
             content: text,
             icon: BrainCircuit,
-            color: 'text-blue-400'
+            color: 'text-violet-400'
         }];
     };
 
@@ -550,39 +615,33 @@ const ThinkingProcess = ({ content }: { content: string }) => {
     };
 
     return (
-        <div className="mb-6 group/thought">
-            <TraceLabel
-                icon={Brain}
-                label="Agent Thought"
-                colorClass="text-blue-400"
-                dotColor="bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.4)]"
-            />
+        <div className="mb-8 group/thought">
+            <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.6)] animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Intelligence Trace</span>
+            </div>
 
-            <div className="overflow-hidden rounded-[1.25rem] border border-white/5 bg-white/[0.01] backdrop-blur-sm transition-all shadow-2xl hover:bg-white/[0.03] group-hover/thought:border-white/10">
+            <div className="overflow-hidden rounded-[1.5rem] border border-white/5 bg-slate-950/20 backdrop-blur-xl transition-all shadow-3xl hover:border-white/10 group-hover/thought:bg-slate-950/40">
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className="w-full h-11 px-4 flex items-center justify-between transition-colors"
+                    className="w-full h-12 px-5 flex items-center justify-between transition-colors hover:bg-white/[0.02]"
                 >
-                    <div className="flex items-center gap-3">
-                        <div className="text-left">
-                            <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">
-                                {isExpanded ? `Synthesizing ${sections.length} Reasoning Tracks` : "Expand Intelligence Trace"}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="flex -space-x-1.5 mr-2">
-                            {sections.slice(0, 3).map((s, i) => {
+                    <div className="flex items-center gap-4">
+                        <div className="flex -space-x-2">
+                            {sections.slice(0, 4).map((s, i) => {
                                 const Icon = s.icon;
                                 return (
-                                    <div key={i} className={cn("w-5 h-5 rounded-full bg-[#111114] border border-white/10 flex items-center justify-center shadow-lg", s.color)}>
-                                        <Icon size={10} />
+                                    <div key={i} className={cn("w-6 h-6 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center shadow-xl", s.color)}>
+                                        <Icon size={11} strokeWidth={2.5} />
                                     </div>
                                 );
                             })}
                         </div>
-                        <ChevronDown size={14} className={cn("text-white/20 transition-transform duration-500", isExpanded && "rotate-180")} />
+                        <span className="text-[11px] text-white/60 font-bold uppercase tracking-wider">
+                            {isExpanded ? `Synthesizing ${sections.length} Reasoning Tracks` : "Expand Intelligence Trace"}
+                        </span>
                     </div>
+                    <ChevronDown size={16} className={cn("text-white/20 transition-transform duration-500", isExpanded && "rotate-180")} />
                 </button>
 
                 <AnimatePresence>
@@ -593,29 +652,29 @@ const ThinkingProcess = ({ content }: { content: string }) => {
                             exit={{ height: 0, opacity: 0 }}
                             className="border-t border-white/5 overflow-hidden"
                         >
-                            <div className="p-3 space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar bg-black/40">
+                            <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar bg-black/40">
                                 {sections.map((section, idx) => {
                                     const Icon = section.icon;
                                     const isOpen = expandedSections.has(idx);
 
                                     return (
-                                        <div key={idx} className="border border-white/5 rounded-xl overflow-hidden bg-white/[0.02]">
+                                        <div key={idx} className="border border-white/5 rounded-2xl overflow-hidden bg-white/[0.01]">
                                             <button
                                                 onClick={() => toggleSection(idx)}
-                                                className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors group/section"
+                                                className="w-full flex items-center justify-between p-4 hover:bg-white/[0.03] transition-colors group/section"
                                             >
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className={cn("p-1.5 rounded-lg bg-white/5 border border-white/5", section.color)}>
-                                                        <Icon size={12} />
+                                                <div className="flex items-center gap-3">
+                                                    <div className={cn("p-2 rounded-xl bg-slate-900 border border-white/5 shadow-inner", section.color)}>
+                                                        <Icon size={14} strokeWidth={2.5} />
                                                     </div>
-                                                    <span className={cn("text-[11px] font-bold uppercase tracking-wider", section.color)}>
+                                                    <span className={cn("text-[12px] font-black uppercase tracking-widest", section.color)}>
                                                         {section.title}
                                                     </span>
                                                 </div>
                                                 <ChevronRight
-                                                    size={12}
+                                                    size={14}
                                                     className={cn(
-                                                        "text-white/30 transition-transform duration-300",
+                                                        "text-white/20 transition-transform duration-300",
                                                         isOpen && "rotate-90"
                                                     )}
                                                 />
@@ -627,10 +686,10 @@ const ThinkingProcess = ({ content }: { content: string }) => {
                                                         initial={{ height: 0, opacity: 0 }}
                                                         animate={{ height: 'auto', opacity: 1 }}
                                                         exit={{ height: 0, opacity: 0 }}
-                                                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                                                        className="border-t border-white/5 bg-black/20"
+                                                        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                                                        className="border-t border-white/5 bg-slate-950/40"
                                                     >
-                                                        <div className="p-4 text-[12px] text-white/70 leading-relaxed font-sans space-y-2">
+                                                        <div className="p-5 text-[13px] text-white/70 leading-relaxed font-medium space-y-3">
                                                             {section.content.split('\n').map((line, i) => {
                                                                 const trimmed = line.trim();
                                                                 if (!trimmed) return null;
@@ -638,14 +697,14 @@ const ThinkingProcess = ({ content }: { content: string }) => {
                                                                 const isBullet = trimmed.match(/^[-*•]\s+(.+)$/);
                                                                 if (isBullet) {
                                                                     return (
-                                                                        <div key={i} className="flex items-start gap-3 ml-1 group/line">
-                                                                            <div className="mt-2 w-1 h-1 rounded-full bg-indigo-400/50 group-hover/line:scale-125 transition-transform" />
+                                                                        <div key={i} className="flex items-start gap-4 ml-1 group/line">
+                                                                            <div className="mt-2.5 w-1.5 h-1.5 rounded-full bg-violet-500/40 group-hover/line:bg-violet-400 transition-colors" />
                                                                             <span className="flex-1 opacity-90">{isBullet[1]}</span>
                                                                         </div>
                                                                     );
                                                                 }
 
-                                                                return <p key={i} className={cn(line.startsWith('  ') && "ml-4 text-white/50 italic font-mono text-[11px]")}>{trimmed}</p>;
+                                                                return <p key={i} className={cn(line.startsWith('  ') && "ml-5 text-white/40 italic font-mono text-[11px] leading-loose")}>{trimmed}</p>;
                                                             })}
                                                         </div>
                                                     </motion.div>
@@ -739,24 +798,28 @@ const CognitiveTimeline = ({ activities }: { activities: any[] }) => {
 
 const AgentStepBadge = ({ tool, status }: { tool: string, status: 'executing' | 'done' | 'failed' }) => {
     return (
-        <div className="mb-4 animate-in fade-in slide-in-from-left-2 duration-700">
-            <TraceLabel
-                icon={Zap}
-                label="Agent Action"
-                colorClass="text-amber-400"
-                dotColor="bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.4)]"
-            />
+        <div className="mb-6 animate-in fade-in slide-in-from-left-4 duration-700">
+            <div className="flex items-center gap-2 mb-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.6)] animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Neural Execution</span>
+            </div>
+
             <div className={cn(
-                "inline-flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all shadow-lg",
-                status === 'executing' ? "bg-amber-500/5 border-amber-500/20 text-amber-300 animate-pulse" :
-                    status === 'done' ? "bg-white/[0.02] border-white/10 text-zinc-300" :
-                        "bg-red-500/5 border-red-500/20 text-red-300"
+                "inline-flex items-center gap-4 px-5 py-3 rounded-2xl border transition-all shadow-2xl backdrop-blur-3xl",
+                status === 'executing' ? "bg-amber-500/10 border-amber-500/30 text-amber-300 animate-[agentic-glow_3s_infinite]" :
+                    status === 'done' ? "bg-slate-950/40 border-white/10 text-white/90" :
+                        "bg-red-500/10 border-red-500/30 text-red-300"
             )}>
-                {status === 'executing' ? <Loader2 size={14} className="animate-spin" /> :
-                    status === 'done' ? <Terminal size={14} className="text-amber-400/60" /> : <X size={14} />}
+                <div className={cn(
+                    "p-2 rounded-xl bg-black/40 border border-white/5 shadow-inner",
+                    status === 'executing' ? "text-amber-400" : status === 'done' ? "text-cyan-400" : "text-red-400"
+                )}>
+                    {status === 'executing' ? <Loader2 size={16} className="animate-spin" /> :
+                        status === 'done' ? <Zap size={16} fill="currentColor" /> : <X size={16} />}
+                </div>
                 <div className="flex flex-col">
-                    <span className="text-[10px] text-white/20 font-black uppercase tracking-widest leading-none mb-1">Invoking Command</span>
-                    <span className="text-[11px] font-mono font-bold">
+                    <span className="text-[10px] text-white/30 font-black uppercase tracking-[0.2em] leading-none mb-1.5">Action Dispatched</span>
+                    <span className="text-[13px] font-mono font-black text-white tracking-tight">
                         {tool.replace(/_/g, ' ')}
                     </span>
                 </div>
@@ -826,11 +889,15 @@ const MessageBubble = ({
             </div>
 
             <div className={cn(
-                "relative group/msg transition-all duration-300 rounded-2xl p-0 overflow-hidden shadow-xl",
+                "relative group/msg transition-all duration-500 rounded-[2rem] p-0 overflow-hidden shadow-3xl",
                 isUser
-                    ? "bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-600 text-white rounded-tr-md"
-                    : "bg-[#18181b] border border-white/5 text-zinc-300 rounded-tl-md"
+                    ? "bg-gradient-to-br from-violet-600 via-indigo-600 to-fuchsia-600 text-white rounded-tr-none border border-white/20"
+                    : "bg-slate-900/60 border border-white/10 text-white/90 rounded-tl-none backdrop-blur-3xl"
             )}>
+                {/* Immersive background glow for AI messages */}
+                {!isUser && (
+                    <div className="absolute inset-0 bg-gradient-to-tr from-violet-500/5 via-transparent to-cyan-500/5 opacity-0 group-hover/msg:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+                )}
                 {/* Message Content */}
                 <div className={cn("px-6 py-5 text-[14px] leading-[1.8] tracking-tight", isUser ? "text-white/95 font-medium" : "text-zinc-300 font-normal")}>
                     <ReactMarkdown
@@ -1032,6 +1099,8 @@ export default function AIChat({
     const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
     const [activeCommandIndex, setActiveCommandIndex] = useState(0);
     const [dismissedQuestionId, setDismissedQuestionId] = useState<string | null>(null);
+    const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
+    const [isClearingAll, setIsClearingAll] = useState(false);
 
     // Sync Props to State
     useEffect(() => {
@@ -1562,6 +1631,23 @@ export default function AIChat({
         }
     };
 
+    const confirmClearAllSessions = async () => {
+        setIsClearingAll(true);
+        try {
+            await deleteAllChatSessions();
+            setChatSessions([]);
+            setActiveSessionId(null);
+            setMessages([]);
+            setActiveSessionTitle('New Chat');
+            toast.success('All chats cleared');
+        } catch (error) {
+            toast.error('Failed to clear chats');
+        } finally {
+            setIsClearingAll(false);
+            setIsClearAllModalOpen(false);
+        }
+    };
+
     const handleStopAgents = async () => {
         try {
             await cancelAllAgentJobs();
@@ -1578,13 +1664,24 @@ export default function AIChat({
         <div className="h-full p-6 space-y-4 overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between mb-4">
                 <h4 className="text-[10px] font-black uppercase text-white/30 tracking-widest">Chats</h4>
-                <button
-                    onClick={startNewChat}
-                    className="p-2 bg-blue-600 rounded-lg text-white"
-                    title="New Chat"
-                >
-                    <Plus size={16} />
-                </button>
+                <div className="flex items-center gap-2">
+                    {chatSessions.length > 0 && (
+                        <button
+                            onClick={() => setIsClearAllModalOpen(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white rounded-lg transition-all text-[10px] font-bold uppercase tracking-wider"
+                        >
+                            <Trash2 size={12} />
+                            Clear All
+                        </button>
+                    )}
+                    <button
+                        onClick={startNewChat}
+                        className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all shadow-lg active:scale-95"
+                        title="New Chat"
+                    >
+                        <Plus size={16} />
+                    </button>
+                </div>
             </div>
             <div className="space-y-3">
                 {chatSessions.length === 0 && (
@@ -3725,6 +3822,20 @@ export default function AIChat({
                 cancelText="Cancel"
                 isDanger
                 isLoading={isDeletingSession}
+            />
+            <ConfirmationModal
+                isOpen={isClearAllModalOpen}
+                onClose={() => {
+                    if (isClearingAll) return;
+                    setIsClearAllModalOpen(false);
+                }}
+                onConfirm={confirmClearAllSessions}
+                title="Clear all chats?"
+                message="This will permanently delete all your chat history. This action cannot be undone."
+                confirmText="Clear All"
+                cancelText="Cancel"
+                isDanger
+                isLoading={isClearingAll}
             />
             <FileEditPreviewModal
                 isOpen={isEditPreviewOpen}

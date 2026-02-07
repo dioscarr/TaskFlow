@@ -98,6 +98,37 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
             }
         }
     },
+    apply_batch: {
+        id: 'apply_batch',
+        name: 'Batch Edit File',
+        description: 'Apply multiple, non-contiguous edits to a single file. Highly efficient for complex tasks.',
+        category: 'workspace',
+        icon: 'Layers',
+        schema: {
+            name: 'apply_batch',
+            description: 'Apply multiple non-contiguous edits to a file',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileId: { type: 'string', description: 'File ID or absolute path' },
+                    edits: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                target: { type: 'string', description: 'Exact text to replace' },
+                                replacement: { type: 'string', description: 'New text' }
+                            },
+                            required: ['target', 'replacement']
+                        },
+                        description: 'List of edits to apply'
+                    },
+                    useAbsolutePath: { type: 'boolean', description: 'If true, treat fileId as an absolute path', default: false }
+                },
+                required: ['fileId', 'edits']
+            }
+        }
+    },
     run_terminal_command: {
         id: 'run_terminal_command',
         name: 'Run Terminal Command',
@@ -1002,6 +1033,45 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
                 required: ['projectName']
             }
         }
+    },
+    execute_command_in_app: {
+        id: 'execute_command_in_app',
+        name: 'Run Command in Active App',
+        description: 'Run a terminal command in the context of the active application. Automatically handles Docker containers or local folder context.',
+        category: 'task',
+        icon: 'Terminal',
+        schema: {
+            name: 'execute_command_in_app',
+            description: 'Run a command in the active app context',
+            parameters: {
+                type: 'object',
+                properties: {
+                    appName: { type: 'string', description: 'Name of the app (e.g., adev)' },
+                    command: { type: 'string', description: 'Command to run (e.g., npm install)' },
+                    background: { type: 'boolean', description: 'Run in background', default: false }
+                },
+                required: ['appName', 'command']
+            }
+        }
+    },
+    get_app_logs: {
+        id: 'get_app_logs',
+        name: 'Get Application Logs',
+        description: 'Retrieve the logs of a running application. Works for both Docker containers and local processes.',
+        category: 'workspace',
+        icon: 'FileText',
+        schema: {
+            name: 'get_app_logs',
+            description: 'Get logs for an application',
+            parameters: {
+                type: 'object',
+                properties: {
+                    appName: { type: 'string', description: 'Name of the app (e.g., adev)' },
+                    limit: { type: 'number', description: 'Number of lines to retrieve', default: 100 }
+                },
+                required: ['appName']
+            }
+        }
     }
 };
 
@@ -1078,5 +1148,9 @@ export const DEFAULT_TOOLS = [
     'get_blueprint',
     'export_blueprint',
     'execute_command',
-    'execute_scaffold_vite'
+    'execute_scaffold_vite',
+    'execute_command_in_app',
+    'get_app_logs',
+    'manage_app_lifecycle',
+    'apply_batch'
 ];
