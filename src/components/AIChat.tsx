@@ -954,11 +954,13 @@ const MessageBubble = ({
 export default function AIChat({
     embedded = false,
     activeFile = null,
-    activeApp = null
+    activeApp = null,
+    headerRight
 }: {
     embedded?: boolean;
-    activeFile?: any;
-    activeApp?: { name: string; path: string } | null;
+    activeFile?: WorkspaceFile | null,
+    activeApp?: { name: string, path: string } | null,
+    headerRight?: React.ReactNode
 }) {
     const [isOpen, setIsOpen] = useState(embedded);
     const [view, setView] = useState<'chat' | 'prompts' | 'sessions'>('chat');
@@ -2625,7 +2627,7 @@ export default function AIChat({
                     embedded ? "w-full border-r" : "w-[450px] border-l"
                 )}>
                     {/* Header (Pinned) */}
-                    <div className="p-6 border-b border-white/10 bg-white/[0.02]">
+                    <div className={cn("border-b border-white/10 bg-white/[0.02]", embedded ? "p-3" : "p-6")}>
                         <div className={cn("flex items-center justify-between", embedded ? "max-w-3xl mx-auto w-full" : "w-full")}>
                             <div className="flex items-center gap-3">
                                 <BrainCircuit size={20} className="text-blue-400" />
@@ -2686,6 +2688,7 @@ export default function AIChat({
                             </div>
 
                             <div className="flex items-center gap-1">
+                                {headerRight}
                                 <button
                                     onClick={() => setVerbosity(v => v === 'concise' ? 'normal' : v === 'normal' ? 'verbose' : 'concise')}
                                     className={cn(

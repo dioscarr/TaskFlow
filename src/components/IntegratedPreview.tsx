@@ -102,7 +102,7 @@ export default function IntegratedPreview({
             )}
         >
             {/* Header Controls */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-black/40 backdrop-blur-md z-10">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-black/40 backdrop-blur-md z-10">
                 <div className="flex items-center gap-4">
                     {!embedded && (
                         <div className="flex gap-1.5 mr-2">
@@ -111,22 +111,29 @@ export default function IntegratedPreview({
                             <div className="w-3 h-3 rounded-full bg-emerald-500/50" />
                         </div>
                     )}
-                    <div className="flex flex-col">
-                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                            <Globe size={14} className="text-blue-400" />
-                            {appName || 'Application Preview'}
-                        </h3>
-                        {status !== 'ready' && (
-                            <div className="flex items-center gap-2">
-                                <div className={cn(
-                                    "w-2 h-2 rounded-full animate-pulse",
-                                    status === 'ready' ? "bg-emerald-500" : status === 'starting' ? "bg-amber-500" : "bg-red-500"
-                                )} />
-                                <span className="text-[10px] uppercase font-bold tracking-widest text-white/40">
-                                    {status === 'ready' ? 'Live System' : status === 'starting' ? 'Progressing' : 'Offline'}
-                                </span>
-                            </div>
-                        )}
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
+                                LIVE PREVIEW
+                            </h3>
+                            <div className="w-px h-3 bg-white/10" />
+                            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                                {appName || 'Application'}
+                            </h3>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <div className={cn(
+                                "w-1.5 h-1.5 rounded-full animate-pulse",
+                                status === 'ready' ? "bg-emerald-500" : status === 'starting' ? "bg-amber-500" : "bg-red-500"
+                            )} />
+                            <span className={cn(
+                                "text-[8px] uppercase font-bold tracking-widest",
+                                status === 'ready' ? "text-emerald-500/80" : "text-white/40"
+                            )}>
+                                {status === 'ready' ? 'Active' : status === 'starting' ? 'Booting' : 'Offline'}
+                            </span>
+                        </div>
                     </div>
                 </div>
 

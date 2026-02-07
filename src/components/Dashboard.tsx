@@ -330,18 +330,22 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                 <div className="w-full h-full flex items-stretch animate-in fade-in duration-700 bg-[#050505]">
                     {/* Column 1: Chat */}
                     <div className="w-[30%] border-r border-white/5 h-full flex flex-col min-w-[350px]">
-                        <div className="px-4 py-3 bg-black/40 border-b border-white/5 flex items-center justify-between">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">AI Architect</h3>
-                            <div className="flex items-center gap-2">
-                                <button className="p-1 px-2 rounded bg-emerald-500/10 text-emerald-400 text-[8px] font-black uppercase tracking-widest border border-emerald-500/20">Voice Mode</button>
-                                <Activity size={12} className="text-emerald-500/50" />
-                            </div>
-                        </div>
                         <div className="flex-1 overflow-hidden relative">
                             <AIChat
                                 embedded
-                                activeFile={vibeRepoEntry || vibeFile}
+                                activeFile={vibeRepoEntry ? {
+                                    id: vibeRepoEntry.path,
+                                    name: vibeRepoEntry.path.split('/').pop() || '',
+                                    type: 'file',
+                                    storagePath: vibeRepoEntry.path
+                                } as any : vibeFile}
                                 activeApp={vibeRepoEntry ? { name: vibeRepoEntry.path.split('/')[0] || 'App', path: vibeRepoEntry.path.split('/')[0] || '' } : null}
+                                headerRight={
+                                    <div className="flex items-center gap-2 mr-4 border-r border-white/5 pr-4">
+                                        <button className="p-1 px-2 rounded bg-emerald-500/10 text-emerald-400 text-[8px] font-black uppercase tracking-widest border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors">Voice Mode</button>
+                                        <Activity size={12} className="text-emerald-500/50" />
+                                    </div>
+                                }
                             />
                         </div>
                     </div>
@@ -448,13 +452,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
 
                     {/* Column 3: Preview */}
                     <div className={cn("h-full flex flex-col min-w-[350px] transition-all duration-500 ease-in-out", showVibeEditor ? "w-[30%]" : "flex-1")}>
-                        <div className="px-4 py-3 bg-black/40 border-b border-white/5 flex items-center justify-between">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">Live Preview</h3>
-                            <div className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-[8px] font-bold text-emerald-500/80 uppercase tracking-widest">Active</span>
-                            </div>
-                        </div>
+
                         <div className="flex-1 overflow-hidden">
                             <IntegratedPreview
                                 isOpen={true}
