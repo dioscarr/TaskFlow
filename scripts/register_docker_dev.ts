@@ -35,6 +35,7 @@ async function main() {
                 path: appPath,
                 command: 'Docker Dev Container',
                 status: 'stopped',
+                port: 3001, // Explicitly set port to match mapped external port (avoid 3000 conflict)
                 healthCheckType: 'port',
                 healthInterval: 10000,
                 // Prisma handles JSON metadata directly

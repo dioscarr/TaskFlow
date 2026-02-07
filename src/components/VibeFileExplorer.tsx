@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Folder, FileCode, ChevronRight, ChevronDown, Loader2, RefreshCw, FileText, LayoutGrid, LayoutPanelLeft } from 'lucide-react';
+import { Folder, FileCode, ChevronRight, Loader2, RefreshCw, LayoutGrid } from 'lucide-react';
 import { listRepoAppEntries } from '@/app/actions';
+import { listProcesses, manageAppLifecycle } from '@/app/processActions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -21,16 +22,18 @@ interface VibeFileExplorerProps {
 export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileExplorerProps) {
     const [entries, setEntries] = useState<RepoEntry[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-    const [currentPath, setCurrentPath] = useState<string>('');
+    const [processes, setProcesses] = useState<any[]>([]);
 
     const loadEntries = async (path: string = '') => {
         setIsLoading(true);
         try {
-            const result = await listRepoAppEntries(path);
-            if (result.success && result.entries) {
-                // Sort: Folders first, then files
-                const sorted = (result.entries as RepoEntry[]).sort((a, b) => {
+            const [filesRes, procRes] = await Promise.all([
+                listRepoAppEntries(path),
+                listProcesses()
+            ]);
+
+            if (filesRes.success && filesRes.entries) {
+                const sorted = (filesRes.entries as RepoEntry[]).sort((a, b) => {
                     if (a.type === b.type) return a.name.localeCompare(b.name);
                     return a.type === 'folder' ? -1 : 1;
                 });
@@ -38,9 +41,13 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
             } else {
                 setEntries([]);
             }
+
+            if (procRes.success && procRes.processes) {
+                setProcesses(procRes.processes);
+            }
         } catch (error) {
-            console.error('Failed to load repo entries:', error);
-            toast.error('Failed to load files');
+            console.error('Failed to load data:', error);
+            toast.error('Failed to load explorer data');
         } finally {
             setIsLoading(false);
         }
@@ -50,14 +57,37 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
         loadEntries('');
     }, []);
 
-    // Helper to check if a file is currently active
-    const isActive = (path: string) => activeFile?.path === path;
+    const handleToggleApp = async (appName: string, currentStatus: string) => {
+        if (currentStatus === 'running') {
+            toast.info(`Stopping ${appName}...`);
+            await manageAppLifecycle({ action: 'stop', target: appName });
+            await loadEntries(); // Refresh status
+            return;
+        }
 
-    // Recursive component for folder tree could be better, but flat list with "currentPath" navigation 
-    // is simpler for "File Manager" style. 
-    // But for "IDE" style (VS Code), we want a tree.
-    // However, listRepoAppEntries takes a path and returns children.
-    // So we need a tree structure where each folder loads its content.
+        // Check for other running apps
+        const otherRunning = processes.find(p => p.status === 'running' && p.type !== 'system' && !p.name.toLowerCase().includes('ngrok'));
+        let stopOthers = false;
+
+        if (otherRunning) {
+            const confirmed = window.confirm(`App "${otherRunning.name}" is currently running. Stop it and start "${appName}"?`);
+            if (!confirmed) return;
+            stopOthers = true;
+        }
+
+        toast.info(stopOthers ? `Stopping others and starting ${appName}...` : `Starting ${appName}...`);
+        const res = await manageAppLifecycle({ action: 'start', target: appName, stopOthers });
+
+        if (res.success) {
+            toast.success(`Started ${appName}`);
+            if (res.previewUrl) {
+                window.dispatchEvent(new CustomEvent('set-vibe-preview', { detail: res.previewUrl }));
+            }
+        } else {
+            toast.error(`Failed to start: ${res.message}`);
+        }
+        await loadEntries(); // Refresh
+    };
 
     return (
         <div className="flex flex-col h-full bg-[#050505] border-r border-white/5 w-64 min-w-[200px]">
@@ -83,6 +113,8 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
                             level={0}
                             onSelect={onFileSelect}
                             activeFilePath={activeFile?.path}
+                            processes={processes}
+                            onToggleApp={handleToggleApp}
                         />
                     </div>
                 )}
@@ -91,16 +123,21 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
     );
 }
 
-const FileTree = ({ path, level, onSelect, activeFilePath }: { path: string, level: number, onSelect: (f: RepoEntry) => void, activeFilePath?: string }) => {
+const FileTree = ({ path, level, onSelect, activeFilePath, processes, onToggleApp }: {
+    path: string,
+    level: number,
+    onSelect: (f: RepoEntry) => void,
+    activeFilePath?: string,
+    processes: any[],
+    onToggleApp: (name: string, status: string) => void
+}) => {
     const [items, setItems] = useState<RepoEntry[]>([]);
-    const [isOpen, setIsOpen] = useState(level === 0); // Root open by default
+    const [isOpen, setIsOpen] = useState(level === 0);
     const [hasLoaded, setHasLoaded] = useState(false);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        if (isOpen && !hasLoaded) {
-            loadChildren();
-        }
+        if (isOpen && !hasLoaded) loadChildren();
     }, [isOpen]);
 
     const loadChildren = async () => {
@@ -108,18 +145,14 @@ const FileTree = ({ path, level, onSelect, activeFilePath }: { path: string, lev
         try {
             const result = await listRepoAppEntries(path);
             if (result.success && result.entries) {
-                const sorted = (result.entries as RepoEntry[]).sort((a, b) => {
+                const sorted = (result.entries as RepoEntry[]).sort((a: any, b: any) => {
                     if (a.type === b.type) return a.name.localeCompare(b.name);
                     return a.type === 'folder' ? -1 : 1;
                 });
                 setItems(sorted);
                 setHasLoaded(true);
             }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
+        } catch (e) { console.error(e); } finally { setLoading(false); }
     };
 
     if (level > 0 && !isOpen) return null;
@@ -127,7 +160,6 @@ const FileTree = ({ path, level, onSelect, activeFilePath }: { path: string, lev
     return (
         <div className="flex flex-col">
             {level === 0 ? (
-                // Root Level: Render children directly (assuming root is just the container)
                 items.map(item => (
                     <FileTreeItem
                         key={item.path}
@@ -135,6 +167,8 @@ const FileTree = ({ path, level, onSelect, activeFilePath }: { path: string, lev
                         level={level}
                         onSelect={onSelect}
                         activeFilePath={activeFilePath}
+                        processes={processes}
+                        onToggleApp={onToggleApp}
                     />
                 ))
             ) : null}
@@ -142,58 +176,74 @@ const FileTree = ({ path, level, onSelect, activeFilePath }: { path: string, lev
     );
 }
 
-const FileTreeItem = ({ item, level, onSelect, activeFilePath }: { item: RepoEntry, level: number, onSelect: (f: RepoEntry) => void, activeFilePath?: string }) => {
+const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onToggleApp }: {
+    item: RepoEntry,
+    level: number,
+    onSelect: (f: RepoEntry) => void,
+    activeFilePath?: string,
+    processes: any[],
+    onToggleApp: (name: string, status: string) => void
+}) => {
     const [isOpen, setIsOpen] = useState(false);
     const [children, setChildren] = useState<RepoEntry[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [loaded, setLoaded] = useState(false);
+    const [loadState, setLoadState] = useState({ loading: false, loaded: false });
+
+    // Identify if this folder corresponds to a running process
+    // We match process name or path
+    const isAppRoot = level === 0 && item.type === 'folder';
+    const relatedProcess = isAppRoot ? processes.find(p => {
+        if (!p.path) return false;
+        const normalizedP = p.path.replace(/\\/g, '/');
+        // Check if process path ends with the app folder name
+        return normalizedP.endsWith(`/${item.name}`) ||
+            normalizedP.endsWith(`/${item.path}`) ||
+            p.name === item.name ||
+            p.name === `Repo App ${item.name}` ||
+            p.metadata?.appName === item.name;
+    }) : undefined;
+
+    const isRunning = relatedProcess?.status === 'running';
 
     const toggleOpen = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (item.type !== 'folder') return;
-
         const nextOpen = !isOpen;
         setIsOpen(nextOpen);
-
-        if (nextOpen && !loaded) {
-            setLoading(true);
+        if (nextOpen && !loadState.loaded) {
+            setLoadState(s => ({ ...s, loading: true }));
             const result = await listRepoAppEntries(item.path);
             if (result.success && result.entries) {
-                const sorted = (result.entries as RepoEntry[]).sort((a, b) => {
+                const sorted = (result.entries as RepoEntry[]).sort((a: any, b: any) => {
                     if (a.type === b.type) return a.name.localeCompare(b.name);
                     return a.type === 'folder' ? -1 : 1;
                 });
                 setChildren(sorted);
-                setLoaded(true);
+                setLoadState(s => ({ ...s, loaded: true, loading: false }));
+            } else {
+                setLoadState(s => ({ ...s, loading: false }));
             }
-            setLoading(false);
         }
     };
 
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (item.type === 'folder') {
-            toggleOpen(e);
-        } else {
-            onSelect(item);
-        }
+        if (item.type === 'folder') toggleOpen(e);
+        else onSelect(item);
     };
-
-    const isAppRoot = level === 0 && item.type === 'folder';
 
     return (
         <div>
             <div
                 onClick={handleClick}
                 className={cn(
-                    "flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors text-white/60 hover:text-white hover:bg-white/5 select-none",
+                    "group flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors text-white/60 hover:text-white hover:bg-white/5 select-none",
                     activeFilePath === item.path ? "bg-blue-500/10 text-blue-300" : ""
                 )}
                 style={{ paddingLeft: `${level * 12 + 8}px` }}
             >
                 <div className="shrink-0 w-4 h-4 flex items-center justify-center">
                     {item.type === 'folder' && (
-                        loading ? <Loader2 size={10} className="animate-spin" /> :
+                        loadState.loading ? <Loader2 size={10} className="animate-spin" /> :
                             <ChevronRight size={12} className={cn("transition-transform", isOpen ? "rotate-90" : "")} />
                     )}
                 </div>
@@ -207,7 +257,29 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath }: { item: RepoEnt
                     )}
                 </div>
 
-                <span className="text-xs truncate">{item.name}</span>
+                <span className="text-xs truncate flex-1">{item.name}</span>
+
+                {isAppRoot && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                        <button
+                            onClick={() => onToggleApp(item.name, isRunning ? 'running' : 'stopped')}
+                            className={cn(
+                                "p-1 rounded hover:bg-white/20 transition-all",
+                                isRunning ? "text-red-400 hover:text-red-300" : "text-emerald-400 hover:text-emerald-300"
+                            )}
+                            title={isRunning ? "Stop App" : "Start App"}
+                        >
+                            {isRunning ? (
+                                <div className="w-2 h-2 bg-current rounded-sm" />
+                            ) : (
+                                <div className="w-0 h-0 border-l-[6px] border-l-current border-y-[4px] border-y-transparent border-r-0" />
+                            )}
+                        </button>
+                        {isRunning && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        )}
+                    </div>
+                )}
             </div>
 
             {isOpen && item.type === 'folder' && (
@@ -219,9 +291,11 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath }: { item: RepoEnt
                             level={level + 1}
                             onSelect={onSelect}
                             activeFilePath={activeFilePath}
+                            processes={processes}
+                            onToggleApp={onToggleApp}
                         />
                     ))}
-                    {children.length === 0 && !loading && (
+                    {children.length === 0 && !loadState.loading && (
                         <div className="py-1 px-4 text-[10px] text-white/20 italic" style={{ paddingLeft: `${(level + 1) * 12 + 24}px` }}>
                             Empty
                         </div>

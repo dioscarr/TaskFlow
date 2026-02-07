@@ -12,7 +12,7 @@ interface TerminalEntry {
     style?: 'success' | 'error' | 'info' | 'default';
 }
 
-export default function InteractiveTerminal({ onClose }: { onClose?: () => void }) {
+export default function InteractiveTerminal({ onClose, initialCommand }: { onClose?: () => void, initialCommand?: string }) {
     const [history, setHistory] = useState<TerminalEntry[]>([
         { type: 'response', content: 'TaskFlow Interactive Shell v1.2', style: 'info' },
         { type: 'response', content: 'Type "help" to see available commands.', style: 'default' }
@@ -21,6 +21,17 @@ export default function InteractiveTerminal({ onClose }: { onClose?: () => void 
     const [isExecuting, setIsExecuting] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const hasRunInitial = useRef(false);
+
+    useEffect(() => {
+        if (initialCommand && !hasRunInitial.current) {
+            hasRunInitial.current = true;
+            // Small delay to allow render
+            setTimeout(() => {
+                handleExecute(undefined, initialCommand);
+            }, 500);
+        }
+    }, [initialCommand]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -28,12 +39,13 @@ export default function InteractiveTerminal({ onClose }: { onClose?: () => void 
         }
     }, [history]);
 
-    const handleExecute = async (e?: React.FormEvent) => {
+    const handleExecute = async (e?: React.FormEvent, commandOverride?: string) => {
         if (e) e.preventDefault();
-        if (!input.trim() || isExecuting) return;
 
-        const cmd = input.trim();
-        setInput('');
+        const cmd = commandOverride || input.trim();
+        if (!cmd || isExecuting) return;
+
+        if (!commandOverride) setInput('');
         setHistory(prev => [...prev, { type: 'command', content: cmd }]);
         setIsExecuting(true);
 

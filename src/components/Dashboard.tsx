@@ -38,6 +38,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
     const [showVibeTerminal, setShowVibeTerminal] = useState(false);
     const [vibeRepoEntry, setVibeRepoEntry] = useState<RepoEntry | null>(null);
     const [showExplorer, setShowExplorer] = useState(true);
+    const [showVibeEditor, setShowVibeEditor] = useState(true);
     const searchParams = useSearchParams();
     const focusId = searchParams?.get('focus');
 
@@ -346,7 +347,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                     </div>
 
                     {/* Column 2: Editor & Terminal */}
-                    <div className="flex-1 flex min-w-0 border-r border-white/5">
+                    <div className={cn("flex-1 flex min-w-0 border-r border-white/5 transition-all duration-500 ease-in-out", !showVibeEditor && "w-0 flex-[0_0_0%] opacity-0 overflow-hidden border-none")}>
                         {/* File Explorer Side Panel */}
                         <div className={cn("border-r border-white/5 bg-[#050505] transition-all duration-300 overflow-hidden flex flex-col", showExplorer ? "w-64 opacity-100" : "w-0 opacity-0")}>
                             <VibeFileExplorer
@@ -436,7 +437,9 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                                         exit={{ height: 0, opacity: 0 }}
                                         className="border-t border-white/5 overflow-hidden"
                                     >
-                                        <InteractiveTerminal onClose={() => setShowVibeTerminal(false)} />
+                                        <InteractiveTerminal
+                                            onClose={() => setShowVibeTerminal(false)}
+                                        />
                                     </motion.div>
                                 )}
                             </AnimatePresence>
@@ -444,7 +447,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                     </div>
 
                     {/* Column 3: Preview */}
-                    <div className="w-[30%] h-full flex flex-col min-w-[350px]">
+                    <div className={cn("h-full flex flex-col min-w-[350px] transition-all duration-500 ease-in-out", showVibeEditor ? "w-[30%]" : "flex-1")}>
                         <div className="px-4 py-3 bg-black/40 border-b border-white/5 flex items-center justify-between">
                             <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">Live Preview</h3>
                             <div className="flex items-center gap-2">
@@ -460,6 +463,13 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                                 url={vibePreviewUrl}
                                 appName={vibeRepoEntry ? 'App' : (vibeFile?.name || 'Vibecall')}
                                 status={vibePreviewUrl ? 'ready' : 'idle'}
+                                onViewModeChange={(mode) => {
+                                    if (mode === 'desktop' || mode === 'tablet') {
+                                        setShowVibeEditor(false);
+                                    } else {
+                                        setShowVibeEditor(true);
+                                    }
+                                }}
                             />
                         </div>
                     </div>

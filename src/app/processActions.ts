@@ -314,7 +314,7 @@ CMD ["npm", "run", "${startScript}"]
                 // 4. Find Port (prefer reserved preview port when configured)
                 const previewPort = Number((global as any).process.env.PREVIEW_PORT || '');
                 const usePreviewPort = Number.isFinite(previewPort) && previewPort > 0;
-                let port = usePreviewPort ? previewPort : await getAvailablePort(5000, 5999);
+                let port = process.port || (usePreviewPort ? previewPort : await getAvailablePort(5000, 5999));
 
                 if (usePreviewPort) {
                     try {
@@ -334,71 +334,73 @@ CMD ["npm", "run", "${startScript}"]
                 const dockerfilePath = join(absAppPath, dockerFileName);
 
                 try {
-                    await execAsync(`docker rm -f ${containerName}`);
-                } catch {
-                    // ignore if container doesn't exist
-                }
-
-                try {
+                    await execAsync(`docker rm -f ${containerName}`).catch(() => { });
+                    // Try to build/run
                     await execAsync(`docker build -t ${imageName} -f "${dockerfilePath}" "${absAppPath}"`);
                     await execAsync(`docker run -d --name ${containerName} -p ${port}:${internalPort} ${imageName}`);
                 } catch (dockerError: any) {
                     console.error('Error starting docker container:', dockerError);
-                    return { success: false, message: 'Failed to start docker container' };
-                }
 
-                const updated = await prisma.processRegistry.update({
-                    where: { id },
-                    data: {
-                        status: 'running',
-                        port,
-                        startedAt: new Date(),
-                        stoppedAt: null,
-                        metadata: {
-                            ...process.metadata as any,
-                            startScript
+                    // Check for Docker Daemon failure
+                    const isDaemonError = dockerError.message?.includes('pipe') ||
+                        dockerError.message?.includes('connect') ||
+                        dockerError.message?.includes('daemon');
+
+                    if (isDaemonError && (meta?.source === 'repo-app' || process.type === 'docker-dev')) {
+                        console.log('⚠️ Docker Daemon unreachable. Falling back to local execution...');
+
+                        // Fallback to local
+                        const script = startScript || 'dev';
+
+                        // ensure dependencies
+                        try {
+                            // Check if node_modules exists to skip install if possible (for speed)
+                            const hasModules = await import('fs').then(fs => fs.existsSync(join(absAppPath, 'node_modules')));
+                            if (!hasModules) {
+                                console.log('Installing dependencies locally...');
+                                await execAsync('npm install', { cwd: absAppPath });
+                            }
+                        } catch (e) {
+                            console.error('Failed to install dependencies:', e);
+                            return { success: false, message: 'Docker is down and local install failed.' };
+                        }
+
+                        // Start Local
+                        let actualCmd = `npm run ${script}`;
+                        // Quick hack for vite
+                        if (actualCmd.includes('vite') || actualCmd.includes('dev')) {
+                            actualCmd += ` -- --port ${port} --host`;
+                        }
+
+                        const { exec } = await import('child_process');
+                        const child = exec(actualCmd, { cwd: absAppPath, env: { ...(global as any).process.env, PORT: port.toString() } });
+
+                        if (child.pid) {
+                            const updated = await prisma.processRegistry.update({
+                                where: { id },
+                                data: {
+                                    status: 'running',
+                                    port,
+                                    pid: child.pid, // Track local PID now
+                                    startedAt: new Date(),
+                                    stoppedAt: null,
+                                    metadata: {
+                                        ...process.metadata as any,
+                                        startScript,
+                                        mode: 'local-fallback' // Mark as fallback
+                                    }
+                                }
+                            });
+                            return { success: true, message: 'Docker unreachable. Started in Local Fallback mode.', process: deepSerialize(updated) };
                         }
                     }
-                });
 
-                return { success: true, process: deepSerialize(updated) };
-            }
-
-            if (containerName) {
-                try {
-                    await execAsync(`docker start ${containerName}`);
-                } catch (dockerError: any) {
-                    console.error('Error starting docker container:', dockerError);
-                    return { success: false, message: 'Failed to start docker container' };
+                    return { success: false, message: 'Failed to start docker container and fallback failed: ' + dockerError.message };
                 }
             }
-
-            const updated = await prisma.processRegistry.update({
-                where: { id },
-                data: {
-                    status: 'running',
-                    startedAt: new Date(),
-                    stoppedAt: null
-                }
-            });
-
-            return { success: true, process: deepSerialize(updated) };
         }
 
-        // This would need proper process spawning implementation
-        // For now, we'll just update the status
-        // In a real implementation, use child_process.spawn() and track the PID
-
-        const updated = await prisma.processRegistry.update({
-            where: { id },
-            data: {
-                status: 'running',
-                startedAt: new Date(),
-                stoppedAt: null
-            }
-        });
-
-        return { success: true, process: deepSerialize(updated), message: 'To start the process, run the command manually for now' };
+        return { success: false, message: 'Process configuration invalid or not supported for start.' };
     } catch (error: any) {
         console.error('Error starting process:', error);
         return { success: false, message: error.message };
@@ -706,10 +708,11 @@ export async function reconfigureProcessPort(processId: string) {
  * Manage App Lifecycle (Start/Stop/Restart)
  * Optimized for local web apps (Vite, Next.js, etc.)
  */
-export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'restart' | 'status', target?: string, script?: string }) {
+export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'restart' | 'status', target?: string, script?: string, stopOthers?: boolean }) {
     try {
         const user = await getDemoUser();
         const root = process.cwd();
+        // ... (existing variable declarations) ...
         let appPath = root;
         let appName = 'Root App';
 
@@ -741,7 +744,9 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
                 userId: user.id,
                 OR: [
                     { path: appPath },
-                    { path: `apps/${appName}` }
+                    { path: `apps/${appName}` },
+                    { name: processName },
+                    { name: appName } // Fallback match
                 ]
             }
         });
@@ -761,6 +766,31 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
         }
 
         if (args.action === 'start') {
+            // STOP OTHERS IF REQUESTED
+            if (args.stopOthers) {
+                const runningApps = await prisma.processRegistry.findMany({
+                    where: {
+                        userId: user.id,
+                        status: 'running',
+                        type: { in: ['docker-dev', 'repo-app', 'dev-server'] }, // Only stop apps, not system services
+                        NOT: { name: { contains: 'ngrok', mode: 'insensitive' } } // Don't stop tunnel services
+                    }
+                });
+
+                if (runningApps.length > 0) {
+                    console.log(`🛑 Stopping ${runningApps.length} other apps before start...`);
+                    await Promise.all(runningApps.map(app => stopProcess(app.id)));
+                    // Brief pause to ensure ports enable
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+
+                // Refresh proc in case we just stopped the target (if it was running)
+                if (proc) {
+                    const refreshed = await prisma.processRegistry.findUnique({ where: { id: proc.id } });
+                    if (refreshed) proc = refreshed;
+                }
+            }
+
             const previewPort = Number(process.env.PREVIEW_PORT || '');
             const usePreviewPort = Number.isFinite(previewPort) && previewPort > 0;
 

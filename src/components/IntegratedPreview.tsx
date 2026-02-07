@@ -33,6 +33,7 @@ interface IntegratedPreviewProps {
     onRestart?: () => void;
     embedded?: boolean;
     children?: React.ReactNode;
+    onViewModeChange?: (mode: 'desktop' | 'tablet' | 'mobile') => void;
 }
 
 const BOOT_STEPS = [
@@ -55,7 +56,8 @@ export default function IntegratedPreview({
     logs = [],
     onRestart,
     embedded = false,
-    children
+    children,
+    onViewModeChange
 }: IntegratedPreviewProps) {
     const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
     const [currentStep, setCurrentStep] = useState(0);
@@ -137,7 +139,11 @@ export default function IntegratedPreview({
                     ].map((mode) => (
                         <button
                             key={mode.id}
-                            onClick={() => setViewMode(mode.id as any)}
+                            onClick={() => {
+                                const newMode = mode.id as 'desktop' | 'tablet' | 'mobile';
+                                setViewMode(newMode);
+                                onViewModeChange?.(newMode);
+                            }}
                             className={cn(
                                 "p-1.5 rounded-lg transition-all",
                                 viewMode === mode.id
