@@ -3,8 +3,10 @@
 import prisma from '@/lib/prisma';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { readdir } from 'fs/promises';
+import { readdir, readFile, writeFile } from 'fs/promises';
+import { join } from 'path';
 import { listProcesses, manageAppLifecycle } from '@/app/processActions';
+import { headers } from 'next/headers';
 import {
     getFileContent,
     saveFileContent,
@@ -18,6 +20,63 @@ export type TerminalResponse = {
     output: string;
     type: 'success' | 'error' | 'info';
     previewUrl?: string;
+    localUrl?: string;
+    forwardedUrl?: string;
+};
+
+const buildForwardedUrl = async (port: number) => {
+    try {
+        const h = await headers();
+        const host = h.get('x-forwarded-host') || h.get('host') || '';
+        const proto = h.get('x-forwarded-proto') || 'https';
+
+        const match = host.match(/^([a-z0-9-]+)-(\d+)\.use\.devtunnels\.ms$/i);
+        if (!match) return undefined;
+
+        const base = match[1];
+        return `${proto}://${base}-${port}.use.devtunnels.ms`;
+    } catch {
+        return undefined;
+    }
+};
+
+const fetchNgrokTunnels = async (): Promise<string[] | null> => {
+    try {
+        const res = await fetch('http://127.0.0.1:4040/api/tunnels');
+        if (!res.ok) return null;
+        const data = await res.json();
+        const urls = Array.isArray(data?.tunnels)
+            ? data.tunnels.map((t: any) => t?.public_url).filter(Boolean)
+            : [];
+        return urls.length ? urls : null;
+    } catch {
+        return null;
+    }
+};
+
+const updateEnvPort = async (port: number) => {
+    try {
+        const envPath = join(process.cwd(), '.env');
+        const raw = await readFile(envPath, 'utf-8');
+        const lines = raw.split(/\r?\n/);
+        let updated = false;
+
+        const nextLines = lines.map(line => {
+            if (line.startsWith('NGROK_PORT=')) {
+                updated = true;
+                return `NGROK_PORT=${port}`;
+            }
+            return line;
+        });
+
+        if (!updated) {
+            nextLines.push(`NGROK_PORT=${port}`);
+        }
+
+        await writeFile(envPath, nextLines.join('\n'));
+    } catch {
+        // Ignore env update errors; ngrok can still start if env is already set
+    }
 };
 
 export async function runShellCommand(commandLine: string, currentPath: string = ''): Promise<TerminalResponse> {
@@ -40,6 +99,7 @@ Available Commands:
 - apps                 : List your applications
 - run <name>           : Run an application (Docker/Local)
 - stop <name>          : Stop a running application
+- tunnel [status|start|stop] : Manage ngrok tunnel
 - scaffold <name>      : Create a new Vite app
 - processes           : List running services
 - db <query>           : Run raw SQL (careful!)
@@ -60,14 +120,50 @@ Available Commands:
                 // Let's assume the last arg is the target if multiple words, unless specific keywords.
 
                 let appTarget = args[args.length - 1]; // "run call" -> "call"
-                if (args.includes('call')) appTarget = 'call';
+
+                // Smart Resolution: Check against actual apps
+                try {
+                    const appsDir = await readdir(join(process.cwd(), 'apps'), { withFileTypes: true });
+                    const knownApps = appsDir.filter(d => d.isDirectory()).map(d => d.name);
+
+                    // 1. Check if any arg matches exactly
+                    const exactArg = args.find(a => knownApps.includes(a));
+                    if (exactArg) {
+                        appTarget = exactArg;
+                    } else {
+                        // 2. Fuzzy / Prefix Matching
+                        // e.g. "run salon-premiu" -> "salon-premium"
+                        const targetLower = appTarget.toLowerCase();
+                        const match = knownApps.find(a =>
+                            a.toLowerCase() === targetLower ||
+                            a.toLowerCase().startsWith(targetLower) ||
+                            targetLower.startsWith(a.toLowerCase()) // reverse check rarely needed but good for "salon-premium-app" -> "salon-premium"
+                        );
+
+                        if (match) {
+                            appTarget = match;
+                        }
+                    }
+                } catch (e) {
+                    // Ignore fs errors, fallback to basic
+                }
 
                 const startRes = await manageAppLifecycle({ action: 'start', target: appTarget });
                 if (startRes.success) {
+                    const port = startRes.process?.port as number | undefined;
+                    const localUrl = port ? `http://localhost:${port}` : undefined;
+                    const forwardedUrl = port ? await buildForwardedUrl(port) : undefined;
+                    const urlLines = [
+                        localUrl ? `Local: ${localUrl}` : null,
+                        forwardedUrl ? `Forwarded: ${forwardedUrl}` : null
+                    ].filter(Boolean).join('\n');
+
                     return {
                         type: 'success',
-                        output: `🚀 App ${startRes.process?.name} is running!\nURL: ${(startRes as any).previewUrl || 'N/A'}\nPID: ${startRes.process?.pid || 'Container'}`,
-                        previewUrl: (startRes as any).previewUrl
+                        output: `🚀 App ${startRes.process?.name} is running!\n${urlLines || 'URL: N/A'}\nPID: ${startRes.process?.pid || 'Container'}`,
+                        previewUrl: localUrl || (startRes as any).previewUrl,
+                        localUrl,
+                        forwardedUrl
                     };
                 }
                 return { type: 'error', output: `❌ Failed to start: ${startRes.message}` };
@@ -80,6 +176,44 @@ Available Commands:
                     return { type: 'success', output: `🛑 Stopped ${stopRes.process?.name}` };
                 }
                 return { type: 'error', output: `❌ Failed to stop: ${stopRes.message}` };
+
+            case 'tunnel': {
+                const action = (args[0] || 'status').toLowerCase();
+
+                if (action === 'start') {
+                    try {
+                        const portArg = args[1] || args[0];
+                        const parsedPort = Number(portArg);
+                        const previewPort = Number(process.env.PREVIEW_PORT || '');
+                        const desiredPort = Number.isFinite(parsedPort) && parsedPort > 0
+                            ? parsedPort
+                            : (Number.isFinite(previewPort) && previewPort > 0 ? previewPort : 5050);
+
+                        await updateEnvPort(desiredPort);
+                        const { stdout, stderr } = await execAsync('docker compose -f docker-compose.ngrok.yml up -d');
+                        const tunnels = await fetchNgrokTunnels();
+                        const urlLines = tunnels?.map(u => `• ${u}`).join('\n') || 'No tunnels detected yet. Check http://127.0.0.1:4040.';
+                        return { type: 'success', output: `✅ Ngrok started (port ${desiredPort}).\n${urlLines}\n${stderr || ''}${stdout || ''}`.trim() };
+                    } catch (e: any) {
+                        return { type: 'error', output: `❌ Failed to start ngrok: ${e.message}` };
+                    }
+                }
+
+                if (action === 'stop') {
+                    try {
+                        const { stdout, stderr } = await execAsync('docker compose -f docker-compose.ngrok.yml down');
+                        return { type: 'success', output: `🛑 Ngrok stopped.\n${stderr || ''}${stdout || ''}`.trim() };
+                    } catch (e: any) {
+                        return { type: 'error', output: `❌ Failed to stop ngrok: ${e.message}` };
+                    }
+                }
+
+                const tunnels = await fetchNgrokTunnels();
+                if (!tunnels) {
+                    return { type: 'info', output: 'No ngrok tunnel detected. Try: tunnel start' };
+                }
+                return { type: 'success', output: `🌐 Ngrok URLs:\n${tunnels.map(u => `• ${u}`).join('\n')}` };
+            }
 
             case 'agent':
                 if (!args.length) return { type: 'error', output: 'Usage: agent <objective>' };
@@ -141,6 +275,45 @@ Available Commands:
                 return { type: 'info', output: '⚡ TaskFlow Status: OPERATIONAL\nAgents: 12 Active\nDatabase: Connected\nFrontend: Vibe Mode Enabled' };
 
             default:
+                // Check if the command matches a known app (Smart Launcher)
+                try {
+                    const appsDir = await readdir(join(process.cwd(), 'apps'), { withFileTypes: true });
+                    const knownApps = appsDir.filter(d => d.isDirectory()).map(d => d.name);
+
+                    // Logic from 'run' command: Exact or Fuzzy Match
+                    const targetLower = cmd.toLowerCase();
+                    const match = knownApps.find(a =>
+                        a.toLowerCase() === targetLower ||
+                        a.toLowerCase().startsWith(targetLower)
+                    );
+
+                    if (match) {
+                        // Found an app! "Run" it.
+                        const startRes = await manageAppLifecycle({ action: 'start', target: match });
+                        if (startRes.success) {
+                            const port = startRes.process?.port as number | undefined;
+                            const localUrl = port ? `http://localhost:${port}` : undefined;
+                            const forwardedUrl = port ? await buildForwardedUrl(port) : undefined;
+                            const urlLines = [
+                                localUrl ? `Local: ${localUrl}` : null,
+                                forwardedUrl ? `Forwarded: ${forwardedUrl}` : null
+                            ].filter(Boolean).join('\n');
+
+                            return {
+                                type: 'success',
+                                output: `🚀 App ${startRes.process?.name} is running!\n${urlLines || 'URL: N/A'}\nPID: ${startRes.process?.pid || 'Container'}`,
+                                previewUrl: localUrl || (startRes as any).previewUrl,
+                                localUrl,
+                                forwardedUrl
+                            };
+                        }
+                        return { type: 'error', output: `❌ Failed to start app '${match}': ${startRes.message}` };
+                    }
+
+                } catch (e) {
+                    // Ignore fs errors, fall through to system command
+                }
+
                 // Attempt a real system command for basic support
                 try {
                     const { stdout, stderr } = await execAsync(commandLine, { timeout: 5000 });

@@ -5,6 +5,12 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb',
+      allowedOrigins: [
+        'localhost:3000',
+        'localhost:5000',
+        '*.devtunnels.ms',
+        'vscode-app.net'
+      ],
     },
   },
 };

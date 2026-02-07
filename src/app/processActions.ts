@@ -13,6 +13,7 @@ import {
     isDockerProcess,
     execAsync,
     getAvailablePort,
+    isPortAvailable,
     resolveStartScript
 } from '@/lib/processActionsCore';
 
@@ -754,8 +755,26 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
             const script = args.script || (pkg.scripts?.dev ? 'dev' : pkg.scripts?.start ? 'start' : null);
             if (!script) return { success: false, message: 'No "dev" or "start" script found in package.json' };
 
-            // 4. Find Port
-            const port = await getAvailablePort(5000, 5999);
+            // 4. Find Port (prefer reserved preview port when configured)
+            const previewPort = Number(process.env.PREVIEW_PORT || '');
+            const usePreviewPort = Number.isFinite(previewPort) && previewPort > 0;
+            let port = usePreviewPort ? previewPort : await getAvailablePort(5000, 5999);
+
+            if (usePreviewPort && !(await isPortAvailable(previewPort))) {
+                const existingOnPort = await prisma.processRegistry.findFirst({
+                    where: { userId: user.id, port: previewPort }
+                });
+
+                if (existingOnPort) {
+                    await stopProcess(existingOnPort.id);
+                }
+
+                if (!(await isPortAvailable(previewPort))) {
+                    return { success: false, message: `Preview port ${previewPort} is already in use` };
+                }
+
+                port = previewPort;
+            }
 
             // 5. Construct Command (Framework Aware)
             let actualCmd = `npm run ${script}`;

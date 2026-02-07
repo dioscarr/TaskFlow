@@ -20,5 +20,20 @@
     },
     "peacock.color": "#8c00f1",
     "python-envs.defaultEnvManager": "ms-python.python:system",
-    "python-envs.pythonProjects": []
+    "python-envs.pythonProjects": [],
+    "remote.autoForwardPorts": true,
+    "remote.portsAttributes": {
+        "5001": {
+            "label": "App 5001",
+            "onAutoForward": "silent"
+        },
+        "5002": {
+            "label": "App 5002",
+            "onAutoForward": "silent"
+        },
+        "5003": {
+            "label": "App 5003",
+            "onAutoForward": "silent"
+        }
+    }
 }
