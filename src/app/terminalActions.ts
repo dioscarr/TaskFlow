@@ -153,17 +153,28 @@ Available Commands:
                     const port = startRes.process?.port as number | undefined;
                     const localUrl = port ? `http://localhost:${port}` : undefined;
                     const forwardedUrl = port ? await buildForwardedUrl(port) : undefined;
+
+                    // Check for Ngrok
+                    let ngrokUrl: string | undefined;
+                    const tunnels = await fetchNgrokTunnels();
+                    if (tunnels && tunnels.length > 0) {
+                        // If we have a tunnel, it's likely for the active preview port
+                        ngrokUrl = tunnels[0];
+                    }
+
                     const urlLines = [
                         localUrl ? `Local: ${localUrl}` : null,
-                        forwardedUrl ? `Forwarded: ${forwardedUrl}` : null
+                        forwardedUrl ? `DevTunnel: ${forwardedUrl}` : null,
+                        ngrokUrl ? `Ngrok: ${ngrokUrl}` : null
                     ].filter(Boolean).join('\n');
 
                     return {
                         type: 'success',
                         output: `🚀 App ${startRes.process?.name} is running!\n${urlLines || 'URL: N/A'}\nPID: ${startRes.process?.pid || 'Container'}`,
-                        previewUrl: localUrl || (startRes as any).previewUrl,
+                        // Prioritize Ngrok -> DevTunnel -> Local
+                        previewUrl: ngrokUrl || forwardedUrl || localUrl || (startRes as any).previewUrl,
                         localUrl,
-                        forwardedUrl
+                        forwardedUrl: ngrokUrl || forwardedUrl
                     };
                 }
                 return { type: 'error', output: `❌ Failed to start: ${startRes.message}` };
@@ -294,17 +305,27 @@ Available Commands:
                             const port = startRes.process?.port as number | undefined;
                             const localUrl = port ? `http://localhost:${port}` : undefined;
                             const forwardedUrl = port ? await buildForwardedUrl(port) : undefined;
+
+                            // Check for Ngrok
+                            let ngrokUrl: string | undefined;
+                            const tunnels = await fetchNgrokTunnels();
+                            if (tunnels && tunnels.length > 0) {
+                                ngrokUrl = tunnels[0];
+                            }
+
                             const urlLines = [
                                 localUrl ? `Local: ${localUrl}` : null,
-                                forwardedUrl ? `Forwarded: ${forwardedUrl}` : null
+                                forwardedUrl ? `DevTunnel: ${forwardedUrl}` : null,
+                                ngrokUrl ? `Ngrok: ${ngrokUrl}` : null
                             ].filter(Boolean).join('\n');
 
                             return {
                                 type: 'success',
                                 output: `🚀 App ${startRes.process?.name} is running!\n${urlLines || 'URL: N/A'}\nPID: ${startRes.process?.pid || 'Container'}`,
-                                previewUrl: localUrl || (startRes as any).previewUrl,
+                                // Prioritize Ngrok -> DevTunnel -> Local
+                                previewUrl: ngrokUrl || forwardedUrl || localUrl || (startRes as any).previewUrl,
                                 localUrl,
-                                forwardedUrl
+                                forwardedUrl: ngrokUrl || forwardedUrl
                             };
                         }
                         return { type: 'error', output: `❌ Failed to start app '${match}': ${startRes.message}` };

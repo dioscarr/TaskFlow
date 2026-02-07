@@ -235,10 +235,8 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
     };
 
     return (
-        <Layout>
-            <CreateTaskModal />
-
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 p-1 bg-black/40 backdrop-blur-md border border-white/5 rounded-lg shadow-xl overflow-hidden max-w-full">
+        <Layout headerCenter={
+            <div className="flex items-center gap-1 p-1 bg-black/40 backdrop-blur-md border border-white/5 rounded-lg shadow-xl overflow-hidden max-w-full">
                 <button
                     onClick={() => setViewMode('zen')}
                     className={cn(
@@ -282,6 +280,8 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                     {viewMode === 'vibe' && <span className="text-[10px] font-bold uppercase tracking-widest mr-1">Vibe</span>}
                 </button>
             </div>
+        }>
+            <CreateTaskModal />
 
             {viewMode === 'zen' && (
                 <div className="w-full h-full animate-in fade-in duration-500">

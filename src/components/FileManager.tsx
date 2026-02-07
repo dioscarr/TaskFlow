@@ -187,7 +187,7 @@ export default function FileManager({ files }: FileManagerProps) {
                         p.metadata?.appName === previewAppName
                     );
                     if (currentApp && currentApp.status === 'running' && currentApp.port) {
-                        const url = `http://localhost:${currentApp.port}`;
+                        const url = (currentApp.metadata as any)?.publicUrl || `http://localhost:${currentApp.port}`;
                         setPreviewUrl(url);
                         setPreviewStatus('ready');
                         window.dispatchEvent(new CustomEvent('set-vibe-preview', { detail: url }));

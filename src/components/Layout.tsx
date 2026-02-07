@@ -24,7 +24,7 @@ export function useFocus() {
     return context;
 }
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Layout({ children, headerCenter }: { children: React.ReactNode, headerCenter?: React.ReactNode }) {
     const [focusedItem, setFocusedItemState] = useState<TaskWithData | null>(null);
 
     const isFocused = !!focusedItem;
@@ -65,13 +65,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         isFocused ? "scale-90 opacity-40 pointer-events-none blur-sm" : "opacity-100"
                     )}>
                         {/* Navbar */}
-                        <header className="flex items-center justify-between px-6 py-4 sticky top-0 z-20 border-b border-white/5 bg-black/5 backdrop-blur-sm overflow-hidden max-w-full">
+                        <header className="relative flex items-center justify-between px-6 py-4 sticky top-0 z-20 border-b border-white/5 bg-black/5 backdrop-blur-sm overflow-hidden max-w-full">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg shadow-blue-500/20 flex items-center justify-center font-bold text-white">
                                     T
                                 </div>
                                 <span className="text-lg font-bold tracking-tight text-white">TaskFlow</span>
                             </div>
+
+                            {/* Centered Content Injection */}
+                            {headerCenter && (
+                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30">
+                                    {headerCenter}
+                                </div>
+                            )}
 
                             <div className="flex items-center gap-6">
                                 <nav className="hidden md:flex gap-6 text-sm font-medium text-white/60">

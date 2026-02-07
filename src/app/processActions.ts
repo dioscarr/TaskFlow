@@ -223,18 +223,36 @@ export async function startProcess(id: string) {
             const appPath = meta?.appPath as string | undefined;
             const imageName = meta?.imageName as string | undefined;
 
-            if (meta?.source === 'repo-app' && appPath && containerName && imageName) {
+            if ((meta?.source === 'repo-app' || process.type === 'docker-dev') && appPath && containerName && imageName) {
+                // Ensure allowedHosts is set for NGrok
+                try {
+                    const viteConfigPath = join(appPath, 'vite.config.ts');
+                    const viteConfig = await readFile(viteConfigPath, 'utf-8');
+                    if (!viteConfig.includes('allowedHosts: true')) {
+                        const newConfig = viteConfig.replace('plugins: [react()],', 'plugins: [react()],\n  server: { allowedHosts: true, host: true },');
+                        if (newConfig !== viteConfig) {
+                            await writeFile(viteConfigPath, newConfig);
+                        }
+                    }
+                } catch (e) {
+                    // Ignore config update errors
+                }
+
                 let internalPort = 3000;
                 let dockerFileName = 'Dockerfile.taskflow';
                 let useExistingDockerfile = false;
 
                 const forcedDockerFile = (meta?.dockerFile as string | undefined);
 
+                // Access global process for cwd, avoiding shadow
+                const currentDir = (global as any).process.cwd();
+                const absAppPath = (process as any).type === 'docker-dev' && appPath ? join(currentDir, appPath) : appPath || '';
+
                 if (forcedDockerFile) {
                     dockerFileName = forcedDockerFile;
                     useExistingDockerfile = true;
                     try {
-                        const content = await readFile(join(appPath, forcedDockerFile), 'utf-8');
+                        const content = await readFile(join(absAppPath, forcedDockerFile), 'utf-8');
                         const exposeMatch = content.match(/EXPOSE\s+(\d+)/);
                         if (exposeMatch) {
                             internalPort = parseInt(exposeMatch[1]);
@@ -245,7 +263,7 @@ export async function startProcess(id: string) {
                 } else {
                     // Check if a custom Dockerfile exists
                     try {
-                        const existingDockerfileContent = await readFile(join(appPath, 'Dockerfile'), 'utf-8');
+                        const existingDockerfileContent = await readFile(join(absAppPath, 'Dockerfile'), 'utf-8');
                         useExistingDockerfile = true;
                         dockerFileName = 'Dockerfile';
 
@@ -266,7 +284,7 @@ export async function startProcess(id: string) {
                 if (!useExistingDockerfile) {
                     if (!startScript) {
                         try {
-                            const pkgRaw = await readFile(join(appPath, 'package.json'), 'utf-8');
+                            const pkgRaw = await readFile(join(absAppPath, 'package.json'), 'utf-8');
                             const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
                             startScript = resolveStartScript(pkg.scripts || null) || undefined;
                         } catch {
@@ -278,7 +296,7 @@ export async function startProcess(id: string) {
                         return { success: false, message: 'package.json is missing a start/preview/dev script' };
                     }
 
-                    const dockerfilePath = join(appPath, 'Dockerfile.taskflow');
+                    const dockerfilePath = join(absAppPath, 'Dockerfile.taskflow');
                     const dockerfile = `FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
@@ -293,8 +311,27 @@ CMD ["npm", "run", "${startScript}"]
                     await writeFile(dockerfilePath, dockerfile);
                 }
 
-                const port = await getAvailablePort();
-                const dockerfilePath = join(appPath, dockerFileName);
+                // 4. Find Port (prefer reserved preview port when configured)
+                const previewPort = Number((global as any).process.env.PREVIEW_PORT || '');
+                const usePreviewPort = Number.isFinite(previewPort) && previewPort > 0;
+                let port = usePreviewPort ? previewPort : await getAvailablePort(5000, 5999);
+
+                if (usePreviewPort) {
+                    try {
+                        // Kill anything on this port first
+                        // Windows/Powershell way
+                        await execAsync(`powershell -Command "Stop-Process -Id (Get-NetTCPConnection -LocalPort ${port}).OwningProcess -Force"`);
+                    } catch (e) {
+                        // Ignore if nothing running
+                    }
+                    // Also try docker stop if we can find container by port... hard to do generically without query
+                    // But if we rebuild/run with same name, docker rm -f below handles it for THIS app.
+                    // For OTHER apps on same port? User has to rely on the kill command above?
+                    // Actually, if we use the same port, docker run will fail if port is bound.
+                    // So we must ensure it's free.
+                }
+
+                const dockerfilePath = join(absAppPath, dockerFileName);
 
                 try {
                     await execAsync(`docker rm -f ${containerName}`);
@@ -303,7 +340,7 @@ CMD ["npm", "run", "${startScript}"]
                 }
 
                 try {
-                    await execAsync(`docker build -t ${imageName} -f "${dockerfilePath}" "${appPath}"`);
+                    await execAsync(`docker build -t ${imageName} -f "${dockerfilePath}" "${absAppPath}"`);
                     await execAsync(`docker run -d --name ${containerName} -p ${port}:${internalPort} ${imageName}`);
                 } catch (dockerError: any) {
                     console.error('Error starting docker container:', dockerError);
@@ -700,7 +737,13 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
 
         // Find existing process registry
         let proc = await prisma.processRegistry.findFirst({
-            where: { userId: user.id, path: appPath }
+            where: {
+                userId: user.id,
+                OR: [
+                    { path: appPath },
+                    { path: `apps/${appName}` }
+                ]
+            }
         });
 
         if (args.action === 'status') {
@@ -718,13 +761,24 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
         }
 
         if (args.action === 'start') {
+            const previewPort = Number(process.env.PREVIEW_PORT || '');
+            const usePreviewPort = Number.isFinite(previewPort) && previewPort > 0;
+
             if (proc && proc.status === 'running') {
-                return {
-                    success: true,
-                    message: `App is already running on port ${proc.port}`,
-                    previewUrl: `http://localhost:${proc.port}`,
-                    process: deepSerialize(proc)
-                };
+                // If we enforce a preview port, and this app is running on a different port,
+                // we should consider it "not running" effectively, and force a restart on the correct port.
+                if (usePreviewPort && proc.port !== previewPort) {
+                    console.log(`App ${proc.name} running on ${proc.port}, but needed on ${previewPort}. Restarting...`);
+                    await stopProcess(proc.id);
+                    // proc is now stopped, fall through to start logic
+                } else {
+                    return {
+                        success: true,
+                        message: `App is already running on port ${proc.port}`,
+                        previewUrl: `http://localhost:${proc.port}`,
+                        process: deepSerialize(proc)
+                    };
+                }
             }
 
             // 1. Delegate to startProcess if already registered (handles Docker correctly)
@@ -756,8 +810,7 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
             if (!script) return { success: false, message: 'No "dev" or "start" script found in package.json' };
 
             // 4. Find Port (prefer reserved preview port when configured)
-            const previewPort = Number(process.env.PREVIEW_PORT || '');
-            const usePreviewPort = Number.isFinite(previewPort) && previewPort > 0;
+            // variables previewPort and usePreviewPort are already declared above
             let port = usePreviewPort ? previewPort : await getAvailablePort(5000, 5999);
 
             if (usePreviewPort && !(await isPortAvailable(previewPort))) {
@@ -843,5 +896,138 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
     } catch (e: any) {
         console.error('manageAppLifecycle error:', e);
         return { success: false, message: `Error: ${e.message}` };
+    }
+}
+
+/**
+ * Toggle Public Access (Ngrok Tunnel)
+ */
+export async function togglePublicAccess(id: string) {
+    try {
+        const user = await getDemoUser();
+        const process = await prisma.processRegistry.findFirst({
+            where: { id, userId: user.id }
+        });
+
+        if (!process) {
+            return { success: false, message: 'Process not found' };
+        }
+
+        const meta = (process.metadata as any) || {};
+        const currentPublicUrl = meta.publicUrl;
+        const ngrokContainerName = `ngrok-${process.id}`;
+
+        // IF PUBLIC URL EXISTS -> STOP TUNNEL
+        if (currentPublicUrl) {
+            try {
+                await execAsync(`docker rm -f ${ngrokContainerName}`);
+            } catch (e) {
+                // Ignore if already gone
+            }
+
+            const updated = await prisma.processRegistry.update({
+                where: { id },
+                data: {
+                    metadata: {
+                        ...meta,
+                        publicUrl: undefined,
+                        publicUrlId: undefined
+                    }
+                }
+            });
+
+            return { success: true, isPublic: false, process: deepSerialize(updated) };
+        }
+
+        // IF NO PUBLIC URL -> START TUNNEL
+        if (!process.port) {
+            return { success: false, message: 'Process has no port assigned' };
+        }
+
+        const authToken = (global as any).process.env.NGROK_AUTHTOKEN;
+        if (!authToken) {
+            return { success: false, message: 'NGROK_AUTHTOKEN not configured' };
+        }
+
+        // 1. Start Ngrok Container
+        // We look for host.docker.internal to access the app on the host machine
+        // We use -P to publish the API port (4040) to a random host port
+        try {
+            // Clean up any stale container
+            await execAsync(`docker rm -f ${ngrokContainerName}`).catch(() => { });
+
+            await execAsync(
+                `docker run -d --name ${ngrokContainerName} -P -e NGROK_AUTHTOKEN=${authToken} ngrok/ngrok http host.docker.internal:${process.port}`
+            );
+        } catch (e: any) {
+            console.error('Failed to start ngrok container', e);
+            return { success: false, message: 'Failed to start tunnel container' };
+        }
+
+        // 2. Wait for it to initialize
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // 3. Find the API port
+        let apiPort = 0;
+        try {
+            const { stdout } = await execAsync(`docker port ${ngrokContainerName} 4040`);
+            // Output format depends on OS, usually 0.0.0.0:32768
+            const match = stdout.match(/:(\d+)/);
+            if (match) {
+                apiPort = parseInt(match[1]);
+            }
+        } catch (e) {
+            await execAsync(`docker rm -f ${ngrokContainerName}`);
+            return { success: false, message: 'Failed to detect tunnel port' };
+        }
+
+        if (!apiPort) {
+            await execAsync(`docker rm -f ${ngrokContainerName}`);
+            return { success: false, message: 'Failed to detect tunnel port' };
+        }
+
+        // 4. Query Ngrok API for Public URL
+        let publicUrl = '';
+        try {
+            const res = await fetch(`http://localhost:${apiPort}/api/tunnels`);
+            const data = await res.json();
+            publicUrl = data.tunnels?.[0]?.public_url;
+        } catch (e) {
+            console.error('Failed to fetch tunnels from ngrok api', e);
+        }
+
+        if (!publicUrl) {
+            // Try one more time with a slightly longer delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            try {
+                const res = await fetch(`http://localhost:${apiPort}/api/tunnels`);
+                const data = await res.json();
+                publicUrl = data.tunnels?.[0]?.public_url;
+            } catch (e) { }
+        }
+
+        if (!publicUrl) {
+            await execAsync(`docker rm -f ${ngrokContainerName}`);
+            return { success: false, message: 'Failed to obtain public URL from tunnel' };
+        }
+
+        // 5. Update Registry
+        const updated = await prisma.processRegistry.update({
+            where: { id },
+            data: {
+                metadata: {
+                    ...meta,
+                    publicUrl,
+                    ngrokContainer: ngrokContainerName,
+                    ngrokApiPort: apiPort
+                }
+            }
+        });
+
+        return { success: true, isPublic: true, publicUrl, process: deepSerialize(updated) };
+
+    } catch (error: any) {
+        console.error('Error toggling public access:', error);
+        return { success: false, message: error.message };
     }
 }

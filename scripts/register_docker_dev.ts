@@ -45,7 +45,8 @@ async function main() {
                     containerName: 'taskflow-call-dev',
                     imageName: 'taskflow-call-dev',
                     dockerFile: 'Dockerfile.dev',
-                    startScript: 'dev'
+                    startScript: 'dev',
+                    publicUrl: undefined  // Reset public URL on re-registration
                 },
                 userId: user.id
             }
