@@ -153,7 +153,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                     import('@/app/processActions').then(async ({ listProcesses, stopProcess }) => {
                         const { processes } = await listProcesses();
                         // Find processes matching the old root
-                        const toStop = processes.filter((p: any) =>
+                        const toStop = (processes || []).filter((p: any) =>
                             p.status === 'running' &&
                             (p.path?.includes(lastRoot) || p.metadata?.appPath?.includes(lastRoot))
                         );
@@ -232,7 +232,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                         {parentAppEntry && (
                             <button
                                 onClick={() => setPreviewContent(parentAppEntry as any)}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-medium text-foreground/70 hover:text-foreground transition-colors"
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-full theme-overlay-medium hover:theme-overlay-strong text-xs font-medium text-foreground/70 hover:text-foreground transition-colors"
                             >
                                 <Folder size={12} className="rotate-180" />
                                 Parent App
@@ -264,12 +264,12 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
 
     return (
         <Layout headerCenter={
-            <div className="relative flex items-center gap-1 p-1.5 bg-[color:var(--card)] backdrop-blur-xl border border-[color:var(--border)] rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.45)] overflow-hidden max-w-full before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-r before:from-white/5 before:via-transparent before:to-white/10 before:pointer-events-none">
+            <div className="relative flex items-center gap-1 p-1.5 bg-[color:var(--card)] backdrop-blur-xl border border-[color:var(--border)] rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.45)] overflow-hidden max-w-full before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-r before:from-[var(--overlay-subtle)] before:via-transparent before:to-[var(--overlay-medium)] before:pointer-events-none">
                 <button
                     onClick={() => setViewMode('zen')}
                     className={cn(
                         "p-2 rounded-lg transition-all group",
-                        viewMode === 'zen' ? "bg-white/15 text-foreground shadow-sm" : "text-foreground/40 hover:text-foreground hover:bg-white/5"
+                        viewMode === 'zen' ? "theme-overlay-strong text-foreground shadow-sm" : "text-foreground/40 hover:text-foreground hover:theme-overlay-subtle"
                     )}
                     title="Zen Chat"
                 >
@@ -279,7 +279,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                     onClick={() => setViewMode('split')}
                     className={cn(
                         "p-2 rounded-lg transition-all",
-                        viewMode === 'split' ? "bg-white/15 text-foreground shadow-sm" : "text-foreground/40 hover:text-foreground hover:bg-white/5"
+                        viewMode === 'split' ? "theme-overlay-strong text-foreground shadow-sm" : "text-foreground/40 hover:text-foreground hover:theme-overlay-subtle"
                     )}
                     title="Split View"
                 >
@@ -289,7 +289,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                     onClick={() => setViewMode('classic')}
                     className={cn(
                         "p-2 rounded-lg transition-all",
-                        viewMode === 'classic' ? "bg-white/15 text-foreground shadow-sm border border-white/15" : "text-foreground/40 hover:text-foreground hover:bg-white/5"
+                        viewMode === 'classic' ? "theme-overlay-strong text-foreground shadow-sm border theme-border-strong" : "text-foreground/40 hover:text-foreground hover:theme-overlay-subtle"
                     )}
                     title="Apps & Files"
                 >
@@ -300,7 +300,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                     onClick={() => setViewMode('vibe')}
                     className={cn(
                         "p-2 rounded-lg transition-all flex items-center gap-2",
-                        viewMode === 'vibe' ? "bg-emerald-500/20 text-emerald-200 shadow-sm border border-emerald-500/30" : "text-foreground/40 hover:text-foreground hover:bg-white/5"
+                        viewMode === 'vibe' ? "bg-emerald-500/20 text-emerald-200 shadow-sm border border-emerald-500/30" : "text-foreground/40 hover:text-foreground hover:theme-overlay-subtle"
                     )}
                     title="Vibe Mode (Full IDE)"
                 >
@@ -344,7 +344,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                                 {typeof previewContent !== 'string' && renderPreview()}
                             </IntegratedPreview>
                         ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center text-white/20 gap-4">
+                            <div className="w-full h-full flex flex-col items-center justify-center theme-text-quaternary gap-4">
                                 <LayoutIcon size={48} className="opacity-50" />
                                 <p className="font-medium">Select a file to preview</p>
                             </div>
@@ -356,7 +356,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
             {viewMode === 'vibe' && (
                 <div className="w-full h-full flex items-stretch animate-in fade-in duration-700 bg-[#050505]">
                     {/* Column 1: Chat */}
-                    <div className="w-[30%] border-r border-white/5 h-full flex flex-col min-w-[350px]">
+                    <div className="w-[30%] border-r theme-border-subtle h-full flex flex-col min-w-[350px]">
                         <div className="flex-1 overflow-hidden relative">
                             <AIChat
                                 embedded
@@ -368,7 +368,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                                 } as any : vibeFile}
                                 activeApp={vibeRepoEntry ? { name: vibeRepoEntry.path.split('/')[0] || 'App', path: vibeRepoEntry.path.split('/')[0] || '' } : null}
                                 headerRight={
-                                    <div className="flex items-center gap-2 mr-4 border-r border-white/5 pr-4">
+                                    <div className="flex items-center gap-2 mr-4 border-r theme-border-subtle pr-4">
                                         <button className="p-1 px-2 rounded bg-emerald-500/10 text-emerald-400 text-[8px] font-black uppercase tracking-widest border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors">Voice Mode</button>
                                         <Activity size={12} className="text-emerald-500/50" />
                                     </div>
@@ -378,9 +378,9 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                     </div>
 
                     {/* Column 2: Editor & Terminal */}
-                    <div className={cn("flex-1 flex min-w-0 border-r border-white/5 transition-all duration-500 ease-in-out", !showVibeEditor && "w-0 flex-[0_0_0%] opacity-0 overflow-hidden border-none")}>
+                    <div className={cn("flex-1 flex min-w-0 border-r theme-border-subtle transition-all duration-500 ease-in-out", !showVibeEditor && "w-0 flex-[0_0_0%] opacity-0 overflow-hidden border-none")}>
                         {/* File Explorer Side Panel */}
-                        <div className={cn("border-r border-white/5 bg-[#050505] transition-all duration-300 overflow-hidden flex flex-col", showExplorer ? "w-64 opacity-100" : "w-0 opacity-0")}>
+                        <div className={cn("border-r theme-border-subtle bg-[#050505] transition-all duration-300 overflow-hidden flex flex-col", showExplorer ? "w-64 opacity-100" : "w-0 opacity-0")}>
                             <VibeFileExplorer
                                 onFileSelect={(file) => {
                                     if (file.type !== 'folder') {
@@ -394,10 +394,10 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
 
                         <div className="flex-1 flex flex-col min-w-0">
                             <div className="flex-1 overflow-hidden relative flex flex-col">
-                                <div className="px-4 py-3 bg-black/40 border-b border-white/5 flex items-center justify-between shrink-0">
+                                <div className="px-4 py-3 bg-black/40 border-b theme-border-subtle flex items-center justify-between shrink-0">
                                     <div className="flex items-center gap-2">
                                         <div className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
-                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest theme-text-tertiary">
                                             {vibeRepoEntry ? vibeRepoEntry.name : (vibeFile ? vibeFile.name : 'Vibe Editor')}
                                         </h3>
                                     </div>
@@ -406,18 +406,18 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                                             onClick={() => setShowVibeTerminal(!showVibeTerminal)}
                                             className={cn(
                                                 "flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold transition-all",
-                                                showVibeTerminal ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20" : "bg-white/5 text-white/40 hover:text-white"
+                                                showVibeTerminal ? "bg-sky-500 theme-text-primary shadow-lg shadow-sky-500/20" : "theme-overlay-subtle theme-text-tertiary hover:theme-text-primary"
                                             )}
                                         >
                                             <Terminal size={12} />
                                             SHELL
                                         </button>
-                                        <div className="w-px h-4 bg-white/10" />
+                                        <div className="w-px h-4 theme-border-medium" />
                                         <button
                                             onClick={() => setShowExplorer(!showExplorer)}
                                             className={cn(
                                                 "p-1.5 rounded-md transition-all",
-                                                showExplorer ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
+                                                showExplorer ? "theme-overlay-medium theme-text-primary" : "theme-text-tertiary hover:theme-text-primary"
                                             )}
                                             title="Toggle Explorer"
                                         >
@@ -427,7 +427,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                                             <button
                                                 onClick={() => handleVibeSave()}
                                                 disabled={isVibeSaving}
-                                                className="px-4 py-1 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-widest rounded-full transition-all active:scale-95 shadow-lg shadow-emerald-500/20 flex items-center gap-2"
+                                                className="px-4 py-1 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 theme-text-primary text-[10px] font-black uppercase tracking-widest rounded-full transition-all active:scale-95 shadow-lg shadow-emerald-500/20 flex items-center gap-2"
                                             >
                                                 {isVibeSaving ? <Loader2 size={10} className="animate-spin" /> : <Zap size={10} />}
                                                 {isVibeSaving ? 'Deploying...' : 'Quick Deploy'}
@@ -446,13 +446,13 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                                             embedded
                                         />
                                     ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center text-white/10 bg-[#050505] gap-6">
-                                            <div className="w-20 h-20 rounded-3xl border-2 border-dashed border-white/5 flex items-center justify-center">
+                                        <div className="w-full h-full flex flex-col items-center justify-center theme-text-quaternary opacity-50 bg-[#050505] gap-6">
+                                            <div className="w-20 h-20 rounded-3xl border-2 border-dashed theme-border-subtle flex items-center justify-center">
                                                 <Code2 size={32} className="opacity-20" />
                                             </div>
                                             <div className="text-center space-y-2">
-                                                <p className="font-black text-[10px] uppercase tracking-widest text-white/40">Vibe Mode Ready</p>
-                                                <p className="text-[10px] text-white/20">Select a file from the explorer to begin high-speed coding.</p>
+                                                <p className="font-black text-[10px] uppercase tracking-widest theme-text-tertiary">Vibe Mode Ready</p>
+                                                <p className="text-[10px] theme-text-quaternary">Select a file from the explorer to begin high-speed coding.</p>
                                             </div>
                                         </div>
                                     )}
@@ -466,7 +466,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                                         initial={{ height: 0, opacity: 0 }}
                                         animate={{ height: '35%', opacity: 1 }}
                                         exit={{ height: 0, opacity: 0 }}
-                                        className="border-t border-white/5 overflow-hidden"
+                                        className="border-t theme-border-subtle overflow-hidden"
                                     >
                                         <InteractiveTerminal
                                             onClose={() => setShowVibeTerminal(false)}
@@ -502,17 +502,17 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
             )}
             {viewMode === 'classic' && (
                 <div className="w-full h-full flex flex-col overflow-auto custom-scrollbar p-4 md:p-8 animate-in fade-in zoom-in-95 duration-300 min-w-0">
-                    <div className="flex items-center gap-2 mb-8 p-1.5 bg-white/5 w-fit rounded-xl border border-white/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)]">
-                        <button onClick={() => setActiveTab('inbox')} className={cn("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all", activeTab === 'inbox' ? "bg-white/10 text-white shadow-sm" : "text-white/50 hover:text-white/80")}>
+                    <div className="flex items-center gap-2 mb-8 p-1.5 theme-overlay-subtle w-fit rounded-xl border theme-border-medium shadow-[inset_0_0_0_1px_var(--overlay-subtle)]">
+                        <button onClick={() => setActiveTab('inbox')} className={cn("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all", activeTab === 'inbox' ? "theme-overlay-medium theme-text-primary shadow-sm" : "theme-text-tertiary hover:theme-text-secondary")}>
                             <Mail size={16} /> Inbox
                         </button>
-                        <button onClick={() => setActiveTab('files')} className={cn("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all", activeTab === 'files' ? "bg-white/10 text-white shadow-sm" : "text-white/50 hover:text-white/80")}>
+                        <button onClick={() => setActiveTab('files')} className={cn("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all", activeTab === 'files' ? "theme-overlay-medium theme-text-primary shadow-sm" : "theme-text-tertiary hover:theme-text-secondary")}>
                             <Folder size={16} /> Files
                         </button>
-                        <button onClick={() => setActiveTab('processes')} className={cn("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all", activeTab === 'processes' ? "bg-white/10 text-white shadow-sm" : "text-white/50 hover:text-white/80")}>
+                        <button onClick={() => setActiveTab('processes')} className={cn("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all", activeTab === 'processes' ? "theme-overlay-medium theme-text-primary shadow-sm" : "theme-text-tertiary hover:theme-text-secondary")}>
                             <Server size={16} /> Processes
                         </button>
-                        <button onClick={() => setActiveTab('intelligence')} className={cn("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all", activeTab === 'intelligence' ? "bg-white/10 text-white shadow-sm" : "text-white/50 hover:text-white/80")}>
+                        <button onClick={() => setActiveTab('intelligence')} className={cn("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all", activeTab === 'intelligence' ? "theme-overlay-medium theme-text-primary shadow-sm" : "theme-text-tertiary hover:theme-text-secondary")}>
                             <Activity size={16} /> Intelligence
                         </button>
                     </div>

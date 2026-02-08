@@ -207,14 +207,19 @@ class TaskFlowShell {
                 return;
             }
 
-            const job = await enqueueAgentJob({
+            const result = await enqueueAgentJob({
                 type: 'chat_task',
                 payload: { objective, query: objective },
                 approved: true
             });
 
-            spinner.succeed(`Agent deployed! Job ID: ${chalk.cyan(job.id)}`);
-            console.log(chalk.gray(`Track progress with: job ${job.id}`));
+            if ('job' in result && result.job) {
+                spinner.succeed(`Agent deployed! Job ID: ${chalk.cyan(result.job.id)}`);
+                console.log(chalk.gray(`Track progress with: job ${result.job.id}`));
+            } else {
+                const errorMsg = 'message' in result ? result.message : 'Unknown error';
+                spinner.fail(`Failed to deploy agent: ${errorMsg}`);
+            }
         } catch (error: any) {
             spinner.fail(`Failed to deploy agent: ${error.message}`);
         }

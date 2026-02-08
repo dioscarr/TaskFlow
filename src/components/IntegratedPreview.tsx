@@ -133,11 +133,11 @@ export default function IntegratedPreview({
         <div
             className={cn(
                 "relative w-full h-full bg-[#0a0a0a] overflow-hidden flex flex-col transition-all duration-300",
-                embedded ? "border-0 rounded-none shadow-none" : "rounded-3xl border border-white/10 shadow-2xl"
+                embedded ? "border-0 rounded-none shadow-none" : "rounded-3xl border theme-border-medium shadow-2xl"
             )}
         >
             {/* Header Controls */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-black/40 backdrop-blur-md z-10">
+            <div className="flex items-center justify-between px-4 py-3 border-b theme-border-subtle bg-black/40 backdrop-blur-md z-10">
                 <div className="flex items-center gap-4">
                     {!embedded && (
                         <div className="flex gap-1.5 mr-2">
@@ -148,7 +148,7 @@ export default function IntegratedPreview({
                     )}
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest theme-text-tertiary flex items-center gap-2">
                                 LIVE PREVIEW
                             </h3>
                             <div className="w-px h-3 bg-white/10" />
@@ -164,18 +164,18 @@ export default function IntegratedPreview({
                             )} />
                             <span className={cn(
                                 "text-[8px] uppercase font-bold tracking-widest",
-                                status === 'ready' ? "text-emerald-500/80" : "text-white/40"
+                                status === 'ready' ? "text-emerald-500/80" : "theme-text-tertiary"
                             )}>
                                 {status === 'ready' ? 'Active' : status === 'starting' ? 'Booting' : 'Offline'}
                             </span>
 
                             {status === 'ready' && publicUrl ? (
-                                <div className="ml-2 flex items-center bg-white/5 rounded-lg p-0.5 border border-white/10">
+                                <div className="ml-2 flex items-center theme-overlay-subtle rounded-lg p-0.5 border theme-border-medium">
                                     <button
                                         onClick={() => setUrlType('local')}
                                         className={cn(
                                             "px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1",
-                                            urlType === 'local' ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
+                                            urlType === 'local' ? "theme-overlay-medium text-white" : "theme-text-tertiary hover:text-white"
                                         )}
                                     >
                                         <Wifi size={10} />
@@ -185,7 +185,7 @@ export default function IntegratedPreview({
                                         onClick={() => setUrlType('public')}
                                         className={cn(
                                             "px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1",
-                                            urlType === 'public' ? "bg-sky-500/20 text-sky-300" : "text-white/40 hover:text-white"
+                                            urlType === 'public' ? "bg-sky-500/20 text-sky-300" : "theme-text-tertiary hover:text-white"
                                         )}
                                     >
                                         <Cloud size={10} />
@@ -220,7 +220,7 @@ export default function IntegratedPreview({
                 </div>
 
                 {/* Responsive Toggles */}
-                <div className="hidden md:flex items-center gap-1 bg-white/5 rounded-xl p-0.5 border border-white/10">
+                <div className="hidden md:flex items-center gap-1 theme-overlay-subtle rounded-xl p-0.5 border theme-border-medium">
                     {[
                         { id: 'desktop', icon: Monitor },
                         { id: 'tablet', icon: Tablet },
@@ -237,7 +237,7 @@ export default function IntegratedPreview({
                                 "p-1.5 rounded-lg transition-all",
                                 viewMode === mode.id
                                     ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20"
-                                    : "text-white/40 hover:text-white hover:bg-white/5"
+                                    : "theme-text-tertiary hover:text-white hover:bg-white/5"
                             )}
                         >
                             <mode.icon size={14} />
@@ -248,7 +248,7 @@ export default function IntegratedPreview({
                 <div className="flex items-center gap-3">
                     <button
                         onClick={handleRefresh}
-                        className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                        className="p-2 theme-text-tertiary hover:text-white hover:theme-overlay-subtle rounded-lg transition-colors"
                         title="Refresh Preview"
                     >
                         <RefreshCw size={16} />
@@ -264,10 +264,10 @@ export default function IntegratedPreview({
                     )}
                     {!embedded && (
                         <>
-                            <div className="w-px h-6 bg-white/10 mx-1" />
+                            <div className="w-px h-6 theme-overlay-medium mx-1" />
                             <button
                                 onClick={onClose}
-                                className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                className="p-2 theme-text-tertiary hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                             >
                                 <X size={20} />
                             </button>
@@ -301,7 +301,7 @@ export default function IntegratedPreview({
                                     }}
                                     className="w-48 h-48 rounded-full border border-sky-500/20 border-t-sky-500/80 border-l-emerald-400/60 flex items-center justify-center relative"
                                 >
-                                    <div className="w-40 h-40 rounded-full border border-white/5 bg-gradient-to-br from-sky-500/10 to-transparent flex items-center justify-center">
+                                    <div className="w-40 h-40 rounded-full border theme-border-subtle bg-gradient-to-br from-sky-500/10 to-transparent flex items-center justify-center">
                                         <Cpu size={48} className="text-sky-400 animate-pulse" />
                                     </div>
                                     {[...Array(4)].map((_, i) => (
@@ -323,15 +323,15 @@ export default function IntegratedPreview({
                                     <h2 className="text-xl font-black text-white tracking-tighter uppercase italic">
                                         Deploying <span className="text-sky-400">Context</span>
                                     </h2>
-                                    <p className="text-white/40 text-[10px] font-medium tracking-wide">SYSTEM BOOT IN PROGRESS</p>
+                                    <p className="theme-text-tertiary text-[10px] font-medium tracking-wide">SYSTEM BOOT IN PROGRESS</p>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <div className="flex justify-between text-[9px] font-bold text-white/50 uppercase tracking-widest">
+                                    <div className="flex justify-between text-[9px] font-bold theme-text-secondary uppercase tracking-widest">
                                         <span>{BOOT_STEPS[currentStep]}</span>
                                         <span>{Math.round(((currentStep + 1) / BOOT_STEPS.length) * 100)}%</span>
                                     </div>
-                                    <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden border border-white/10 p-[1px]">
+                                    <div className="h-1 w-full theme-overlay-subtle rounded-full overflow-hidden border theme-border-medium p-[1px]">
                                         <motion.div
                                             className="h-full bg-gradient-to-r from-sky-600 to-emerald-400 rounded-full shadow-[0_0_15px_rgba(56,189,248,0.5)]"
                                             initial={{ width: 0 }}
@@ -357,7 +357,7 @@ export default function IntegratedPreview({
                                         initial={{ height: 0, opacity: 0 }}
                                         animate={{ height: 'auto', opacity: 1 }}
                                         exit={{ height: 0, opacity: 0 }}
-                                        className="w-full max-w-lg mt-6 bg-black/40 border border-white/10 rounded-xl overflow-hidden text-left font-mono"
+                                        className="w-full max-w-lg mt-6 bg-black/40 border theme-border-medium rounded-xl overflow-hidden text-left font-mono"
                                     >
                                         <div className="p-4 h-32 overflow-y-auto text-[10px] space-y-1 custom-scrollbar">
                                             {logs.length > 0 ? logs.map((log, i) => (

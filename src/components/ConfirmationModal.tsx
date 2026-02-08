@@ -51,13 +51,13 @@ export default function ConfirmationModal({
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl relative z-10"
+                        className="w-full max-w-md bg-[color:var(--card)] border theme-border-medium rounded-2xl p-6 shadow-2xl relative z-10"
                     >
                         {/* Close Button */}
                         <button
                             onClick={onClose}
                             disabled={isLoading}
-                            className="absolute top-4 right-4 p-2 text-white/40 hover:text-white rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+                            className="absolute top-4 right-4 p-2 theme-text-tertiary hover:theme-text-primary rounded-full hover:theme-overlay-medium transition-colors disabled:opacity-50"
                         >
                             <X size={20} />
                         </button>
@@ -69,8 +69,8 @@ export default function ConfirmationModal({
                                 <AlertTriangle size={24} />
                             </div>
 
-                            <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
-                            <p className="text-white/60 mb-8 leading-relaxed">
+                            <h3 className="text-xl font-bold theme-text-primary mb-2">{title}</h3>
+                            <p className="theme-text-tertiary mb-8 leading-relaxed">
                                 {message}
                             </p>
 
@@ -78,7 +78,7 @@ export default function ConfirmationModal({
                                 <button
                                     onClick={onClose}
                                     disabled={isLoading}
-                                    className="flex-1 px-4 py-2.5 rounded-lg border border-white/10 text-white/70 hover:text-white hover:bg-white/5 font-medium transition-all"
+                                    className="flex-1 px-4 py-2.5 rounded-lg border theme-border-medium theme-text-tertiary hover:theme-text-primary hover:theme-overlay-subtle font-medium transition-all"
                                 >
                                     {cancelText}
                                 </button>

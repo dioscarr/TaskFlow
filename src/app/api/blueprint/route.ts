@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { BlueprintGenerator } from '@/lib/blueprintGenerator';
-import { memory } from '@/lib/agents/symphony/memory';
+import { memory } from '@/lib/agents/memory';
 import path from 'path';
 
 export async function GET(request: NextRequest) {

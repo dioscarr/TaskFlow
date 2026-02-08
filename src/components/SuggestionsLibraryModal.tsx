@@ -115,10 +115,10 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="w-full h-full max-w-6xl bg-[#0a0a0b] border border-white/10 rounded-[2.5rem] shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
+                        className="w-full h-full max-w-6xl bg-[#0a0a0b] border theme-border-medium rounded-[2.5rem] shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
                     >
                         {/* Header */}
-                        <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                        <div className="p-8 border-b theme-border-subtle flex items-center justify-between bg-white/[0.02]">
                             <div className="flex items-center gap-4">
                                 <div className="p-3 bg-sky-500/20 rounded-2xl text-sky-400 border border-sky-500/20 shadow-xl shadow-sky-500/10">
                                     <Compass size={24} />
@@ -130,14 +130,14 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                             </div>
                             <button
                                 onClick={onClose}
-                                className="p-3 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white rounded-full transition-all"
+                                className="p-3 theme-overlay-subtle hover:theme-overlay-medium theme-text-tertiary hover:text-white rounded-full transition-all"
                             >
                                 <X size={24} />
                             </button>
                         </div>
 
                         {/* Search Bar */}
-                        <div className="px-8 py-6 bg-white/[0.01] border-b border-white/5">
+                        <div className="px-8 py-6 bg-white/[0.01] border-b theme-border-subtle">
                             {/* Workflow Type Indicator */}
                             {workflowType && (
                                 <div className="mb-4 flex items-center gap-2">
@@ -152,13 +152,13 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                                 </div>
                             )}
                             <form onSubmit={handleSearch} className="relative group">
-                                <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-sky-400 transition-colors" size={20} />
+                                <Search className="absolute left-6 top-1/2 -translate-y-1/2 theme-text-quaternary group-focus-within:text-sky-400 transition-colors" size={20} />
                                 <input
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="Search for industries (e.g. Real Estate, Fintech, E-commerce) or themes..."
-                                    className="w-full bg-white/5 border border-white/10 rounded-[1.8rem] pl-16 pr-44 py-5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/30 transition-all placeholder:text-white/10 font-medium"
+                                    className="w-full theme-overlay-subtle border theme-border-medium rounded-[1.8rem] pl-16 pr-44 py-5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/30 transition-all placeholder:text-white/10 font-medium"
                                 />
                                 <button
                                     type="submit"
@@ -174,13 +174,13 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                         {/* Content Area */}
                         <div className="flex-1 flex overflow-hidden">
                             {/* Catalog */}
-                            <div className="w-[400px] border-r border-white/5 overflow-y-auto p-8 space-y-4 custom-scrollbar bg-black/20">
+                            <div className="w-[400px] border-r theme-border-subtle overflow-y-auto p-8 space-y-4 custom-scrollbar bg-black/20">
                                 {suggestions.length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-white/5 rounded-[2.5rem]">
-                                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-6 text-white/10">
+                                    <div className="h-full flex flex-col items-center justify-center text-center p-8 border-2 border-dashed theme-border-subtle rounded-[2.5rem]">
+                                        <div className="w-16 h-16 theme-overlay-subtle rounded-full flex items-center justify-center mb-6 text-white/10">
                                             <Lightbulb size={32} />
                                         </div>
-                                        <p className="text-sm font-bold text-white/20 uppercase tracking-widest">No Flows Loaded</p>
+                                        <p className="text-sm font-bold theme-text-quaternary uppercase tracking-widest">No Flows Loaded</p>
                                         <p className="text-[11px] text-white/10 mt-2">Enter a theme above to discover new strategic workflows for your agent.</p>
                                     </div>
                                 ) : (
@@ -192,13 +192,13 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                                                 "w-full text-left p-6 rounded-[1.8rem] border transition-all duration-300 group relative overflow-hidden",
                                                 selectedSuggestion?.id === s.id
                                                     ? "bg-sky-500/10 border-sky-500/30 shadow-xl shadow-sky-500/5"
-                                                    : "bg-white/[0.02] border-white/5 hover:border-white/10 hover:bg-white/5"
+                                                    : "bg-white/[0.02] theme-border-subtle hover:theme-border-medium hover:bg-white/5"
                                             )}
                                         >
                                             <div className="relative z-10">
                                                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-sky-400/60 mb-2 block">{s.category}</span>
                                                 <h4 className="text-sm font-bold text-white mb-2 group-hover:text-sky-300 transition-colors">{s.title}</h4>
-                                                <p className="text-[11px] text-white/40 line-clamp-2 leading-relaxed">{s.description}</p>
+                                                <p className="text-[11px] theme-text-tertiary line-clamp-2 leading-relaxed">{s.description}</p>
                                             </div>
                                             {selectedSuggestion?.id === s.id && (
                                                 <div className="absolute top-0 right-0 p-4">
@@ -223,7 +223,7 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                                                 <span className="px-3 py-1 bg-sky-500/10 text-sky-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-sky-500/10">
                                                     {selectedSuggestion.category}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Strategic Flow • ID: {selectedSuggestion.id}</span>
+                                                <span className="text-[10px] font-bold theme-text-quaternary uppercase tracking-[0.2em]">Strategic Flow • ID: {selectedSuggestion.id}</span>
                                             </div>
                                             <h3 className="text-4xl font-black text-white tracking-tighter">{selectedSuggestion.title}</h3>
                                             <p className="text-lg text-white/60 leading-relaxed font-medium">{selectedSuggestion.description}</p>
@@ -231,16 +231,16 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
 
                                         {/* Task Steps */}
                                         <div className="space-y-6">
-                                            <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 border-b border-white/5 pb-4">Implementation Timeline</h5>
+                                            <h5 className="text-[10px] font-black uppercase tracking-[0.3em] theme-text-quaternary border-b theme-border-subtle pb-4">Implementation Timeline</h5>
                                             <div className="space-y-4">
                                                 {selectedSuggestion.flow.map((step) => (
-                                                    <div key={step.step} className="flex gap-6 p-6 bg-white/[0.02] rounded-[1.8rem] border border-white/5 group hover:border-white/10 transition-all">
+                                                    <div key={step.step} className="flex gap-6 p-6 bg-white/[0.02] rounded-[1.8rem] border theme-border-subtle group hover:theme-border-medium transition-all">
                                                         <div className="h-10 w-10 shrink-0 bg-sky-500/10 rounded-xl flex items-center justify-center text-sky-400 text-xs font-black shadow-inner border border-sky-500/10 group-hover:scale-110 transition-transform">
                                                             {step.step}
                                                         </div>
                                                         <div>
                                                             <h6 className="text-[13px] font-bold text-white mb-1 group-hover:text-sky-300 transition-colors uppercase tracking-wide">{step.task}</h6>
-                                                            <p className="text-[12px] text-white/40 leading-relaxed font-medium">{step.description}</p>
+                                                            <p className="text-[12px] theme-text-tertiary leading-relaxed font-medium">{step.description}</p>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -249,14 +249,14 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
 
                                         {/* Agent Instruction Block */}
                                         <div className="space-y-6">
-                                            <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                                                <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">Agent Instruction File</h5>
+                                            <div className="flex items-center justify-between border-b theme-border-subtle pb-4">
+                                                <h5 className="text-[10px] font-black uppercase tracking-[0.3em] theme-text-quaternary">Agent Instruction File</h5>
                                                 <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-500/60 uppercase">
                                                     <Sparkles size={12} />
                                                     Optimized for Gemini 2.0
                                                 </div>
                                             </div>
-                                            <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 relative overflow-hidden group">
+                                            <div className="p-8 bg-black/40 rounded-[2.5rem] border theme-border-subtle relative overflow-hidden group">
                                                 <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 <div className="prose prose-invert prose-xs max-w-none text-white/60 relative z-10 font-mono tracking-tight leading-loose">
                                                     <ReactMarkdown>{selectedSuggestion.agentInstructions}</ReactMarkdown>
@@ -275,7 +275,7 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                                                 <ArrowRight size={20} />
                                             </button>
                                             <button
-                                                className="px-8 py-5 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white rounded-[1.8rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-white/5"
+                                                className="px-8 py-5 theme-overlay-subtle hover:theme-overlay-medium theme-text-tertiary hover:text-white rounded-[1.8rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all border theme-border-subtle"
                                                 onClick={() => toast.info("Flow bookmarked for later.")}
                                             >
                                                 <Bookmark size={20} />
@@ -293,7 +293,7 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                         </div>
 
                         {/* Footer */}
-                        <div className="px-10 py-5 bg-white/[0.01] border-t border-white/5 flex items-center justify-between text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">
+                        <div className="px-10 py-5 bg-white/[0.01] border-t theme-border-subtle flex items-center justify-between text-[10px] font-bold theme-text-quaternary uppercase tracking-[0.2em]">
                             <div className="flex items-center gap-6">
                                 <span className="flex items-center gap-2">AI Engine: <span className="text-sky-400">Tactical Research Agent</span></span>
                             </div>

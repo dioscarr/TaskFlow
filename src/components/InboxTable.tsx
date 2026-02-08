@@ -185,26 +185,26 @@ export default function InboxTable({ tasks }: InboxTableProps) {
             />
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-white">Inbox</h1>
-                    <p className="text-white/40 text-sm mt-1">Manage your active tasks and communications</p>
+                    <h1 className="text-3xl font-bold theme-text-primary">Inbox</h1>
+                    <p className="theme-text-tertiary text-sm mt-1">Manage your active tasks and communications</p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 items-center">
                     {/* Search Bar */}
                     <div className="relative w-full sm:w-64">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-quaternary" size={16} />
                         <input
                             ref={searchInputRef}
                             type="text"
                             placeholder="Search inbox... (Ctrl+K)"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all placeholder:text-white/20"
+                            className="w-full theme-overlay-subtle border theme-border-medium rounded-xl pl-10 pr-4 py-2 text-sm theme-text-primary focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all placeholder:theme-text-quaternary"
                         />
                     </div>
 
                     {/* Filter Tabs */}
-                    <div className="flex p-1 bg-white/5 border border-white/10 rounded-xl">
+                    <div className="flex p-1 theme-overlay-subtle border theme-border-medium rounded-xl">
                         {['All', 'Unread', 'Campaigns'].map((filter) => (
                             <button
                                 key={filter}
@@ -213,7 +213,7 @@ export default function InboxTable({ tasks }: InboxTableProps) {
                                     "px-4 py-1.5 rounded-lg text-xs font-medium transition-all",
                                     activeFilter === filter
                                         ? "bg-sky-600 text-white shadow-lg shadow-sky-500/20"
-                                        : "text-white/40 hover:text-white/70"
+                                        : "theme-text-tertiary hover:theme-text-secondary"
                                 )}
                             >
                                 {filter}
@@ -251,16 +251,16 @@ export default function InboxTable({ tasks }: InboxTableProps) {
                                     ...fullTask
                                 })}
                                 className={cn(
-                                    "group relative flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 border border-white/5 hover:border-white/10",
-                                    "bg-white/5 hover:bg-white/10 backdrop-blur-sm",
+                                    "group relative flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 border theme-border-subtle hover:theme-border-medium",
+                                    "theme-overlay-subtle hover:theme-overlay-medium backdrop-blur-sm",
                                     task.status === 'unread' ? "shadow-[0_0_15px_-5px_theme(colors.sky.500/0.35)]" : ""
                                 )}
                             >
                                 {/* Status Indicator */}
-                                <div className={cn("w-1.5 h-1.5 rounded-full", task.status === 'unread' ? "bg-sky-500" : "bg-white/20")} />
+                                <div className={cn("w-1.5 h-1.5 rounded-full", task.status === 'unread' ? "bg-sky-500" : "theme-overlay-medium")} />
 
                                 {/* Sender Avatar/Icon */}
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500/20 to-emerald-500/20 flex items-center justify-center text-sky-300 border border-white/10 shrink-0">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500/20 to-emerald-500/20 flex items-center justify-center text-sky-300 border theme-border-medium shrink-0">
                                     {sender.avatar ? (
                                         <User size={18} />
                                     ) : (
@@ -271,36 +271,36 @@ export default function InboxTable({ tasks }: InboxTableProps) {
                                 {/* Content */}
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-0.5">
-                                        <span className={cn("text-sm font-medium truncate", task.status === 'unread' ? "text-white" : "text-white/70")}>
+                                        <span className={cn("text-sm font-medium truncate", task.status === 'unread' ? "theme-text-primary" : "theme-text-secondary")}>
                                             {sender.name}
                                         </span>
                                         {/* Attachment indicator placeholder */}
                                     </div>
-                                    <div className="text-sm font-semibold text-white/90 truncate">{fullTask.title || task.title}</div>
-                                    <div className="text-xs text-white/50 mt-0 break-words whitespace-normal max-w-full wrap-anywhere">{fullTask.preview || fullTask.description || task.description}</div>
+                                    <div className="text-sm font-semibold theme-text-primary truncate">{fullTask.title || task.title}</div>
+                                    <div className="text-xs theme-text-secondary mt-0 break-words whitespace-normal max-w-full wrap-anywhere">{fullTask.preview || fullTask.description || task.description}</div>
                                 </div>
 
                                 {/* Meta & Date */}
                                 <div className="flex flex-col items-end gap-2 shrink-0">
                                     {/* Use createdAt or email date if available */}
-                                    <span className="text-xs text-white/40 font-mono">
+                                    <span className="text-xs theme-text-tertiary font-mono">
                                         {formatDate(task.createdAt)}
                                     </span>
                                     <div className="flex gap-1">
                                         {tags.slice(0, 1).map((tag: string) => (
-                                            <span key={tag} className="px-2 py-0.5 rounded-md text-[10px] bg-white/5 border border-white/10 text-white/60">
+                                            <span key={tag} className="px-2 py-0.5 rounded-md text-[10px] theme-overlay-subtle border theme-border-medium theme-text-tertiary">
                                                 {tag}
                                             </span>
                                         ))}
                                         {tags.length > 1 && (
-                                            <span className="px-2 py-0.5 rounded-md text-[10px] bg-white/5 text-white/40">+ {tags.length - 1}</span>
+                                            <span className="px-2 py-0.5 rounded-md text-[10px] theme-overlay-subtle theme-text-tertiary">+ {tags.length - 1}</span>
                                         )}
                                     </div>
                                 </div>
 
                                 {/* Hover Action */}
                                 <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity translate-x-2 group-hover:translate-x-0">
-                                    <ChevronRight className="text-white/50" />
+                                    <ChevronRight className="theme-text-secondary" />
                                 </div>
 
                             </motion.div>
@@ -312,7 +312,7 @@ export default function InboxTable({ tasks }: InboxTableProps) {
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="py-20 flex flex-col items-center justify-center text-white/20"
+                    className="py-20 flex flex-col items-center justify-center theme-text-quaternary"
                 >
                     <Mail size={48} className="mb-4 opacity-10" />
                     <p className="text-lg font-medium">No messages found</p>

@@ -1,26 +1,43 @@
-import WebSocket from 'ws';
+import { WebSocketServer } from 'ws';
 import prisma from './prisma';
 import { deepSerialize } from './serialization';
 
-let wss: WebSocket.Server | null = null;
+let wss: WebSocketServer | null = null;
+let initAttempted = false;
+let initError: Error | null = null;
 
 const PORT = Number(process.env.PROCESS_WS_PORT || 4001);
 
 function getWss() {
+  // If we already have a working instance, return it
   if (wss) return wss;
 
+  // If we already tried and failed, don't keep retrying
+  if (initAttempted && initError) {
+    return null;
+  }
+
+  initAttempted = true;
+
   try {
-    wss = new WebSocket.Server({ port: PORT });
+    wss = new WebSocketServer({ port: PORT });
     wss.on('connection', (socket) => {
-      socket.on('message', () => {});
-      socket.on('error', () => {});
+      socket.on('message', () => { });
+      socket.on('error', () => { });
     });
+
+    wss.on('error', (error) => {
+      // eslint-disable-next-line no-console
+      console.error('WebSocket server error:', error);
+    });
+
     // eslint-disable-next-line no-console
     console.log(`Process WebSocket server running on ws://localhost:${PORT}`);
+    initError = null;
   } catch (e) {
-    // ignore (maybe already running)
+    initError = e as Error;
     // eslint-disable-next-line no-console
-    console.warn('Could not start Process WebSocket server', e);
+    console.error('Could not start Process WebSocket server:', e);
     wss = null;
   }
 
@@ -39,7 +56,7 @@ export async function broadcastProcesses() {
     const payload = JSON.stringify({ type: 'processes', data: deepSerialize(processes) });
 
     server.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
+      if (client.readyState === 1) { // 1 is OPEN in ws
         client.send(payload);
       }
     });

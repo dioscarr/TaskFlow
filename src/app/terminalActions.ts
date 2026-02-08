@@ -177,7 +177,8 @@ Available Commands:
                         forwardedUrl: ngrokUrl || forwardedUrl
                     };
                 }
-                return { type: 'error', output: `❌ Failed to start: ${startRes.message}` };
+                const errorMsg = 'message' in startRes ? startRes.message : 'status' in startRes ? startRes.status : 'Unknown error';
+                return { type: 'error', output: `❌ Failed to start: ${errorMsg}` };
 
             case 'stop':
                 if (!args.length) return { type: 'error', output: 'Usage: stop <app-name>' };
@@ -186,7 +187,8 @@ Available Commands:
                 if (stopRes.success) {
                     return { type: 'success', output: `🛑 Stopped ${stopRes.process?.name}` };
                 }
-                return { type: 'error', output: `❌ Failed to stop: ${stopRes.message}` };
+                const stopErrorMsg = 'message' in stopRes ? stopRes.message : 'status' in stopRes ? stopRes.status : 'Unknown error';
+                return { type: 'error', output: `❌ Failed to stop: ${stopErrorMsg}` };
 
             case 'tunnel': {
                 const action = (args[0] || 'status').toLowerCase();
@@ -237,7 +239,8 @@ Available Commands:
                 if (jobRes.success && jobRes.job) {
                     return { type: 'success', output: `✅ Agent deployed! Job ID: ${jobRes.job.id}\nTrack progress with: job ${jobRes.job.id}` };
                 }
-                return { type: 'error', output: `❌ Failed to deploy agent: ${jobRes.message}` };
+                const jobErrorMsg = 'message' in jobRes ? jobRes.message : 'Unknown error';
+                return { type: 'error', output: `❌ Failed to deploy agent: ${jobErrorMsg}` };
 
             case 'jobs':
                 const jobs = await prisma.agentJob.findMany({
@@ -263,7 +266,8 @@ Available Commands:
                 if (!args.length) return { type: 'error', output: 'Usage: scaffold <name>' };
                 const scaffoldRes = await executeScaffoldVite({ projectName: args[0] });
                 if (scaffoldRes.success) return { type: 'success', output: `✅ Scaffolded ${args[0]} at apps/${args[0]}` };
-                return { type: 'error', output: `❌ Failed: ${scaffoldRes.message}` };
+                const scaffoldErrorMsg = 'message' in scaffoldRes ? scaffoldRes.message : 'Unknown error';
+                return { type: 'error', output: `❌ Failed: ${scaffoldErrorMsg}` };
 
             case 'processes':
                 const procRes = await listProcesses();
@@ -328,7 +332,8 @@ Available Commands:
                                 forwardedUrl: ngrokUrl || forwardedUrl
                             };
                         }
-                        return { type: 'error', output: `❌ Failed to start app '${match}': ${startRes.message}` };
+                        const startErrorMsg = 'message' in startRes ? startRes.message : 'status' in startRes ? startRes.status : 'Unknown error';
+                        return { type: 'error', output: `❌ Failed to start app '${match}': ${startErrorMsg}` };
                     }
 
                 } catch (e) {

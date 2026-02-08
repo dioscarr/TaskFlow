@@ -1,47 +1,22 @@
 
 import Dashboard from '@/components/Dashboard';
-import prisma from '@/lib/prisma';
+import { getCachedDemoUser, getCachedUserTasks, getCachedWorkspaceFiles } from '@/lib/dataCache';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Incremental Static Regeneration: revalidate every 60 seconds
+// This means the page will be cached and regenerated in the background
+export const revalidate = 60;
 
 export default async function Home() {
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: 'demo@example.com' }
-    });
+    // Use cached data fetching functions
+    const user = await getCachedDemoUser();
 
     if (!user) return <div>User not found</div>;
 
+    // Parallel data fetching with automatic request deduplication
     const [tasks, files] = await Promise.all([
-      prisma.task.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } }),
-      (prisma as any).workspaceFile.findMany({
-        where: { userId: user.id },
-        orderBy: [
-          { order: 'asc' },
-          { createdAt: 'desc' }
-        ],
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          size: true,
-          items: true,
-          shared: true,
-          order: true,
-          parentId: true,
-          userId: true,
-          highlightBgColor: true,
-          highlightTextColor: true,
-          highlightBorderColor: true,
-          highlightFontWeight: true,
-          tags: true,
-          storagePath: true,
-          magicRule: true,
-          createdAt: true,
-          updatedAt: true
-        }
-      })
+      getCachedUserTasks(user.id),
+      getCachedWorkspaceFiles(user.id)
     ]);
 
     return (

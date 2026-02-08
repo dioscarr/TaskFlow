@@ -597,35 +597,53 @@ model AppResource {
 // Resource Credentials (encrypted secrets storage)
 model ResourceCredential {
   id              String    @id @default(cuid())
-  
+
   resourceId      String
   resource        AppResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
-  
+
   // Credential Info
   name            String    // "api_key", "service_account", "oauth_token", etc.
   type            String    // "api_key", "oauth2", "service_account", "basic_auth", "certificate"
-  
+
   // Encrypted value (use app-level encryption)
   encryptedValue  String    @db.Text
-  
+
   // OAuth specific
   accessToken     String?   @db.Text
   refreshToken    String?   @db.Text
   tokenExpiresAt  DateTime?
   scopes          String[]  @default([])
-  
+
   // Metadata
   isActive        Boolean   @default(true)
   lastUsedAt      DateTime?
   expiresAt       DateTime?
-  
+
   userId          String
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  
+
   @@index([resourceId])
   @@index([userId, type])
+}
+
+// Docker Build Metrics
+model BuildMetric {
+  id            String    @id @default(cuid())
+
+  appName       String
+  imageName     String
+  durationMs    Int       // Build duration in milliseconds
+  success       Boolean   // Build succeeded or failed
+  stage         String?   // Last stage reached: preparing, pulling, installing, copying, building, complete, error, failed
+  errorMessage  String?   @db.Text
+
+  createdAt     DateTime  @default(now())
+
+  @@index([appName])
+  @@index([success])
+  @@index([createdAt])
 }
 

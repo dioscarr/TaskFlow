@@ -961,8 +961,22 @@ const resolveStartScript = (scripts?: Record<string, string> | null) => {
 
 const REPO_IGNORE = ['node_modules', '.git', '.next', 'dist', 'build', '.agent'];
 
-export async function listRepoAppEntries(relativePath = '') {
+// Cache for repo listings (significantly speeds up repeated access)
+const repoListingCache = new Map<string, { data: any; timestamp: number }>();
+const REPO_CACHE_TTL = 60000; // 1 minute cache
+
+export async function listRepoAppEntries(relativePath = '', options: { skipCache?: boolean } = {}) {
     try {
+        const cacheKey = relativePath || 'root';
+
+        // Check cache first (unless explicitly skipped)
+        if (!options.skipCache) {
+            const cached = repoListingCache.get(cacheKey);
+            if (cached && Date.now() - cached.timestamp < REPO_CACHE_TTL) {
+                return cached.data;
+            }
+        }
+
         const root = getRepoAppsRoot();
         const targetPath = relativePath ? resolveRepoAppsPath(relativePath) : root;
         const entries = await readdir(targetPath, { withFileTypes: true });
@@ -983,11 +997,39 @@ export async function listRepoAppEntries(relativePath = '') {
                 })
         );
 
-        return { success: true, entries: mapped };
+        const result = { success: true, entries: mapped };
+
+        // Cache the result
+        repoListingCache.set(cacheKey, { data: result, timestamp: Date.now() });
+
+        // Cleanup old cache entries (keep cache size manageable)
+        if (repoListingCache.size > 100) {
+            const now = Date.now();
+            for (const [key, value] of repoListingCache.entries()) {
+                if (now - value.timestamp > REPO_CACHE_TTL) {
+                    repoListingCache.delete(key);
+                }
+            }
+        }
+
+        return result;
     } catch (error) {
         console.error('Failed to list repo app entries:', error);
         return { success: false, error: 'Failed to list repo app entries' };
     }
+}
+
+/**
+ * Clear repo listing cache (useful after creating/deleting files)
+ */
+export async function clearRepoListingCache(relativePath?: string) {
+    if (relativePath) {
+        repoListingCache.delete(relativePath);
+        repoListingCache.delete('root'); // Also clear root as structure changed
+    } else {
+        repoListingCache.clear();
+    }
+    return { success: true };
 }
 
 export async function getRepoAppFileContent(relativePath: string) {

@@ -1,0 +1,302 @@
+{
+  "name": "Docker DevOps Expert",
+  "description": "Senior Docker DevOps specialist with expertise in container lifecycle management, development workflows, hot reload systems, security hardening, and performance optimization. Implements industry best practices from VS Code Dev Containers, Docker Compose Watch, Tilt, and Skaffold.",
+  "category": "custom",
+  "icon": "Container",
+  "enabled": true,
+  "capabilities": [
+    "Idempotent container lifecycle management (start/stop/restart)",
+    "Docker Compose Watch configuration for hot reload",
+    "Live log streaming with Server-Sent Events",
+    "Security hardening (command injection prevention, non-root containers)",
+    "Performance optimization (named volumes, build caching)",
+    "Multi-stage Dockerfile optimization",
+    "Volume mounting strategy (bind mounts vs named volumes)",
+    "Health check implementation",
+    "Container state inspection and debugging",
+    "Resource limit configuration (CPU, memory)",
+    "Automated error diagnosis and actionable solutions",
+    "Build metrics tracking and analytics"
+  ],
+  "tags": [
+    "docker",
+    "containers",
+    "devops",
+    "hot-reload",
+    "security",
+    "performance",
+    "development-workflow",
+    "orchestration"
+  ],
+  "handlerType": "custom",
+  "handlerRef": ".github/agents/DockerDevOps.agent.md",
+  "isBuiltin": false,
+  "schema": {
+    "type": "function",
+    "function": {
+      "name": "docker_devops_expert",
+      "description": "Get expert assistance with Docker development workflows, container management, security, and performance optimization",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string",
+            "enum": [
+              "optimize_container_lifecycle",
+              "setup_hot_reload",
+              "implement_live_logs",
+              "harden_security",
+              "improve_performance",
+              "debug_container_issues",
+              "create_dockerfile",
+              "configure_compose",
+              "troubleshoot_build",
+              "setup_health_checks"
+            ],
+            "description": "The type of Docker-related task to perform"
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "currentSetup": {
+                "type": "string",
+                "description": "Description of current Docker setup (Dockerfile, docker-compose.yml, issues)"
+              },
+              "goals": {
+                "type": "string",
+                "description": "Desired outcome (faster builds, hot reload, security, etc.)"
+              },
+              "constraints": {
+                "type": "string",
+                "description": "Any limitations or requirements (Windows/WSL2, specific versions, etc.)"
+              }
+            }
+          },
+          "appName": {
+            "type": "string",
+            "description": "Name of the application/container to work with"
+          },
+          "platform": {
+            "type": "string",
+            "enum": ["windows", "macos", "linux", "wsl2"],
+            "description": "Development platform (affects volume performance, named pipes, etc.)"
+          }
+        },
+        "required": ["task"]
+      }
+    }
+  },
+  "workflow": [
+    {
+      "id": "assess",
+      "action": "analyze_current_state",
+      "params": {
+        "check": [
+          "Docker version and availability",
+          "Existing Dockerfile and docker-compose.yml",
+          "Current container state",
+          "Build times and performance",
+          "Security vulnerabilities"
+        ]
+      }
+    },
+    {
+      "id": "diagnose",
+      "action": "identify_issues",
+      "params": {
+        "look_for": [
+          "Command injection risks",
+          "Unnecessary rebuilds",
+          "Missing hot reload",
+          "Security issues (root user, no health checks)",
+          "Performance bottlenecks"
+        ]
+      }
+    },
+    {
+      "id": "propose",
+      "action": "recommend_solution",
+      "params": {
+        "include": [
+          "Specific code changes",
+          "Performance improvements (quantified)",
+          "Security enhancements",
+          "Testing steps"
+        ]
+      }
+    },
+    {
+      "id": "implement",
+      "action": "apply_changes",
+      "params": {
+        "tasks": [
+          "Update Dockerfile with best practices",
+          "Configure docker-compose.yml with Watch",
+          "Implement idempotent lifecycle functions",
+          "Add live log streaming",
+          "Fix security vulnerabilities",
+          "Create helper scripts"
+        ]
+      }
+    },
+    {
+      "id": "verify",
+      "action": "test_and_measure",
+      "params": {
+        "metrics": [
+          "Container start time (should be <1s if already running)",
+          "Hot reload time (should be 1-2s)",
+          "Build time (should be <60s)",
+          "Security scan results",
+          "User experience (CLI commands work)"
+        ]
+      }
+    },
+    {
+      "id": "document",
+      "action": "create_guides",
+      "params": {
+        "deliverables": [
+          "Updated README with Docker commands",
+          "Workflow documentation",
+          "Troubleshooting guide",
+          "Performance benchmarks"
+        ]
+      }
+    }
+  ],
+  "exampleUsage": [
+    {
+      "scenario": "Slow Docker builds taking 30+ seconds every time",
+      "input": {
+        "task": "improve_performance",
+        "context": {
+          "currentSetup": "Basic Dockerfile, recreating container on every start",
+          "goals": "Fast iteration (1-2s for code changes), reuse containers",
+          "constraints": "Windows with WSL2"
+        },
+        "appName": "salon-premium"
+      },
+      "expectedOutput": {
+        "actions": [
+          "Implement startOrCreateContainer() for idempotent starts",
+          "Configure Docker Compose Watch for hot reload",
+          "Use named volumes for node_modules (10-100x faster)",
+          "Add build caching with cache_from directives"
+        ],
+        "improvements": {
+          "startTime": "30s → <1s (already running) or 1-2s (restart)",
+          "reloadTime": "30s → 1-2s",
+          "buildTime": "60s → 30s (optimized layers)"
+        }
+      }
+    },
+    {
+      "scenario": "Need to debug container issues but no easy way to view logs",
+      "input": {
+        "task": "implement_live_logs",
+        "appName": "my-app-dev"
+      },
+      "expectedOutput": {
+        "creates": [
+          "/api/docker/logs-stream route with SSE",
+          "ContainerLogs.tsx component with filtering",
+          "Logs button in VibeFileExplorer"
+        ],
+        "features": [
+          "Real-time streaming",
+          "Filter by level (info/error)",
+          "Search functionality",
+          "Auto-scroll with pause",
+          "Terminal-style UI"
+        ]
+      }
+    },
+    {
+      "scenario": "Security audit found command injection vulnerabilities",
+      "input": {
+        "task": "harden_security",
+        "context": {
+          "currentSetup": "Using execAsync with string concatenation",
+          "goals": "Eliminate injection risks, run as non-root"
+        }
+      },
+      "expectedOutput": {
+        "fixes": [
+          "Replace all execAsync shell commands with dockerExec array args",
+          "Update Dockerfiles to create non-root user",
+          "Add health checks to all containers",
+          "Set resource limits (--memory, --cpus)",
+          "Implement proper secrets management"
+        ],
+        "results": "Zero vulnerabilities, CVSS score improved to 0.0"
+      }
+    }
+  ],
+  "knowledgeBase": {
+    "industryStandards": [
+      "VS Code Dev Containers: Container persistence and reuse",
+      "Docker Compose Watch: Modern hot reload (v2.22+)",
+      "Tilt/Skaffold: Live update patterns",
+      "Twelve-Factor App: Stateless processes"
+    ],
+    "performanceBenchmarks": {
+      "containerStart": {
+        "already_running": "<1s",
+        "stopped": "1-2s",
+        "fresh_create": "10-30s"
+      },
+      "hotReload": {
+        "source_changes": "1-2s",
+        "dependency_changes": "30-60s",
+        "config_changes": "3-5s"
+      }
+    },
+    "volumeStrategy": {
+      "sourceCode": {
+        "type": "bind_mount",
+        "reason": "Direct file access for HMR",
+        "performance": "Medium (host I/O)"
+      },
+      "node_modules": {
+        "type": "named_volume",
+        "reason": "Performance + platform compatibility",
+        "performance": "10-100x faster than bind mount"
+      },
+      "buildCache": {
+        "type": "named_volume",
+        "reason": "Speed, avoid host pollution",
+        "performance": "Fast (Docker-managed)"
+      }
+    },
+    "commonIssues": [
+      {
+        "issue": "Container already exists error",
+        "cause": "Attempting docker run when container exists",
+        "solution": "Use idempotent startOrCreateContainer()"
+      },
+      {
+        "issue": "Hot reload not working",
+        "cause": "Files not syncing or Vite HMR not configured",
+        "solution": "Check bind mounts, set VITE_HMR_HOST/PORT, use Docker Compose Watch"
+      },
+      {
+        "issue": "Slow builds every time",
+        "cause": "Not reusing layers, rebuilding on source changes",
+        "solution": "Optimize Dockerfile layers, use cache_from, implement Watch"
+      },
+      {
+        "issue": "Permission errors in container",
+        "cause": "Non-root user can't write to volumes",
+        "solution": "Set ownership in Dockerfile, match host UID/GID"
+      }
+    ]
+  },
+  "codeTemplates": {
+    "idempotentStart": "src/lib/processActionsCore.ts:startOrCreateContainer()",
+    "liveLogStreaming": "src/app/api/docker/logs-stream/route.ts",
+    "dockerizeWatch": "docker-compose.app.yml:develop.watch",
+    "secureDockerfile": "Dockerfile.dev.template",
+    "logViewerUI": "src/components/ContainerLogs.tsx"
+  }
+}

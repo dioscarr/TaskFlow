@@ -76,8 +76,8 @@ export default function Settings() {
                 getProfile(),
                 getResources()
             ]);
-            setProfile(profileData);
-            setResources(resourcesData as Resource[]);
+            setProfile(profileData as any);
+            setResources(resourcesData as any);
         } catch (err) {
             console.error('Failed to load settings:', err);
         } finally {
@@ -104,7 +104,7 @@ export default function Settings() {
                     {/* Header */}
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold mb-2">Settings</h1>
-                        <p className="text-white/50">Manage your profile, preferences, and resources</p>
+                        <p className="theme-text-secondary">Manage your profile, preferences, and resources</p>
                     </div>
 
                     <div className="flex gap-8">
@@ -116,8 +116,8 @@ export default function Settings() {
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
                                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all ${activeTab === tab.id
-                                            ? 'bg-white/10 text-white'
-                                            : 'text-white/50 hover:text-white hover:bg-white/5'
+                                            ? 'theme-overlay-medium text-foreground'
+                                            : 'theme-text-secondary hover:text-foreground theme-overlay-subtle hover:theme-overlay-medium'
                                             }`}
                                     >
                                         <span className="text-lg">{tab.icon}</span>
@@ -196,20 +196,20 @@ function ProfileTab({ profile, setProfile, onSave, saving }: {
 
             <div className="grid grid-cols-2 gap-6">
                 <div>
-                    <label className="block text-sm text-white/50 mb-2">Display Name</label>
+                    <label className="block text-sm theme-text-secondary mb-2">Display Name</label>
                     <input
                         type="text"
                         value={profile.displayName || ''}
                         onChange={e => setProfile({ ...profile, displayName: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400"
+                        className="w-full theme-overlay-subtle border theme-border-medium rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400"
                     />
                 </div>
                 <div>
-                    <label className="block text-sm text-white/50 mb-2">Timezone</label>
+                    <label className="block text-sm theme-text-secondary mb-2">Timezone</label>
                     <select
                         value={profile.timezone || 'UTC'}
                         onChange={e => setProfile({ ...profile, timezone: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400"
+                        className="w-full theme-overlay-subtle border theme-border-medium rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400"
                     >
                         <option value="UTC">UTC</option>
                         <option value="America/New_York">Eastern Time</option>
@@ -222,23 +222,23 @@ function ProfileTab({ profile, setProfile, onSave, saving }: {
             </div>
 
             <div>
-                <label className="block text-sm text-white/50 mb-2">Bio</label>
+                <label className="block text-sm theme-text-secondary mb-2">Bio</label>
                 <textarea
                     value={profile.bio || ''}
                     onChange={e => setProfile({ ...profile, bio: e.target.value })}
                     rows={3}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 resize-none"
+                    className="w-full theme-overlay-subtle theme-border-medium border rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 resize-none text-foreground"
                 />
             </div>
 
             <div>
-                <label className="block text-sm text-white/50 mb-2">Theme</label>
+                <label className="block text-sm theme-text-secondary mb-2">Theme</label>
                 <div className="flex gap-3">
                     {['system', 'light', 'dark'].map(theme => (
                         <button
                             key={theme}
                             onClick={() => setProfile({ ...profile, theme })}
-                            className={`px-4 py-2 rounded-lg capitalize ${profile.theme === theme ? 'bg-sky-500 text-white' : 'bg-white/5 text-white/70'
+                            className={`px-4 py-2 rounded-lg capitalize ${profile.theme === theme ? 'bg-sky-500 text-white' : 'theme-overlay-subtle theme-text-secondary'
                                 }`}
                         >
                             {theme}
@@ -261,7 +261,7 @@ function ProfileTab({ profile, setProfile, onSave, saving }: {
 function GeneralTab() {
     return (
         <div className="space-y-6">
-            <h2 className="text-xl font-semibold mb-4">General Settings</h2>
+            <h2 className="text-xl font-semibold mb-4 text-foreground">General Settings</h2>
             <div className="space-y-4">
                 <ToggleSetting label="Compact Mode" description="Use a more condensed UI layout" defaultChecked={false} />
                 <ToggleSetting label="Email Notifications" description="Receive email updates" defaultChecked={true} />
@@ -281,14 +281,14 @@ function AITab({ profile, setProfile, onSave, saving }: {
 
     return (
         <div className="space-y-6">
-            <h2 className="text-xl font-semibold mb-4">AI Settings</h2>
+            <h2 className="text-xl font-semibold mb-4 text-foreground">AI Settings</h2>
 
             <div>
-                <label className="block text-sm text-white/50 mb-2">Default Model</label>
+                <label className="block text-sm theme-text-secondary mb-2">Default Model</label>
                 <select
                     value={profile.defaultModel || 'gemini-2.0-flash'}
                     onChange={e => setProfile({ ...profile, defaultModel: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3"
+                    className="w-full theme-overlay-subtle theme-border-medium border rounded-xl px-4 py-3 text-foreground"
                 >
                     <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                     <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
@@ -298,13 +298,13 @@ function AITab({ profile, setProfile, onSave, saving }: {
             </div>
 
             <div>
-                <label className="block text-sm text-white/50 mb-2">AI Personality</label>
+                <label className="block text-sm theme-text-secondary mb-2">AI Personality</label>
                 <div className="flex gap-3">
                     {['professional', 'casual', 'technical'].map(p => (
                         <button
                             key={p}
                             onClick={() => setProfile({ ...profile, aiPersonality: p })}
-                            className={`px-4 py-2 rounded-lg capitalize ${profile.aiPersonality === p ? 'bg-sky-500 text-white' : 'bg-white/5 text-white/70'
+                            className={`px-4 py-2 rounded-lg capitalize ${profile.aiPersonality === p ? 'bg-sky-500 text-white' : 'theme-overlay-subtle theme-text-secondary'
                                 }`}
                         >
                             {p}
@@ -314,7 +314,7 @@ function AITab({ profile, setProfile, onSave, saving }: {
             </div>
 
             <div>
-                <label className="block text-sm text-white/50 mb-2">Temperature: {profile.temperature || 0.7}</label>
+                <label className="block text-sm theme-text-secondary mb-2">Temperature: {profile.temperature || 0.7}</label>
                 <input
                     type="range"
                     min="0"
@@ -363,8 +363,8 @@ function ResourcesTab({ resources, onRefresh, onAddNew, onSelectResource }: {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-xl font-semibold">Resources</h2>
-                    <p className="text-white/50 text-sm mt-1">
+                    <h2 className="text-xl font-semibold text-foreground">Resources</h2>
+                    <p className="theme-text-secondary text-sm mt-1">
                         Configure external services, APIs, databases, and EDI connections.
                     </p>
                 </div>
@@ -374,7 +374,7 @@ function ResourcesTab({ resources, onRefresh, onAddNew, onSelectResource }: {
             </div>
 
             {resources.length === 0 ? (
-                <div className="text-center py-12 text-white/40 bg-white/5 rounded-xl border border-dashed border-white/20">
+                <div className="text-center py-12 theme-text-tertiary theme-overlay-subtle rounded-xl border border-dashed theme-border-medium">
                     <p className="text-4xl mb-4">🔗</p>
                     <p className="font-medium">No resources configured yet</p>
                     <p className="text-sm mt-1 mb-4">Add APIs, databases, or EDI connections to get started</p>
@@ -386,26 +386,26 @@ function ResourcesTab({ resources, onRefresh, onAddNew, onSelectResource }: {
                         <button
                             key={resource.id}
                             onClick={() => onSelectResource(resource)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 flex items-center gap-4 hover:bg-white/10 hover:border-white/20 transition-all text-left group"
+                            className="w-full theme-overlay-subtle theme-border-medium border rounded-xl p-4 flex items-center gap-4 hover:theme-overlay-medium hover:theme-border-strong transition-all text-left group"
                         >
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center text-2xl shadow-lg">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br theme-overlay-medium flex items-center justify-center text-2xl shadow-lg">
                                 {resource.icon || getTypeIcon(resource.type)}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="font-medium text-white">{resource.name}</div>
-                                <div className="text-sm text-white/50 flex items-center gap-2">
+                                <div className="font-medium text-foreground">{resource.name}</div>
+                                <div className="text-sm theme-text-secondary flex items-center gap-2">
                                     <span>{resource.provider}</span>
-                                    <span className="w-1 h-1 bg-white/30 rounded-full" />
+                                    <span className="w-1 h-1 theme-overlay-medium rounded-full" />
                                     <span className="capitalize">{resource.type}</span>
                                     {resource.envVars?.length > 0 && (
                                         <>
-                                            <span className="w-1 h-1 bg-white/30 rounded-full" />
+                                            <span className="w-1 h-1 theme-overlay-medium rounded-full" />
                                             <span>{resource.envVars.length} env vars</span>
                                         </>
                                     )}
                                     {resource.credentials?.length > 0 && (
                                         <>
-                                            <span className="w-1 h-1 bg-white/30 rounded-full" />
+                                            <span className="w-1 h-1 theme-overlay-medium rounded-full" />
                                             <span>{resource.credentials.length} credentials</span>
                                         </>
                                     )}
@@ -414,9 +414,9 @@ function ResourcesTab({ resources, onRefresh, onAddNew, onSelectResource }: {
                             <div className="flex items-center gap-3">
                                 <div className="flex items-center gap-2">
                                     <div className={`w-2 h-2 rounded-full ${getStatusColor(resource.status)}`} />
-                                    <span className="text-xs text-white/50 capitalize">{resource.status}</span>
+                                    <span className="text-xs theme-text-secondary capitalize">{resource.status}</span>
                                 </div>
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity text-white/50">
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity theme-text-secondary">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <polyline points="9,18 15,12 9,6" />
                                     </svg>
@@ -428,8 +428,8 @@ function ResourcesTab({ resources, onRefresh, onAddNew, onSelectResource }: {
             )}
 
             {resources.length > 0 && (
-                <div className="pt-4 border-t border-white/10 flex items-center justify-between text-sm">
-                    <span className="text-white/40">{resources.length} resource{resources.length !== 1 ? 's' : ''} configured</span>
+                <div className="pt-4 border-t theme-border-medium flex items-center justify-between text-sm">
+                    <span className="theme-text-tertiary">{resources.length} resource{resources.length !== 1 ? 's' : ''} configured</span>
                     <button onClick={onRefresh} className="text-sky-400 hover:text-sky-300 flex items-center gap-1">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <polyline points="23,4 23,10 17,10" />
@@ -451,7 +451,7 @@ function SecurityTab() {
                 <ToggleSetting label="Two-Factor Authentication" description="Add an extra layer of security" defaultChecked={false} />
                 <ToggleSetting label="Session Timeout" description="Auto-logout after inactivity" defaultChecked={true} />
             </div>
-            <div className="pt-4 border-t border-white/10">
+            <div className="pt-4 border-t theme-border-medium">
                 <button className="text-red-400 hover:text-red-300">Sign out of all devices</button>
             </div>
         </div>
@@ -461,14 +461,14 @@ function SecurityTab() {
 function ToggleSetting({ label, description, defaultChecked }: { label: string; description: string; defaultChecked: boolean }) {
     const [enabled, setEnabled] = useState(defaultChecked);
     return (
-        <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+        <div className="flex items-center justify-between p-4 theme-overlay-subtle rounded-xl">
             <div>
-                <div className="font-medium">{label}</div>
-                <div className="text-sm text-white/50">{description}</div>
+                <div className="font-medium text-foreground">{label}</div>
+                <div className="text-sm theme-text-secondary">{description}</div>
             </div>
             <button
                 onClick={() => setEnabled(!enabled)}
-                className={`w-12 h-6 rounded-full transition-colors ${enabled ? 'bg-sky-500' : 'bg-white/20'}`}
+                className={`w-12 h-6 rounded-full transition-colors ${enabled ? 'bg-sky-500' : 'theme-overlay-medium'}`}
             >
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform ${enabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
             </button>
@@ -506,12 +506,12 @@ function ResourceModal({ onClose, onCreated }: { onClose: () => void; onCreated:
             >
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-semibold">Add Resource</h2>
-                    <button onClick={onClose} className="text-white/50 hover:text-white">✕</button>
+                    <button onClick={onClose} className="theme-text-secondary hover:theme-text-primary">✕</button>
                 </div>
 
                 {step === 'template' ? (
                     <div className="space-y-4">
-                        <p className="text-white/50">Choose a template or start from scratch:</p>
+                        <p className="theme-text-secondary">Choose a template or start from scratch:</p>
                         <div className="grid grid-cols-3 gap-3 max-h-80 overflow-auto">
                             {templates.map(([key, tpl]) => (
                                 <button
@@ -530,16 +530,16 @@ function ResourceModal({ onClose, onCreated }: { onClose: () => void; onCreated:
                                             ediConfig: template.ediConfig as CreateResourceData['ediConfig'],
                                         });
                                     }}
-                                    className={`p-4 rounded-xl text-left border ${selected === key ? 'border-sky-400 bg-sky-400/10' : 'border-white/10 bg-white/5'
+                                    className={`p-4 rounded-xl text-left border ${selected === key ? 'border-sky-400 bg-sky-400/10' : 'theme-border-medium theme-overlay-subtle'
                                         }`}
                                 >
                                     <div className="font-medium">{tpl.name}</div>
-                                    <div className="text-xs text-white/50">{tpl.type}</div>
+                                    <div className="text-xs theme-text-secondary">{tpl.type}</div>
                                 </button>
                             ))}
                         </div>
                         <div className="flex justify-end gap-3 pt-4">
-                            <button onClick={onClose} className="px-4 py-2 text-white/50">Cancel</button>
+                            <button onClick={onClose} className="px-4 py-2 theme-text-secondary">Cancel</button>
                             <button
                                 onClick={() => setStep('config')}
                                 disabled={!selected}
@@ -552,32 +552,32 @@ function ResourceModal({ onClose, onCreated }: { onClose: () => void; onCreated:
                 ) : (
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm text-white/50 mb-1">Name</label>
+                            <label className="block text-sm theme-text-secondary mb-1">Name</label>
                             <input
                                 value={formData.name}
                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+                                className="w-full theme-overlay-subtle border theme-border-medium rounded-lg px-3 py-2"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm text-white/50 mb-1">Slug (URL-safe ID)</label>
+                            <label className="block text-sm theme-text-secondary mb-1">Slug (URL-safe ID)</label>
                             <input
                                 value={formData.slug}
                                 onChange={e => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+                                className="w-full theme-overlay-subtle border theme-border-medium rounded-lg px-3 py-2"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm text-white/50 mb-1">Description</label>
+                            <label className="block text-sm theme-text-secondary mb-1">Description</label>
                             <textarea
                                 value={formData.description || ''}
                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
                                 rows={2}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 resize-none"
+                                className="w-full theme-overlay-subtle border theme-border-medium rounded-lg px-3 py-2 resize-none"
                             />
                         </div>
                         <div className="flex justify-end gap-3 pt-4">
-                            <button onClick={() => setStep('template')} className="px-4 py-2 text-white/50">Back</button>
+                            <button onClick={() => setStep('template')} className="px-4 py-2 theme-text-secondary">Back</button>
                             <button onClick={handleCreate} disabled={saving} className="px-4 py-2 bg-sky-500 rounded-lg disabled:opacity-50">
                                 {saving ? 'Creating...' : 'Create Resource'}
                             </button>
@@ -622,7 +622,7 @@ function ResourceDetailModal({ resource, onClose, onSave }: {
             await updateResource(localResource.id, {
                 name: localResource.name,
                 description: localResource.description,
-                status: localResource.status,
+                status: localResource.status as "error" | "pending" | "active" | "disabled" | undefined,
                 envVars: localResource.envVars,
             });
             onSave();
@@ -638,7 +638,7 @@ function ResourceDetailModal({ resource, onClose, onSave }: {
         if (!newEnvVar.key) return;
         setLocalResource({
             ...localResource,
-            envVars: [...(localResource.envVars || []), { ...newEnvVar }]
+            envVars: [...(localResource.envVars || []), { ...newEnvVar, scope: 'local' }] as any
         });
         setNewEnvVar({ key: '', value: '', isSecret: false });
         setShowNewEnvVarForm(false);
@@ -654,9 +654,10 @@ function ResourceDetailModal({ resource, onClose, onSave }: {
     const handleAddCredential = async () => {
         if (!newCredential.name) return;
         try {
-            await addCredential(localResource.id, {
+            await addCredential({
+                resourceId: localResource.id,
                 name: newCredential.name,
-                type: newCredential.type,
+                type: newCredential.type as "api_key" | "oauth2" | "service_account" | "basic_auth" | "certificate",
                 value: newCredential.value
             });
             onSave();
@@ -698,30 +699,30 @@ function ResourceDetailModal({ resource, onClose, onSave }: {
                 className="w-full max-w-4xl max-h-[85vh] glass-card rounded-2xl flex flex-col overflow-hidden"
             >
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-white/10">
+                <div className="flex items-center justify-between p-6 border-b theme-border-medium">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-400/20 to-emerald-400/20 flex items-center justify-center text-2xl">
                             {localResource.icon || (localResource.type === 'api' ? '🔌' : localResource.type === 'database' ? '💾' : localResource.type === 'edi' ? '📄' : '☁️')}
                         </div>
                         <div>
                             <h2 className="text-xl font-semibold">{localResource.name}</h2>
-                            <p className="text-sm text-white/50">{localResource.provider} • {localResource.slug}</p>
+                            <p className="text-sm theme-text-secondary">{localResource.provider} • {localResource.slug}</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white">
+                    <button onClick={onClose} className="w-8 h-8 rounded-lg theme-overlay-subtle hover:theme-overlay-medium flex items-center justify-center theme-text-secondary hover:theme-text-primary">
                         ✕
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-white/10 px-6">
+                <div className="flex border-b theme-border-medium px-6">
                     {tabs.filter(t => t.show).map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === tab.id
-                                    ? 'border-sky-400 text-white'
-                                    : 'border-transparent text-white/50 hover:text-white'
+                                    ? 'border-sky-400 theme-text-primary'
+                                    : 'border-transparent theme-text-secondary hover:theme-text-primary'
                                 }`}
                         >
                             <span>{tab.icon}</span>
@@ -771,12 +772,12 @@ function ResourceDetailModal({ resource, onClose, onSave }: {
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between p-6 border-t border-white/10 bg-white/5">
+                <div className="flex items-center justify-between p-6 border-t theme-border-medium theme-overlay-subtle">
                     <button onClick={handleDelete} className="px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors">
                         Delete Resource
                     </button>
                     <div className="flex gap-3">
-                        <button onClick={onClose} className="px-4 py-2 text-white/50 hover:text-white">Cancel</button>
+                        <button onClick={onClose} className="px-4 py-2 theme-text-secondary hover:theme-text-primary">Cancel</button>
                         <button
                             onClick={handleSave}
                             disabled={saving}
@@ -797,20 +798,20 @@ function OverviewPanel({ resource, setResource }: { resource: Resource; setResou
         <div className="space-y-6">
             <div className="grid grid-cols-2 gap-6">
                 <div>
-                    <label className="block text-sm text-white/50 mb-2">Name</label>
+                    <label className="block text-sm theme-text-secondary mb-2">Name</label>
                     <input
                         type="text"
                         value={resource.name}
                         onChange={e => setResource({ ...resource, name: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400"
+                        className="w-full theme-overlay-subtle border theme-border-medium rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400"
                     />
                 </div>
                 <div>
-                    <label className="block text-sm text-white/50 mb-2">Status</label>
+                    <label className="block text-sm theme-text-secondary mb-2">Status</label>
                     <select
                         value={resource.status}
                         onChange={e => setResource({ ...resource, status: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3"
+                        className="w-full theme-overlay-subtle border theme-border-medium rounded-xl px-4 py-3"
                     >
                         <option value="active">Active</option>
                         <option value="disabled">Disabled</option>
@@ -820,26 +821,26 @@ function OverviewPanel({ resource, setResource }: { resource: Resource; setResou
             </div>
 
             <div>
-                <label className="block text-sm text-white/50 mb-2">Description</label>
+                <label className="block text-sm theme-text-secondary mb-2">Description</label>
                 <textarea
                     value={resource.description || ''}
                     onChange={e => setResource({ ...resource, description: e.target.value })}
                     rows={3}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 resize-none"
+                    className="w-full theme-overlay-subtle border theme-border-medium rounded-xl px-4 py-3 resize-none"
                 />
             </div>
 
-            <div className="grid grid-cols-3 gap-4 p-4 bg-white/5 rounded-xl">
+            <div className="grid grid-cols-3 gap-4 p-4 theme-overlay-subtle rounded-xl">
                 <div>
-                    <div className="text-xs text-white/40 uppercase tracking-wider mb-1">Type</div>
+                    <div className="text-xs theme-text-tertiary uppercase tracking-wider mb-1">Type</div>
                     <div className="font-medium capitalize">{resource.type}</div>
                 </div>
                 <div>
-                    <div className="text-xs text-white/40 uppercase tracking-wider mb-1">Provider</div>
+                    <div className="text-xs theme-text-tertiary uppercase tracking-wider mb-1">Provider</div>
                     <div className="font-medium">{resource.provider}</div>
                 </div>
                 <div>
-                    <div className="text-xs text-white/40 uppercase tracking-wider mb-1">Slug</div>
+                    <div className="text-xs theme-text-tertiary uppercase tracking-wider mb-1">Slug</div>
                     <div className="font-mono text-sm">{resource.slug}</div>
                 </div>
             </div>
@@ -849,8 +850,8 @@ function OverviewPanel({ resource, setResource }: { resource: Resource; setResou
                     <h3 className="font-medium mb-3">Resource Limits</h3>
                     <div className="grid grid-cols-2 gap-3">
                         {Object.entries(resource.limits).map(([key, value]) => (
-                            <div key={key} className="flex justify-between p-3 bg-white/5 rounded-lg">
-                                <span className="text-white/50 capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
+                            <div key={key} className="flex justify-between p-3 theme-overlay-subtle rounded-lg">
+                                <span className="theme-text-secondary capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
                                 <span className="font-mono">{String(value)}</span>
                             </div>
                         ))}
@@ -876,7 +877,7 @@ function EnvVarsPanel({ envVars, newEnvVar, setNewEnvVar, showForm, setShowForm,
             <div className="flex items-center justify-between">
                 <div>
                     <h3 className="font-medium">Environment Variables</h3>
-                    <p className="text-sm text-white/50">Configure secrets and environment variables (Replit-style)</p>
+                    <p className="text-sm theme-text-secondary">Configure secrets and environment variables (Replit-style)</p>
                 </div>
                 <button
                     onClick={() => setShowForm(true)}
@@ -890,7 +891,7 @@ function EnvVarsPanel({ envVars, newEnvVar, setNewEnvVar, showForm, setShowForm,
                 <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3"
+                    className="p-4 theme-overlay-subtle rounded-xl border theme-border-medium space-y-3"
                 >
                     <div className="grid grid-cols-2 gap-3">
                         <input
@@ -898,14 +899,14 @@ function EnvVarsPanel({ envVars, newEnvVar, setNewEnvVar, showForm, setShowForm,
                             placeholder="KEY_NAME"
                             value={newEnvVar.key}
                             onChange={e => setNewEnvVar({ ...newEnvVar, key: e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '') })}
-                            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 font-mono text-sm"
+                            className="theme-overlay-subtle border theme-border-medium rounded-lg px-3 py-2 font-mono text-sm"
                         />
                         <input
                             type={newEnvVar.isSecret ? 'password' : 'text'}
                             placeholder="value"
                             value={newEnvVar.value}
                             onChange={e => setNewEnvVar({ ...newEnvVar, value: e.target.value })}
-                            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+                            className="theme-overlay-subtle border theme-border-medium rounded-lg px-3 py-2"
                         />
                     </div>
                     <div className="flex items-center justify-between">
@@ -916,10 +917,10 @@ function EnvVarsPanel({ envVars, newEnvVar, setNewEnvVar, showForm, setShowForm,
                                 onChange={e => setNewEnvVar({ ...newEnvVar, isSecret: e.target.checked })}
                                 className="rounded"
                             />
-                            <span className="text-white/70">Secret (hidden in logs)</span>
+                            <span className="theme-text-secondary">Secret (hidden in logs)</span>
                         </label>
                         <div className="flex gap-2">
-                            <button onClick={() => setShowForm(false)} className="px-3 py-1.5 text-white/50 text-sm">Cancel</button>
+                            <button onClick={() => setShowForm(false)} className="px-3 py-1.5 theme-text-secondary text-sm">Cancel</button>
                             <button onClick={onAdd} className="px-3 py-1.5 bg-sky-500 rounded-lg text-sm">Add</button>
                         </div>
                     </div>
@@ -927,20 +928,20 @@ function EnvVarsPanel({ envVars, newEnvVar, setNewEnvVar, showForm, setShowForm,
             )}
 
             {envVars.length === 0 && !showForm ? (
-                <div className="text-center py-8 text-white/40 bg-white/5 rounded-xl border border-dashed border-white/20">
+                <div className="text-center py-8 theme-text-tertiary theme-overlay-subtle rounded-xl border border-dashed theme-border-strong">
                     <p className="text-2xl mb-2">🔐</p>
                     <p>No environment variables configured</p>
                 </div>
             ) : (
                 <div className="space-y-2">
                     {envVars.map(env => (
-                        <div key={env.key} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg group">
-                            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-sm">
+                        <div key={env.key} className="flex items-center gap-3 p-3 theme-overlay-subtle rounded-lg group">
+                            <div className="w-8 h-8 rounded-lg theme-overlay-medium flex items-center justify-center text-sm">
                                 {env.isSecret ? '🔒' : '📝'}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="font-mono text-sm font-medium">{env.key}</div>
-                                <div className="text-xs text-white/40 truncate">
+                                <div className="text-xs theme-text-tertiary truncate">
                                     {env.isSecret ? '••••••••••••' : env.value}
                                 </div>
                             </div>
@@ -981,7 +982,7 @@ function CredentialsPanel({ credentials, newCredential, setNewCredential, showFo
             <div className="flex items-center justify-between">
                 <div>
                     <h3 className="font-medium">Credentials</h3>
-                    <p className="text-sm text-white/50">Manage API keys, tokens, and authentication</p>
+                    <p className="text-sm theme-text-secondary">Manage API keys, tokens, and authentication</p>
                 </div>
                 <button
                     onClick={() => setShowForm(true)}
@@ -995,7 +996,7 @@ function CredentialsPanel({ credentials, newCredential, setNewCredential, showFo
                 <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3"
+                    className="p-4 theme-overlay-subtle rounded-xl border theme-border-medium space-y-3"
                 >
                     <div className="grid grid-cols-2 gap-3">
                         <input
@@ -1003,12 +1004,12 @@ function CredentialsPanel({ credentials, newCredential, setNewCredential, showFo
                             placeholder="Credential name"
                             value={newCredential.name}
                             onChange={e => setNewCredential({ ...newCredential, name: e.target.value })}
-                            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+                            className="theme-overlay-subtle border theme-border-medium rounded-lg px-3 py-2"
                         />
                         <select
                             value={newCredential.type}
                             onChange={e => setNewCredential({ ...newCredential, type: e.target.value })}
-                            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+                            className="theme-overlay-subtle border theme-border-medium rounded-lg px-3 py-2"
                         >
                             {credentialTypes.map(t => (
                                 <option key={t.value} value={t.value}>{t.label}</option>
@@ -1020,40 +1021,40 @@ function CredentialsPanel({ credentials, newCredential, setNewCredential, showFo
                         value={newCredential.value}
                         onChange={e => setNewCredential({ ...newCredential, value: e.target.value })}
                         rows={3}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 font-mono text-sm resize-none"
+                        className="w-full theme-overlay-subtle border theme-border-medium rounded-lg px-3 py-2 font-mono text-sm resize-none"
                     />
                     <div className="flex justify-end gap-2">
-                        <button onClick={() => setShowForm(false)} className="px-3 py-1.5 text-white/50 text-sm">Cancel</button>
+                        <button onClick={() => setShowForm(false)} className="px-3 py-1.5 theme-text-secondary text-sm">Cancel</button>
                         <button onClick={onAdd} className="px-3 py-1.5 bg-sky-500 rounded-lg text-sm">Add Credential</button>
                     </div>
                 </motion.div>
             )}
 
             {credentials.length === 0 && !showForm ? (
-                <div className="text-center py-8 text-white/40 bg-white/5 rounded-xl border border-dashed border-white/20">
+                <div className="text-center py-8 theme-text-tertiary theme-overlay-subtle rounded-xl border border-dashed theme-border-strong">
                     <p className="text-2xl mb-2">🔑</p>
                     <p>No credentials configured</p>
                 </div>
             ) : (
                 <div className="space-y-2">
                     {credentials.map(cred => (
-                        <div key={cred.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg group">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${cred.isActive ? 'bg-emerald-500/20' : 'bg-white/10'}`}>
+                        <div key={cred.id} className="flex items-center gap-3 p-3 theme-overlay-subtle rounded-lg group">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${cred.isActive ? 'bg-emerald-500/20' : 'theme-overlay-medium'}`}>
                                 🔑
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="font-medium">{cred.name}</div>
-                                <div className="text-xs text-white/40 flex items-center gap-2">
+                                <div className="text-xs theme-text-tertiary flex items-center gap-2">
                                     <span className="capitalize">{cred.type.replace('_', ' ')}</span>
                                     {cred.createdAt && (
                                         <>
-                                            <span className="w-1 h-1 bg-white/30 rounded-full" />
+                                            <span className="w-1 h-1 theme-overlay-medium rounded-full" />
                                             <span>Added {new Date(cred.createdAt).toLocaleDateString()}</span>
                                         </>
                                     )}
                                 </div>
                             </div>
-                            <div className={`px-2 py-0.5 rounded text-xs ${cred.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/50'}`}>
+                            <div className={`px-2 py-0.5 rounded text-xs ${cred.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'theme-overlay-medium theme-text-secondary'}`}>
                                 {cred.isActive ? 'Active' : 'Inactive'}
                             </div>
                             <button
@@ -1103,27 +1104,27 @@ function EDIConfigPanel({ resource, setResource }: { resource: Resource; setReso
                     <span>📄</span>
                     <span className="font-medium">EDI Configuration (X12 / EDIFACT)</span>
                 </div>
-                <p className="text-sm text-white/50">Configure your Electronic Data Interchange settings for B2B document exchange</p>
+                <p className="text-sm theme-text-secondary">Configure your Electronic Data Interchange settings for B2B document exchange</p>
             </div>
 
             <div className="grid grid-cols-2 gap-6">
                 <div>
-                    <label className="block text-sm text-white/50 mb-2">Standard</label>
+                    <label className="block text-sm theme-text-secondary mb-2">Standard</label>
                     <select
                         value={ediConfig.standard}
                         onChange={e => updateEDI({ standard: e.target.value as 'X12' | 'EDIFACT' })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3"
+                        className="w-full theme-overlay-subtle border theme-border-medium rounded-xl px-4 py-3"
                     >
                         <option value="X12">ANSI X12 (North America)</option>
                         <option value="EDIFACT">UN/EDIFACT (International)</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm text-white/50 mb-2">Version</label>
+                    <label className="block text-sm theme-text-secondary mb-2">Version</label>
                     <select
                         value={ediConfig.version}
                         onChange={e => updateEDI({ version: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3"
+                        className="w-full theme-overlay-subtle border theme-border-medium rounded-xl px-4 py-3"
                     >
                         {ediConfig.standard === 'X12' ? (
                             <>
@@ -1143,10 +1144,10 @@ function EDIConfigPanel({ resource, setResource }: { resource: Resource; setReso
             </div>
 
             <div>
-                <label className="block text-sm text-white/50 mb-2">Transaction Sets</label>
+                <label className="block text-sm theme-text-secondary mb-2">Transaction Sets</label>
                 <div className="grid grid-cols-3 gap-2">
                     {transactionSetOptions.map(ts => (
-                        <label key={ts.code} className="flex items-center gap-2 p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10">
+                        <label key={ts.code} className="flex items-center gap-2 p-2 theme-overlay-subtle rounded-lg cursor-pointer hover:theme-overlay-medium">
                             <input
                                 type="checkbox"
                                 checked={ediConfig.transactionSets.includes(ts.code)}
@@ -1160,42 +1161,42 @@ function EDIConfigPanel({ resource, setResource }: { resource: Resource; setReso
                             />
                             <span className="text-sm">
                                 <span className="font-mono">{ts.code}</span>
-                                <span className="text-white/50 ml-1">- {ts.name}</span>
+                                <span className="theme-text-secondary ml-1">- {ts.name}</span>
                             </span>
                         </label>
                     ))}
                 </div>
             </div>
 
-            <div className="p-4 bg-white/5 rounded-xl space-y-4">
+            <div className="p-4 theme-overlay-subtle rounded-xl space-y-4">
                 <h4 className="font-medium">Interchange Settings</h4>
                 <div className="grid grid-cols-3 gap-4">
                     <div>
-                        <label className="block text-xs text-white/50 mb-1">Sender ID (ISA06)</label>
+                        <label className="block text-xs theme-text-secondary mb-1">Sender ID (ISA06)</label>
                         <input
                             type="text"
                             value={ediConfig.interchange.senderId}
                             onChange={e => updateEDI({ interchange: { ...ediConfig.interchange, senderId: e.target.value } })}
                             placeholder="Your ID"
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 font-mono text-sm"
+                            className="w-full theme-overlay-subtle border theme-border-medium rounded-lg px-3 py-2 font-mono text-sm"
                         />
                     </div>
                     <div>
-                        <label className="block text-xs text-white/50 mb-1">Receiver ID (ISA08)</label>
+                        <label className="block text-xs theme-text-secondary mb-1">Receiver ID (ISA08)</label>
                         <input
                             type="text"
                             value={ediConfig.interchange.receiverId}
                             onChange={e => updateEDI({ interchange: { ...ediConfig.interchange, receiverId: e.target.value } })}
                             placeholder="Partner ID"
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 font-mono text-sm"
+                            className="w-full theme-overlay-subtle border theme-border-medium rounded-lg px-3 py-2 font-mono text-sm"
                         />
                     </div>
                     <div>
-                        <label className="block text-xs text-white/50 mb-1">Qualifier</label>
+                        <label className="block text-xs theme-text-secondary mb-1">Qualifier</label>
                         <select
                             value={ediConfig.interchange.qualifier}
                             onChange={e => updateEDI({ interchange: { ...ediConfig.interchange, qualifier: e.target.value } })}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+                            className="w-full theme-overlay-subtle border theme-border-medium rounded-lg px-3 py-2"
                         >
                             <option value="ZZ">Mutually Defined (ZZ)</option>
                             <option value="01">DUNS Number (01)</option>
@@ -1240,7 +1241,7 @@ function EndpointsPanel({ resource }: { resource: Resource }) {
             <div className="flex items-center justify-between">
                 <div>
                     <h3 className="font-medium">Endpoints</h3>
-                    <p className="text-sm text-white/50">API endpoints and connection URLs</p>
+                    <p className="text-sm theme-text-secondary">API endpoints and connection URLs</p>
                 </div>
                 <button className="px-3 py-1.5 bg-sky-500/20 text-sky-400 rounded-lg text-sm hover:bg-sky-500/30">
                     + Add Endpoint
@@ -1248,22 +1249,22 @@ function EndpointsPanel({ resource }: { resource: Resource }) {
             </div>
 
             {endpoints.length === 0 ? (
-                <div className="text-center py-8 text-white/40 bg-white/5 rounded-xl border border-dashed border-white/20">
+                <div className="text-center py-8 theme-text-tertiary theme-overlay-subtle rounded-xl border border-dashed theme-border-strong">
                     <p className="text-2xl mb-2">🌐</p>
                     <p>No endpoints configured</p>
                 </div>
             ) : (
                 <div className="space-y-2">
                     {endpoints.map((ep, idx) => (
-                        <div key={idx} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-                            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-sm">
+                        <div key={idx} className="flex items-center gap-3 p-3 theme-overlay-subtle rounded-lg">
+                            <div className="w-8 h-8 rounded-lg theme-overlay-medium flex items-center justify-center text-sm">
                                 🌐
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="font-medium">{ep.name}</div>
-                                <div className="text-xs text-white/40 font-mono truncate">{ep.url}</div>
+                                <div className="text-xs theme-text-tertiary font-mono truncate">{ep.url}</div>
                             </div>
-                            <span className="px-2 py-0.5 bg-white/10 rounded text-xs uppercase">{ep.type}</span>
+                            <span className="px-2 py-0.5 theme-overlay-medium rounded text-xs uppercase">{ep.type}</span>
                         </div>
                     ))}
                 </div>

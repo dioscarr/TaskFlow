@@ -66,7 +66,7 @@ export default function TaskDetail({ task, onClose }: { task: TaskWithData; onCl
 
             <div className="flex flex-col h-full text-foreground">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-white/10 glass bg-white/5">
+                <div className="flex items-center justify-between p-6 border-b theme-border-medium glass bg-white/5">
                     <div className="flex items-center gap-4">
                         <div className="p-2 bg-sky-500/20 rounded-lg text-sky-400">
                             <FileText size={24} />
@@ -80,7 +80,7 @@ export default function TaskDetail({ task, onClose }: { task: TaskWithData; onCl
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleDeleteClick}
-                            className="p-2 hover:bg-white/10 rounded-full transition-colors text-red-400"
+                            className="p-2 hover:theme-overlay-medium rounded-full transition-colors text-red-400"
                             title="Delete Task (Delete)"
                         >
                             <Trash2 size={20} />
@@ -103,14 +103,14 @@ export default function TaskDetail({ task, onClose }: { task: TaskWithData; onCl
                                     toast.error('An error occurred', { id: loadingToast });
                                 }
                             }}
-                            className="p-2 hover:bg-white/10 rounded-full transition-colors text-emerald-400"
+                            className="p-2 hover:theme-overlay-medium rounded-full transition-colors text-emerald-400"
                             title="Mark as Done"
                         >
                             <CheckSquare size={20} />
                         </button>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                            className="p-2 hover:theme-overlay-medium rounded-full transition-colors"
                         >
                             <X size={20} />
                         </button>
@@ -122,7 +122,7 @@ export default function TaskDetail({ task, onClose }: { task: TaskWithData; onCl
                     {/* Metadata Badges */}
                     <div className="flex gap-2 mb-6">
                         {task.tags?.map(tag => (
-                            <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-white/70">
+                            <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium theme-overlay-subtle border theme-border-medium text-white/70">
                                 {tag}
                             </span>
                         ))}

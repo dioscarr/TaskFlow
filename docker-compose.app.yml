@@ -6,20 +6,86 @@ services:
     build:
       context: ./apps/${APP_NAME}
       dockerfile: Dockerfile.dev
+      # Cache build layers for faster rebuilds
+      cache_from:
+        - ${APP_NAME}:dev-cache
+    container_name: ${APP_NAME}-dev
     ports:
       - "${DEV_PORT:-5050}:5050"
     environment:
       - NODE_ENV=development
+      - VITE_HMR_HOST=localhost
+      - VITE_HMR_PORT=${DEV_PORT:-5050}
     volumes:
-      - ./apps/${APP_NAME}:/app
-      - /app/node_modules
+      # Bind mount source code only (for hot reload)
+      - ./apps/${APP_NAME}/src:/app/src:cached
+      - ./apps/${APP_NAME}/public:/app/public:cached
+
+      # Named volume for node_modules (performance + platform compatibility)
+      - ${APP_NAME}_node_modules:/app/node_modules
+
+      # Cache volumes for faster builds (optional)
+      - ${APP_NAME}_vite_cache:/app/.vite
+
+    # 🆕 Docker Compose Watch - Modern hot reload pattern
+    develop:
+      watch:
+        # Sync source files instantly (triggers Vite HMR)
+        - action: sync
+          path: ./apps/${APP_NAME}/src
+          target: /app/src
+          ignore:
+            - "**/*.test.ts"
+            - "**/*.test.tsx"
+            - "**/*.spec.ts"
+            - "**/*.spec.tsx"
+
+        # Sync public assets
+        - action: sync
+          path: ./apps/${APP_NAME}/public
+          target: /app/public
+
+        # Rebuild on dependency changes
+        - action: rebuild
+          path: ./apps/${APP_NAME}/package.json
+
+        # Sync+restart on config changes
+        - action: sync+restart
+          path: ./apps/${APP_NAME}/vite.config.ts
+          target: /app/vite.config.ts
+        - action: sync+restart
+          path: ./apps/${APP_NAME}/vite.config.js
+          target: /app/vite.config.js
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5050"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 60s
 
   app-prod:
     profiles: ["prod"]
     build:
       context: ./apps/${APP_NAME}
       dockerfile: Dockerfile
+    container_name: ${APP_NAME}-prod
     ports:
       - "${PROD_PORT:-8080}:80"
     environment:
       - NODE_ENV=production
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  ${APP_NAME}_node_modules:
+  ${APP_NAME}_vite_cache:
+

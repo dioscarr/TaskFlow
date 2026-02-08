@@ -695,7 +695,7 @@ export async function rotateCredential(id: string, newValue: string) {
 // RESOURCE TEMPLATES
 // ============================================
 
-export const RESOURCE_TEMPLATES = {
+const RESOURCE_TEMPLATES = {
     firebase: {
         name: 'Firebase',
         type: 'api' as const,

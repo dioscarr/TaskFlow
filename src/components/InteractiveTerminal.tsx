@@ -81,25 +81,25 @@ export default function InteractiveTerminal({ onClose, initialCommand }: { onClo
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#08080c] border border-white/10 rounded-xl overflow-hidden shadow-2xl relative">
+        <div className="flex flex-col h-full bg-[#08080c] border theme-border-medium rounded-xl overflow-hidden shadow-2xl relative">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-white/5 border-b border-white/5 backdrop-blur-md z-10">
+            <div className="flex items-center justify-between px-4 py-3 theme-overlay-subtle border-b theme-border-subtle backdrop-blur-md z-10">
                 <div className="flex items-center gap-3">
                     <div className="flex gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-red-500/50" />
                         <div className="w-2.5 h-2.5 rounded-full bg-amber-500/50" />
                         <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/50" />
                     </div>
-                    <div className="h-4 w-px bg-white/10 mx-1" />
+                    <div className="h-4 w-px theme-overlay-medium mx-1" />
                     <div className="flex items-center gap-2">
                         <Terminal size={12} className="text-sky-400" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Omni-Shell</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest theme-text-secondary">Omni-Shell</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setHistory([])}
-                        className="p-1.5 hover:bg-white/5 rounded-md text-white/20 hover:text-white/60 transition-all"
+                        className="p-1.5 hover:theme-overlay-subtle rounded-md theme-text-quaternary hover:text-white/60 transition-all"
                         title="Clear History"
                     >
                         <Trash2 size={12} />
@@ -107,7 +107,7 @@ export default function InteractiveTerminal({ onClose, initialCommand }: { onClo
                     {onClose && (
                         <button
                             onClick={onClose}
-                            className="p-1.5 hover:bg-red-500/10 rounded-md text-white/20 hover:text-red-400 transition-all"
+                            className="p-1.5 hover:bg-red-500/10 rounded-md theme-text-quaternary hover:text-red-400 transition-all"
                         >
                             <X size={14} />
                         </button>
@@ -146,7 +146,7 @@ export default function InteractiveTerminal({ onClose, initialCommand }: { onClo
             {/* Input Area */}
             <form
                 onSubmit={handleExecute}
-                className="px-4 py-3 bg-black/40 border-t border-white/5 flex items-center gap-3"
+                className="px-4 py-3 bg-black/40 border-t theme-border-subtle flex items-center gap-3"
             >
                 <ChevronRight size={14} className="text-sky-400 shrink-0" />
                 <input
@@ -156,7 +156,7 @@ export default function InteractiveTerminal({ onClose, initialCommand }: { onClo
                     onChange={(e) => setInput(e.target.value)}
                     disabled={isExecuting}
                     placeholder="Enter command (e.g. status, agent, jobs)..."
-                    className="flex-1 bg-transparent border-none outline-none text-white/90 font-mono text-[11px] placeholder:text-white/10"
+                    className="flex-1 bg-transparent border-none outline-none text-white/90 font-mono text-[11px] placeholder:theme-text-quaternary"
                     autoFocus
                 />
                 <button
@@ -169,7 +169,7 @@ export default function InteractiveTerminal({ onClose, initialCommand }: { onClo
             </form>
 
             {/* Status Bar */}
-            <div className="px-4 py-1.5 bg-black/60 border-t border-white/5 flex items-center justify-between text-[8px] font-black uppercase tracking-[0.2em] text-white/20">
+            <div className="px-4 py-1.5 bg-black/60 border-t theme-border-subtle flex items-center justify-between text-[8px] font-black uppercase tracking-[0.2em] theme-text-quaternary">
                 <div className="flex gap-6">
                     <span className="flex items-center gap-1.5">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />

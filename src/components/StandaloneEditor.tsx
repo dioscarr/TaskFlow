@@ -104,17 +104,17 @@ export default function StandaloneEditor({
     return (
         <div className={cn(
             "flex flex-col h-full bg-[#050505] overflow-hidden",
-            embedded ? "border-x border-white/5" : "border border-white/10 rounded-xl"
+            embedded ? "border-x theme-border-subtle" : "border theme-border-medium rounded-xl"
         )}>
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-2.5 bg-[#0a0a0a] border-b border-white/5">
+            <div className="flex items-center justify-between px-4 py-2.5 bg-[#0a0a0a] border-b theme-border-subtle">
                 <div className="flex items-center gap-3">
                     <div className="p-1.5 bg-sky-500/10 rounded border border-sky-500/20">
                         <Code2 size={14} className="text-sky-400" />
                     </div>
                     <div>
                         <h3 className="text-xs font-medium text-white/90 truncate max-w-[150px]">{fileName}</h3>
-                        <p className="text-[9px] text-white/40 font-mono uppercase tracking-widest">{language}</p>
+                        <p className="text-[9px] theme-text-tertiary font-mono uppercase tracking-widest">{language}</p>
                     </div>
                 </div>
 
@@ -157,7 +157,7 @@ export default function StandaloneEditor({
                 />
 
                 {/* Floating status */}
-                <div className="absolute bottom-4 right-4 px-2 py-1 bg-black/60 backdrop-blur-md rounded border border-white/5 text-[9px] text-white/40 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute bottom-4 right-4 px-2 py-1 bg-black/60 backdrop-blur-md rounded border theme-border-subtle text-[9px] theme-text-tertiary font-mono opacity-0 group-hover:opacity-100 transition-opacity">
                     LN {content.split('\n').length} | UTF-8
                 </div>
             </div>

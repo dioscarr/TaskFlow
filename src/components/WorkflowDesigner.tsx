@@ -175,9 +175,9 @@ export default function WorkflowDesigner({
     return (
         <div className="flex gap-6 h-full min-h-[500px]">
             {/* Sidebar List */}
-            <div className="w-1/4 flex flex-col gap-2 border-r border-white/10 pr-6">
+            <div className="w-1/4 flex flex-col gap-2 border-r theme-border-medium pr-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">Workflows</h3>
+                    <h3 className="text-[10px] font-black uppercase tracking-widest theme-text-tertiary">Workflows</h3>
                     <button
                         onClick={addWorkflow}
                         className="p-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 rounded-lg transition-all"
@@ -195,7 +195,7 @@ export default function WorkflowDesigner({
                                     <button
                                         key={template.id}
                                         onClick={() => addTemplateWorkflow(template)}
-                                        className="w-full flex items-center gap-3 p-3 rounded-2xl border border-white/5 text-left bg-white/5 text-white/40 hover:bg-white/10 hover:border-white/10 transition-all"
+                                        className="w-full flex items-center gap-3 p-3 rounded-2xl border theme-border-subtle text-left theme-overlay-subtle theme-text-tertiary hover:theme-overlay-medium hover:theme-border-medium transition-all"
                                     >
                                         <Zap size={14} className="text-yellow-400" />
                                         <span className="text-xs font-bold truncate">{template.name}</span>
@@ -212,10 +212,10 @@ export default function WorkflowDesigner({
                                     "w-full flex items-center gap-3 p-3 rounded-2xl border transition-all text-left",
                                     activeWorkflowId === w.id
                                         ? "bg-sky-500/10 border-sky-500/30 text-sky-400"
-                                        : "bg-white/5 border-white/5 text-white/40 hover:bg-white/10 hover:border-white/10"
+                                        : "theme-overlay-subtle theme-border-subtle theme-text-tertiary hover:theme-overlay-medium hover:theme-border-medium"
                                 )}
                             >
-                                <List size={14} className={activeWorkflowId === w.id ? "text-sky-500" : "text-white/20"} />
+                                <List size={14} className={activeWorkflowId === w.id ? "text-sky-500" : "theme-text-quaternary"} />
                                 <span className="text-xs font-bold truncate pr-6">{w.name}</span>
                             </button>
                             <button
@@ -227,7 +227,7 @@ export default function WorkflowDesigner({
                         </div>
                     ))}
                     {workflows.length === 0 && (
-                        <div className="text-[10px] text-white/20 text-center py-8">No workflows defined</div>
+                        <div className="text-[10px] theme-text-quaternary text-center py-8">No workflows defined</div>
                     )}
                 </div>
             </div>
@@ -237,7 +237,7 @@ export default function WorkflowDesigner({
                 {activeWorkflow ? (
                     <div className="space-y-6">
                         {/* Header/Name */}
-                        <div className="bg-white/5 border border-white/10 rounded-3xl p-6">
+                        <div className="theme-overlay-subtle border theme-border-medium rounded-3xl p-6">
                             <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-1">
                                     <label className="text-[9px] font-black uppercase tracking-[0.2em] text-sky-400 mb-1 ml-1 group-focus-within:text-sky-400 transition-colors">Workflow Identity</label>
@@ -248,7 +248,7 @@ export default function WorkflowDesigner({
                                         <input
                                             value={activeWorkflow.name}
                                             onChange={e => updateActiveWorkflow({ name: e.target.value })}
-                                            className="bg-white/5 border border-white/10 focus:border-sky-500/50 focus:bg-white/10 px-4 py-2 rounded-xl text-lg font-bold text-white outline-none transition-all flex-1"
+                                            className="theme-overlay-subtle border theme-border-medium focus:border-sky-500/50 focus:theme-overlay-medium px-4 py-2 rounded-xl text-lg font-bold text-white outline-none transition-all flex-1"
                                             placeholder="Name your automation flow (e.g. Dominican Receipt Sync)..."
                                         />
                                     </div>
@@ -262,11 +262,11 @@ export default function WorkflowDesigner({
                                         </div>
                                         <span className="text-[8px] text-white/30 uppercase font-bold">Press Enter or click Add</span>
                                     </div>
-                                    <div className="bg-black/20 border border-white/5 rounded-2xl p-3">
+                                    <div className="bg-black/20 border theme-border-subtle rounded-2xl p-3">
                                         <div className="flex flex-wrap gap-2 mb-3">
                                             {activeWorkflow.triggerKeywords.length > 0 ? (
                                                 activeWorkflow.triggerKeywords.map(kw => (
-                                                    <span key={kw} className="flex items-center gap-1.5 px-2 py-1 bg-white/5 border border-white/10 text-white/50 rounded-lg text-[9px] font-medium transition-all group">
+                                                    <span key={kw} className="flex items-center gap-1.5 px-2 py-1 theme-overlay-subtle border theme-border-medium theme-text-secondary rounded-lg text-[9px] font-medium transition-all group">
                                                         {kw}
                                                         <button onClick={() => removeKeyword(kw)} className="hover:text-red-400 transition-colors">
                                                             <X size={10} />
@@ -274,7 +274,7 @@ export default function WorkflowDesigner({
                                                     </span>
                                                 ))
                                             ) : (
-                                                <span className="text-[10px] text-white/20 italic px-2">No keywords defined yet...</span>
+                                                <span className="text-[10px] theme-text-quaternary italic px-2">No keywords defined yet...</span>
                                             )}
                                         </div>
                                         <div className="flex gap-2">
@@ -283,7 +283,7 @@ export default function WorkflowDesigner({
                                                 onChange={e => setKeywordInput(e.target.value)}
                                                 onKeyDown={handleAddKeyword}
                                                 placeholder="e.g. sync, process, verify..."
-                                                className="bg-white/5 border border-white/5 hover:border-white/10 focus:border-sky-500/50 px-4 py-2 rounded-xl text-xs text-white placeholder:text-white/10 outline-none transition-all flex-1"
+                                                className="theme-overlay-subtle border theme-border-subtle hover:theme-border-medium focus:border-sky-500/50 px-4 py-2 rounded-xl text-xs text-white placeholder:text-white/10 outline-none transition-all flex-1"
                                             />
                                             <button
                                                 onClick={() => {
@@ -333,12 +333,12 @@ export default function WorkflowDesigner({
                                         <Reorder.Item
                                             key={step.id}
                                             value={step}
-                                            className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4 group hover:border-white/20 transition-all"
+                                            className="theme-overlay-subtle border theme-border-medium rounded-2xl p-4 flex items-center gap-4 group hover:border-white/20 transition-all"
                                         >
-                                            <div className="cursor-grab active:cursor-grabbing text-white/20 group-hover:text-white/40">
+                                            <div className="cursor-grab active:cursor-grabbing theme-text-quaternary group-hover:theme-text-tertiary">
                                                 <GripVertical size={20} />
                                             </div>
-                                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black text-white/40">
+                                            <div className="flex-shrink-0 w-8 h-8 rounded-full theme-overlay-subtle border theme-border-medium flex items-center justify-center text-[10px] font-black theme-text-tertiary">
                                                 {index + 1}
                                             </div>
                                             <div className="flex-1 min-w-0 space-y-2">
@@ -354,7 +354,7 @@ export default function WorkflowDesigner({
 
                                                 {(step.action === 'move_attachments_to_folder' || step.action === 'copy_attachments_to_folder') && (
                                                     <div className="flex flex-wrap gap-2 items-center">
-                                                        <span className="text-[10px] text-white/40">
+                                                        <span className="text-[10px] theme-text-tertiary">
                                                             {step.action === 'move_attachments_to_folder'
                                                                 ? 'Moves files into the last created folder.'
                                                                 : 'Copies files into the last created folder.'}
@@ -366,7 +366,7 @@ export default function WorkflowDesigner({
                                                                 "px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all",
                                                                 ((step.params as any)?.useLastMarkdownFolder ?? true)
                                                                     ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
-                                                                    : "bg-white/5 border-white/10 text-white/40 hover:text-white"
+                                                                    : "theme-overlay-subtle theme-border-medium theme-text-tertiary hover:text-white"
                                                             )}
                                                         >
                                                             {((step.params as any)?.useLastMarkdownFolder ?? true) ? 'Using last folder' : 'Select folder later'}
@@ -376,12 +376,12 @@ export default function WorkflowDesigner({
 
                                                 {step.action === 'create_folder' && (
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                        <label className="text-[9px] uppercase tracking-widest text-white/40">
+                                                        <label className="text-[9px] uppercase tracking-widest theme-text-tertiary">
                                                             If folder exists
                                                             <select
                                                                 value={(step.params as any)?.onExistingFolder || 'reuse'}
                                                                 onChange={(e) => updateStepParams(step.id, { onExistingFolder: e.target.value })}
-                                                                className="mt-1 w-full h-8 rounded-md bg-white/5 border border-white/10 text-white/70 text-[10px]"
+                                                                className="mt-1 w-full h-8 rounded-md theme-overlay-subtle border theme-border-medium text-white/70 text-[10px]"
                                                             >
                                                                 <option value="ask">Ask me each time</option>
                                                                 <option value="reuse">Use existing folder</option>
@@ -389,7 +389,7 @@ export default function WorkflowDesigner({
                                                             </select>
                                                         </label>
                                                         <div className="flex flex-col gap-1">
-                                                            <span className="text-[9px] uppercase tracking-widest text-white/40">
+                                                            <span className="text-[9px] uppercase tracking-widest theme-text-tertiary">
                                                                 Name conflicts
                                                             </span>
                                                             <button
@@ -399,7 +399,7 @@ export default function WorkflowDesigner({
                                                                     "px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all",
                                                                     (step.params as any)?.nameConflictStrategy === 'timestamp'
                                                                         ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
-                                                                        : "bg-white/5 border-white/10 text-white/40 hover:text-white"
+                                                                        : "theme-overlay-subtle theme-border-medium theme-text-tertiary hover:text-white"
                                                                 )}
                                                             >
                                                                 {(step.params as any)?.nameConflictStrategy === 'timestamp'
@@ -412,39 +412,39 @@ export default function WorkflowDesigner({
 
                                                 {step.action === 'highlight_file' && (
                                                     <div className="grid grid-cols-2 gap-3">
-                                                        <label className="text-[9px] uppercase tracking-widest text-white/40">
+                                                        <label className="text-[9px] uppercase tracking-widest theme-text-tertiary">
                                                             Background
                                                             <input
                                                                 type="color"
                                                                 value={(step.params as any)?.backgroundColor || '#0f172a'}
                                                                 onChange={(e) => updateStepParams(step.id, { backgroundColor: e.target.value })}
-                                                                className="mt-1 w-full h-8 rounded-md bg-transparent border border-white/10"
+                                                                className="mt-1 w-full h-8 rounded-md bg-transparent border theme-border-medium"
                                                             />
                                                         </label>
-                                                        <label className="text-[9px] uppercase tracking-widest text-white/40">
+                                                        <label className="text-[9px] uppercase tracking-widest theme-text-tertiary">
                                                             Text
                                                             <input
                                                                 type="color"
                                                                 value={(step.params as any)?.textColor || '#f8fafc'}
                                                                 onChange={(e) => updateStepParams(step.id, { textColor: e.target.value })}
-                                                                className="mt-1 w-full h-8 rounded-md bg-transparent border border-white/10"
+                                                                className="mt-1 w-full h-8 rounded-md bg-transparent border theme-border-medium"
                                                             />
                                                         </label>
-                                                        <label className="text-[9px] uppercase tracking-widest text-white/40">
+                                                        <label className="text-[9px] uppercase tracking-widest theme-text-tertiary">
                                                             Border
                                                             <input
                                                                 type="color"
                                                                 value={(step.params as any)?.borderColor || '#334155'}
                                                                 onChange={(e) => updateStepParams(step.id, { borderColor: e.target.value })}
-                                                                className="mt-1 w-full h-8 rounded-md bg-transparent border border-white/10"
+                                                                className="mt-1 w-full h-8 rounded-md bg-transparent border theme-border-medium"
                                                             />
                                                         </label>
-                                                        <label className="text-[9px] uppercase tracking-widest text-white/40">
+                                                        <label className="text-[9px] uppercase tracking-widest theme-text-tertiary">
                                                             Font Weight
                                                             <select
                                                                 value={(step.params as any)?.fontWeight || '600'}
                                                                 onChange={(e) => updateStepParams(step.id, { fontWeight: e.target.value })}
-                                                                className="mt-1 w-full h-8 rounded-md bg-white/5 border border-white/10 text-white/70 text-[10px]"
+                                                                className="mt-1 w-full h-8 rounded-md theme-overlay-subtle border theme-border-medium text-white/70 text-[10px]"
                                                             >
                                                                 <option value="400">Regular</option>
                                                                 <option value="500">Medium</option>
@@ -458,7 +458,7 @@ export default function WorkflowDesigner({
                                             </div>
                                             <button
                                                 onClick={() => removeStep(step.id)}
-                                                className="p-2 text-white/20 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                className="p-2 theme-text-quaternary hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                                             >
                                                 <Trash2 size={16} />
                                             </button>
@@ -467,7 +467,7 @@ export default function WorkflowDesigner({
                                 })}
 
                                 {activeWorkflow.steps.length === 0 && !isAddingStep && (
-                                    <div className="py-12 border-2 border-dashed border-white/5 rounded-3xl flex flex-col items-center justify-center text-white/10">
+                                    <div className="py-12 border-2 border-dashed theme-border-subtle rounded-3xl flex flex-col items-center justify-center text-white/10">
                                         <Play size={32} className="mb-4 opacity-20" />
                                         <p className="text-xs font-bold">No steps in this flow</p>
                                     </div>
@@ -476,7 +476,7 @@ export default function WorkflowDesigner({
                         </div>
                     </div>
                 ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-white/10 py-20 bg-white/[0.02] border border-dashed border-white/5 rounded-3xl">
+                    <div className="h-full flex flex-col items-center justify-center text-white/10 py-20 bg-white/[0.02] border border-dashed theme-border-subtle rounded-3xl">
                         <Edit3 size={48} className="mb-4 opacity-20" />
                         <h4 className="text-sm font-bold uppercase tracking-widest mb-2">Workspace Empty</h4>
                         <p className="text-[10px]">Select or create a workflow to begin configuring.</p>
@@ -496,11 +496,11 @@ export default function WorkflowDesigner({
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-zinc-900 border border-white/10 rounded-3xl p-8 shadow-2xl w-full max-w-2xl"
+                            className="bg-zinc-900 border theme-border-medium rounded-3xl p-8 shadow-2xl w-full max-w-2xl"
                         >
                             <div className="flex items-center justify-between mb-6">
-                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white/40">Select Process or Tool</h4>
-                                <button onClick={() => setIsAddingStep(false)} className="text-white/20 hover:text-white">
+                                <h4 className="text-xs font-black uppercase tracking-[0.2em] theme-text-tertiary">Select Process or Tool</h4>
+                                <button onClick={() => setIsAddingStep(false)} className="theme-text-quaternary hover:text-white">
                                     <X size={20} />
                                 </button>
                             </div>
@@ -510,7 +510,7 @@ export default function WorkflowDesigner({
                                     <button
                                         key={action.id}
                                         onClick={() => addStep(action)}
-                                        className="flex flex-col items-start p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 hover:border-yellow-500/30 transition-all text-left group"
+                                        className="flex flex-col items-start p-4 theme-overlay-subtle border theme-border-subtle rounded-2xl hover:theme-overlay-medium hover:border-yellow-500/30 transition-all text-left group"
                                     >
                                         <div className="flex items-center justify-between w-full mb-1">
                                             <span className={cn(

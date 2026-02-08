@@ -287,11 +287,11 @@ export default function CodeEditorModal({
                         maxWidth: isMaximized ? 'none' : '64rem'
                     }}
                     exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                    className="bg-[#050505] border border-white/10 rounded-xl shadow-[0_0_50px_rgba(0,194,255,0.1)] overflow-hidden flex flex-col relative"
+                    className="bg-[#050505] border theme-border-medium rounded-xl shadow-[0_0_50px_rgba(0,194,255,0.1)] overflow-hidden flex flex-col relative"
                     onClick={e => e.stopPropagation()}
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-3 bg-[#0a0a0a] border-b border-white/5 select-none relative overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 bg-[#0a0a0a] border-b theme-border-subtle select-none relative overflow-hidden">
                         <div className="absolute inset-0 bg-gradient-to-r from-sky-500/5 via-transparent to-transparent pointer-events-none" />
                         <div className="flex items-center gap-4 relative z-10">
                             <div className="p-2 bg-sky-500/10 rounded-lg border border-sky-500/20 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
@@ -299,9 +299,9 @@ export default function CodeEditorModal({
                             </div>
                             <div>
                                 <h3 className="text-sm font-medium text-white/90">{fileName}</h3>
-                                <p className="text-[10px] text-white/40 font-mono uppercase tracking-wider">{language}</p>
+                                <p className="text-[10px] theme-text-tertiary font-mono uppercase tracking-wider">{language}</p>
                             </div>
-                            <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-white/5">
+                            <div className="flex items-center gap-1 theme-overlay-subtle rounded-lg p-1 border theme-border-subtle">
                                 <button
                                     onClick={() => {
                                         setActiveMode('edit');
@@ -309,7 +309,7 @@ export default function CodeEditorModal({
                                     }}
                                     className={cn(
                                         "px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-colors",
-                                        activeMode === 'edit' ? "bg-sky-500/20 text-sky-200" : "text-white/50 hover:text-white"
+                                        activeMode === 'edit' ? "bg-sky-500/20 text-sky-200" : "theme-text-secondary hover:text-white"
                                     )}
                                 >
                                     Edit
@@ -322,7 +322,7 @@ export default function CodeEditorModal({
                                     disabled={!previewFile}
                                     className={cn(
                                         "px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-colors",
-                                        activeMode === 'preview' ? "bg-emerald-500/20 text-emerald-200" : "text-white/50 hover:text-white",
+                                        activeMode === 'preview' ? "bg-emerald-500/20 text-emerald-200" : "theme-text-secondary hover:text-white",
                                         !previewFile && "opacity-50 cursor-not-allowed"
                                     )}
                                 >
@@ -335,7 +335,7 @@ export default function CodeEditorModal({
                             {activeMode === 'edit' && (
                                 <button
                                     onClick={handleCopy}
-                                    className="p-2 hover:bg-white/10 text-white/60 hover:text-white rounded-lg transition-colors"
+                                    className="p-2 hover:theme-overlay-medium text-white/60 hover:text-white rounded-lg transition-colors"
                                     title="Copy Content"
                                 >
                                     <Copy size={16} />
@@ -343,7 +343,7 @@ export default function CodeEditorModal({
                             )}
                             <button
                                 onClick={handleOpenMagic}
-                                className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors border border-white/5 hover:border-emerald-500/30 group"
+                                className="flex items-center gap-2 px-3 py-2 theme-overlay-subtle hover:theme-overlay-medium text-white/70 hover:text-white rounded-lg transition-colors border theme-border-subtle hover:border-emerald-500/30 group"
                                 title="AI Magic Content"
                             >
                                 <Sparkles size={14} className="text-emerald-400 group-hover:animate-pulse" />
@@ -351,7 +351,7 @@ export default function CodeEditorModal({
                             </button>
                             <button
                                 onClick={() => setIsMaximized(!isMaximized)}
-                                className="p-2 hover:bg-white/10 text-white/60 hover:text-white rounded-lg transition-colors"
+                                className="p-2 hover:theme-overlay-medium text-white/60 hover:text-white rounded-lg transition-colors"
                                 title={isMaximized ? "Restore" : "Maximize"}
                             >
                                 {isMaximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -371,10 +371,10 @@ export default function CodeEditorModal({
                                     {isSaving ? 'Saving...' : 'Save'}
                                 </button>
                             )}
-                            <div className="w-px h-6 bg-white/10 mx-1" />
+                            <div className="w-px h-6 theme-overlay-medium mx-1" />
                             <button
                                 onClick={onClose}
-                                className="p-2 hover:bg-red-500/20 text-white/40 hover:text-red-400 rounded-lg transition-colors"
+                                className="p-2 hover:bg-red-500/20 theme-text-tertiary hover:text-red-400 rounded-lg transition-colors"
                                 title="Close"
                             >
                                 <X size={18} />
@@ -407,7 +407,7 @@ export default function CodeEditorModal({
                         </>
                     ) : (
                         <div className="flex-1 p-6 bg-[#050505] overflow-hidden">
-                            <div className="w-full h-full rounded-xl border border-white/5 bg-black/20 overflow-hidden flex items-center justify-center">
+                            <div className="w-full h-full rounded-xl border theme-border-subtle bg-black/20 overflow-hidden flex items-center justify-center">
                                 {isImage ? (
                                     <img
                                         src={`/uploads/${previewPath}`}
@@ -436,13 +436,13 @@ export default function CodeEditorModal({
                                     </div>
                                 ) : (
                                     <div className="text-center space-y-4">
-                                        <FileText size={64} className="mx-auto text-white/20" />
-                                        <p className="text-white/50">Preview not available for this file type</p>
+                                        <FileText size={64} className="mx-auto theme-text-quaternary" />
+                                        <p className="theme-text-secondary">Preview not available for this file type</p>
                                         {previewPath && (
                                             <a
                                                 href={`/uploads/${previewPath}`}
                                                 download
-                                                className="inline-block px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                                                className="inline-block px-6 py-2 theme-overlay-medium hover:bg-white/20 text-white rounded-lg transition-colors"
                                             >
                                                 Download File
                                             </a>
@@ -466,22 +466,22 @@ export default function CodeEditorModal({
                                     initial={{ scale: 0.95, opacity: 0, y: 10 }}
                                     animate={{ scale: 1, opacity: 1, y: 0 }}
                                     exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                                    className="w-full max-w-2xl bg-[#050505] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                                    className="w-full max-w-2xl bg-[#050505] border theme-border-medium rounded-2xl shadow-2xl overflow-hidden"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <div className="flex items-center justify-between px-5 py-4 bg-[#0a0a0a] border-b border-white/5">
+                                    <div className="flex items-center justify-between px-5 py-4 bg-[#0a0a0a] border-b theme-border-subtle">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-emerald-500/10 rounded-lg">
                                                 <Sparkles size={16} className="text-emerald-300" />
                                             </div>
                                             <div>
                                                 <h3 className="text-sm font-semibold text-white/90">AI Magic Content</h3>
-                                                <p className="text-[11px] text-white/40">Update {fileName} with a clear goal</p>
+                                                <p className="text-[11px] theme-text-tertiary">Update {fileName} with a clear goal</p>
                                             </div>
                                         </div>
                                         <button
                                             onClick={() => setIsMagicOpen(false)}
-                                            className="p-2 hover:bg-red-500/20 text-white/40 hover:text-red-400 rounded-lg transition-colors"
+                                            className="p-2 hover:bg-red-500/20 theme-text-tertiary hover:text-red-400 rounded-lg transition-colors"
                                             title="Close Magic Content"
                                         >
                                             <X size={16} />
@@ -490,16 +490,16 @@ export default function CodeEditorModal({
 
                                     <div className="p-5 space-y-4">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold uppercase tracking-wider text-white/50">Description</label>
+                                            <label className="text-xs font-bold uppercase tracking-wider theme-text-secondary">Description</label>
                                             <textarea
                                                 value={magicGoal}
                                                 onChange={(e) => setMagicGoal(e.target.value)}
                                                 placeholder="Describe what you want changed (e.g., improve layout, add CTA, refine copy)"
-                                                className="w-full h-24 rounded-xl bg-black/30 border border-white/10 p-3 text-sm text-white/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 custom-scrollbar"
+                                                className="w-full h-24 rounded-xl bg-black/30 border theme-border-medium p-3 text-sm text-white/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 custom-scrollbar"
                                                 aria-label="Magic content goal"
                                             />
                                             {chatContext && chatContext.length > 0 && (
-                                                <p className="text-[10px] text-white/40">
+                                                <p className="text-[10px] theme-text-tertiary">
                                                     Using last {Math.min(chatContext.length, 5)} chat messages as context.
                                                 </p>
                                             )}
@@ -508,7 +508,7 @@ export default function CodeEditorModal({
                                         <div className="flex items-center justify-between gap-3">
                                             <button
                                                 onClick={() => setIsIdeasOpen(true)}
-                                                className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all bg-white/10 hover:bg-white/20 text-white"
+                                                className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all theme-overlay-medium hover:bg-white/20 text-white"
                                             >
                                                 <span className="flex items-center gap-2">
                                                     <Lightbulb size={12} />
@@ -521,8 +521,8 @@ export default function CodeEditorModal({
                                                 className={cn(
                                                     "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all",
                                                     isMagicSuggesting
-                                                        ? "bg-white/10 text-white/40 cursor-wait"
-                                                        : "bg-white/10 hover:bg-white/20 text-white"
+                                                        ? "theme-overlay-medium theme-text-tertiary cursor-wait"
+                                                        : "theme-overlay-medium hover:bg-white/20 text-white"
                                                 )}
                                             >
                                                 {isMagicSuggesting ? 'Suggesting...' : 'Get 5 Suggestions'}
@@ -543,7 +543,7 @@ export default function CodeEditorModal({
 
                                         {magicSuggestions.length > 0 && (
                                             <div className="space-y-2">
-                                                <label className="text-xs font-bold uppercase tracking-wider text-white/50">Suggestions</label>
+                                                <label className="text-xs font-bold uppercase tracking-wider theme-text-secondary">Suggestions</label>
                                                 <div className="grid gap-2">
                                                     {magicSuggestions.map((suggestion, index) => (
                                                         <button
@@ -552,7 +552,7 @@ export default function CodeEditorModal({
                                                                 setMagicGoal(suggestion);
                                                                 await handleGenerateMagic();
                                                             }}
-                                                            className="text-left w-full rounded-xl border border-white/10 bg-black/30 hover:bg-white/5 px-4 py-3 text-xs text-white/70 hover:text-white transition-colors"
+                                                            className="text-left w-full rounded-xl border theme-border-medium bg-black/30 hover:theme-overlay-subtle px-4 py-3 text-xs text-white/70 hover:text-white transition-colors"
                                                         >
                                                             {suggestion}
                                                         </button>
@@ -563,18 +563,18 @@ export default function CodeEditorModal({
 
                                         {magicResult && (
                                             <div className="space-y-2">
-                                                <label className="text-xs font-bold uppercase tracking-wider text-white/50">Preview</label>
-                                                <div className="max-h-60 overflow-y-auto rounded-xl border border-white/10 bg-black/40 p-3 text-xs text-white/70 custom-scrollbar whitespace-pre-wrap">
+                                                <label className="text-xs font-bold uppercase tracking-wider theme-text-secondary">Preview</label>
+                                                <div className="max-h-60 overflow-y-auto rounded-xl border theme-border-medium bg-black/40 p-3 text-xs text-white/70 custom-scrollbar whitespace-pre-wrap">
                                                     {magicResult}
                                                 </div>
                                             </div>
                                         )}
                                     </div>
 
-                                    <div className="px-5 py-4 bg-[#0a0a0a] border-t border-white/5 flex items-center justify-between">
+                                    <div className="px-5 py-4 bg-[#0a0a0a] border-t theme-border-subtle flex items-center justify-between">
                                         <button
                                             onClick={() => setIsMagicOpen(false)}
-                                            className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-white/50 hover:text-white transition-colors"
+                                            className="px-3 py-2 text-xs font-bold uppercase tracking-wider theme-text-secondary hover:text-white transition-colors"
                                         >
                                             Cancel
                                         </button>
@@ -584,7 +584,7 @@ export default function CodeEditorModal({
                                             className={cn(
                                                 "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all",
                                                 !magicResult
-                                                    ? "bg-white/5 text-white/30 cursor-not-allowed"
+                                                    ? "theme-overlay-subtle text-white/30 cursor-not-allowed"
                                                     : isMagicApplying
                                                         ? "bg-emerald-600/40 text-white/70 cursor-wait"
                                                         : "bg-emerald-600 hover:bg-emerald-500 text-white"

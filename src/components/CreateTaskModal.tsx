@@ -73,13 +73,13 @@ export default function CreateTaskModal() {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="w-full max-w-lg bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl relative z-10"
+                            className="w-full max-w-lg bg-[color:var(--card)] border theme-border-medium rounded-2xl p-6 shadow-2xl relative z-10"
                         >
                             <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-white">New Task</h2>
+                                <h2 className="text-xl font-bold theme-text-primary">New Task</h2>
                                 <button
                                     onClick={() => setIsOpen(false)}
-                                    className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white"
+                                    className="p-2 hover:theme-overlay-medium rounded-full transition-colors theme-text-secondary hover:theme-text-primary"
                                 >
                                     <X size={20} />
                                 </button>
@@ -87,24 +87,24 @@ export default function CreateTaskModal() {
 
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-white/60 mb-1">Title</label>
+                                    <label className="block text-sm font-medium theme-text-tertiary mb-1">Title</label>
                                     <input
                                         type="text"
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
                                         placeholder="What needs to be done?"
-                                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
+                                        className="w-full px-4 py-2 theme-overlay-subtle border theme-border-medium rounded-lg theme-text-primary placeholder:theme-text-quaternary focus:outline-none focus:ring-2 focus:ring-sky-500/50"
                                         autoFocus
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-white/60 mb-1">Description</label>
+                                    <label className="block text-sm font-medium theme-text-tertiary mb-1">Description</label>
                                     <textarea
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
                                         placeholder="Add details..."
                                         rows={4}
-                                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/50 resize-none"
+                                        className="w-full px-4 py-2 theme-overlay-subtle border theme-border-medium rounded-lg theme-text-primary placeholder:theme-text-quaternary focus:outline-none focus:ring-2 focus:ring-sky-500/50 resize-none"
                                     />
                                 </div>
 
@@ -112,7 +112,7 @@ export default function CreateTaskModal() {
                                     <button
                                         type="button"
                                         onClick={() => setIsOpen(false)}
-                                        className="px-4 py-2 text-sm font-medium text-white/60 hover:text-white transition-colors"
+                                        className="px-4 py-2 text-sm font-medium theme-text-tertiary hover:theme-text-primary transition-colors"
                                     >
                                         Cancel
                                     </button>

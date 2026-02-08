@@ -36,12 +36,12 @@ export default function AlegraProcessor({ bills }: Props) {
 
     if (bills.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-32 text-center rounded-[3rem] bg-white/5 border border-white/5 border-dashed">
+            <div className="flex flex-col items-center justify-center py-32 text-center rounded-[3rem] theme-overlay-subtle border theme-border-subtle border-dashed">
                 <div className="p-6 bg-sky-500/10 rounded-full mb-6">
                     <Receipt size={48} className="text-sky-400 opacity-50" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">No Bills Prepared</h3>
-                <p className="text-white/40 max-w-md mx-6 leading-relaxed">
+                <p className="theme-text-tertiary max-w-md mx-6 leading-relaxed">
                     Select your receipts from the <span className="text-sky-400 font-bold underline cursor-pointer">Files</span> tab.
                     <br /><br />
                     <span className="text-white/60 font-medium">💡 Pro Tip:</span> If a receipt is split in 2 files, <span className="text-white/80 font-bold">select both</span> and ask the AI Agent to: <br />
@@ -67,7 +67,7 @@ export default function AlegraProcessor({ bills }: Props) {
                         <DollarSign className="text-sky-500" size={20} />
                         Alegra Fiscal Hub
                     </h2>
-                    <p className="text-white/20 text-[9px] mt-0.5 uppercase tracking-widest font-bold">Gastos RD & DGII Compliance</p>
+                    <p className="theme-text-quaternary text-[9px] mt-0.5 uppercase tracking-widest font-bold">Gastos RD & DGII Compliance</p>
                 </div>
                 <div className="flex gap-3">
                     <div className="px-4 py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg shadow-emerald-500/5">
@@ -96,8 +96,8 @@ export default function AlegraProcessor({ bills }: Props) {
                                 className={cn(
                                     "glass-card p-1 rounded-[2rem] border transition-all duration-500 overflow-hidden relative group",
                                     isExported
-                                        ? "bg-black/40 border-white/5 opacity-80"
-                                        : "bg-white/5 border-white/10 hover:border-sky-500/30"
+                                        ? "bg-black/40 theme-border-subtle opacity-80"
+                                        : "theme-overlay-subtle theme-border-medium hover:border-sky-500/30"
                                 )}
                             >
                                 <div className="p-6 space-y-4">
@@ -115,7 +115,7 @@ export default function AlegraProcessor({ bills }: Props) {
 
                                     {/* Header Section */}
                                     <div className="flex items-start gap-5 relative z-10">
-                                        <div className="p-5 bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-[2rem] border border-white/10 shadow-2xl group-hover:scale-110 transition-transform duration-500">
+                                        <div className="p-5 bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-[2rem] border theme-border-medium shadow-2xl group-hover:scale-110 transition-transform duration-500">
                                             <Building2 size={24} className="text-sky-400" />
                                         </div>
                                         <div className="flex-1">
@@ -130,8 +130,8 @@ export default function AlegraProcessor({ bills }: Props) {
                                                 )}
                                             </div>
                                             <div className="flex flex-wrap items-center gap-3 mt-1">
-                                                <div className="flex items-center gap-1.5 px-3 py-1 bg-black/40 rounded-lg border border-white/5">
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                                                <div className="flex items-center gap-1.5 px-3 py-1 bg-black/40 rounded-lg border theme-border-subtle">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest theme-text-tertiary">
                                                         RNC: {bill.identification || 'N/A'}
                                                     </span>
                                                     {bill.isVerified && <div className="w-1 h-1 rounded-full bg-emerald-500" />}
@@ -150,14 +150,14 @@ export default function AlegraProcessor({ bills }: Props) {
 
                                     {/* Data Grid */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="p-5 bg-black/40 rounded-3xl border border-white/5 hover:border-white/10 transition-colors group/card">
+                                        <div className="p-5 bg-black/40 rounded-3xl border theme-border-subtle hover:theme-border-medium transition-colors group/card">
                                             <div className="flex items-center gap-2 mb-2 opacity-30 group-hover/card:opacity-60 transition-opacity">
                                                 <Calendar size={14} className="text-sky-400" />
                                                 <span className="text-[10px] uppercase font-black tracking-[0.1em]">Reporting Date</span>
                                             </div>
                                             <div className="text-white font-bold text-lg">{bill.date}</div>
                                         </div>
-                                        <div className="p-5 bg-black/40 rounded-3xl border border-white/5">
+                                        <div className="p-5 bg-black/40 rounded-3xl border theme-border-subtle">
                                             <div className="flex items-center gap-2 mb-2 opacity-30">
                                                 <Paperclip size={14} className="text-sky-400" />
                                                 <span className="text-[10px] uppercase font-black tracking-[0.1em]">Attachment</span>
@@ -176,18 +176,18 @@ export default function AlegraProcessor({ bills }: Props) {
                                     {/* Items Analysis */}
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between px-2">
-                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-white/20 italic">Extracted Analysis ({items.length} items)</h5>
+                                            <h5 className="text-[10px] font-black uppercase tracking-widest theme-text-quaternary italic">Extracted Analysis ({items.length} items)</h5>
                                             <div className="w-1/3 h-[1px] bg-white/5" />
                                         </div>
-                                        <div className="bg-black/30 rounded-[2rem] border border-white/5 overflow-hidden backdrop-blur-md">
+                                        <div className="bg-black/30 rounded-[2rem] border theme-border-subtle overflow-hidden backdrop-blur-md">
                                             {items.map((item, i) => (
-                                                <div key={i} className="px-7 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors flex items-center justify-between group/item">
+                                                <div key={i} className="px-7 py-4 border-b theme-border-subtle last:border-0 hover:bg-white/[0.02] transition-colors flex items-center justify-between group/item">
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className="text-white/90 font-bold text-sm tracking-tight">{item.description}</span>
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-[9px] text-white/20 uppercase font-black tracking-widest">Quantity: {item.quantity}</span>
+                                                            <span className="text-[9px] theme-text-quaternary uppercase font-black tracking-widest">Quantity: {item.quantity}</span>
                                                             <div className="w-1 h-1 rounded-full bg-white/10" />
-                                                            <span className="text-[9px] text-white/20 uppercase font-black tracking-widest">Unit Price: RD$ {item.price}</span>
+                                                            <span className="text-[9px] theme-text-quaternary uppercase font-black tracking-widest">Unit Price: RD$ {item.price}</span>
                                                         </div>
                                                     </div>
                                                     <div className="text-white font-black text-sm group-hover/item:text-sky-400 transition-colors">RD$ {(item.quantity * item.price).toLocaleString()}</div>
@@ -213,7 +213,7 @@ export default function AlegraProcessor({ bills }: Props) {
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(bill.id)}
-                                                    className="p-5 bg-white/5 border border-white/10 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded-[2rem] transition-all group-hover:text-white/40"
+                                                    className="p-5 theme-overlay-subtle border theme-border-medium theme-text-quaternary hover:text-red-400 hover:bg-red-500/10 rounded-[2rem] transition-all group-hover:theme-text-tertiary"
                                                 >
                                                     <Trash2 size={22} />
                                                 </button>
@@ -223,7 +223,7 @@ export default function AlegraProcessor({ bills }: Props) {
                                                 <div className="flex-1 py-5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3">
                                                     <CheckCircle2 size={20} /> Reconciled & Synchronized
                                                 </div>
-                                                <button className="p-5 bg-white/5 border border-white/5 text-white/40 hover:text-white rounded-[2rem] transition-all">
+                                                <button className="p-5 theme-overlay-subtle border theme-border-subtle theme-text-tertiary hover:text-white rounded-[2rem] transition-all">
                                                     <ExternalLink size={22} />
                                                 </button>
                                             </div>

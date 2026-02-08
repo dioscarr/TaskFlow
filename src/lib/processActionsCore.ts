@@ -9,7 +9,9 @@ export const execAsync = promisify(exec);
 
 export const isDockerDaemonUnavailable = (error: any) => {
     const msg = (error?.stderr || error?.message || '').toString().toLowerCase();
-    return msg.includes('pipe/docker_engine') || msg.includes('daemon') || msg.includes('failed to connect to the docker api');
+    // Check for timeout signals - Docker may be slow to respond on Windows/WSL2
+    const isTimeout = error?.killed && error?.signal === 'SIGTERM';
+    return isTimeout || msg.includes('pipe/docker_engine') || msg.includes('daemon') || msg.includes('failed to connect to the docker api');
 };
 
 export const checkDockerAvailability = async () => {
@@ -17,9 +19,20 @@ export const checkDockerAvailability = async () => {
     if (!isDockerAvailable && now - lastDockerCheck < DOCKER_RECHECK_INTERVAL) {
         return false;
     }
-    // If we haven't checked in a while, trigger a sync in background or just return current known state
-    // For now, return what we know.
-    return isDockerAvailable;
+    try {
+        // Increased timeout for Windows/WSL2 - Docker Desktop with many plugins can be slow
+        await execAsync('docker info', { timeout: 10000 });
+        isDockerAvailable = true;
+        lastDockerCheck = Date.now();
+        return true;
+    } catch (error) {
+        lastDockerCheck = Date.now();
+        if (isDockerDaemonUnavailable(error)) {
+            isDockerAvailable = false;
+            return false;
+        }
+        throw error;
+    }
 };
 
 export interface ProcessInput {
@@ -61,6 +74,15 @@ export const getAvailablePort = async (start = 5000, end = 5999) => {
     throw new Error('No available ports found');
 };
 
+export const waitForPortAvailable = async (port: number, timeoutMs = 5000, intervalMs = 250) => {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        if (await isPortAvailable(port)) return true;
+        await new Promise(resolve => setTimeout(resolve, intervalMs));
+    }
+    return false;
+};
+
 /**
  * Get the demo user (same pattern as actions.ts)
  */
@@ -82,6 +104,142 @@ export const getDockerContainerStatus = async (containerName: string) => {
         return 'unknown';
     }
 };
+
+/**
+ * Get detailed container state (exists, status, health)
+ */
+export interface ContainerState {
+    exists: boolean;
+    status: 'running' | 'exited' | 'created' | 'paused' | 'restarting' | 'removing' | 'dead' | 'unknown';
+    health?: 'healthy' | 'unhealthy' | 'starting';
+}
+
+export const getContainerState = async (containerName: string): Promise<ContainerState> => {
+    try {
+        const { stdout } = await execAsync(
+            `docker inspect -f "{{.State.Status}}|{{.State.Health.Status}}" ${containerName}`,
+            { timeout: 10000 }
+        );
+        const [status, health] = stdout.trim().split('|');
+        return {
+            exists: true,
+            status: (status || 'unknown') as ContainerState['status'],
+            health: health ? (health as ContainerState['health']) : undefined
+        };
+    } catch (error) {
+        return { exists: false, status: 'unknown' };
+    }
+};
+
+/**
+ * Check if container is running using docker ps (faster than inspect)
+ */
+export const isContainerRunning = async (containerName: string): Promise<boolean> => {
+    try {
+        const { stdout } = await execAsync(
+            `docker ps --filter "name=^${containerName}$" --filter "status=running" --format "{{.Names}}"`,
+            { timeout: 10000 }
+        );
+        return stdout.trim() === containerName;
+    } catch {
+        return false;
+    }
+};
+
+/**
+ * Safe Docker command execution using array args (prevents command injection)
+ */
+export async function dockerExec(args: string[], options: any = {}): Promise<{ stdout: string; stderr: string }> {
+    const { execFile } = require('child_process');
+    const execFileAsync = promisify(execFile);
+    return execFileAsync('docker', args, { timeout: 30000, ...options });
+}
+
+/**
+ * Idempotent container start - implements "start once, keep running" pattern
+ *
+ * Industry best practice: Reuse containers instead of recreating
+ * - If container is running → return immediately
+ * - If container exists but stopped → docker start
+ * - If container doesn't exist → docker run
+ *
+ * This follows the pattern used by VS Code Dev Containers, Docker Compose, and Tilt.
+ */
+export async function startOrCreateContainer(options: {
+    containerName: string;
+    imageName: string;
+    port: number;
+    internalPort?: number;
+    volumes?: string[];
+    env?: Record<string, string>;
+    restart?: string;
+}): Promise<{
+    success: boolean;
+    action: 'created' | 'started' | 'already_running';
+    port: number;
+    error?: string;
+}> {
+    const {
+        containerName,
+        imageName,
+        port,
+        internalPort = 5050,
+        volumes = [],
+        env = {},
+        restart = 'unless-stopped'
+    } = options;
+
+    try {
+        // Step 1: Check current state
+        const state = await getContainerState(containerName);
+
+        // Step 2: Container already running - nothing to do
+        if (state.status === 'running') {
+            return { success: true, action: 'already_running', port };
+        }
+
+        // Step 3: Container exists but stopped - restart it
+        if (state.exists && (state.status === 'exited' || state.status === 'created')) {
+            try {
+                await dockerExec(['start', containerName]);
+                return { success: true, action: 'started', port };
+            } catch (startError: any) {
+                // If start fails, remove the container and recreate
+                console.error(`Failed to start existing container ${containerName}, removing:`, startError);
+                try {
+                    await dockerExec(['rm', '-f', containerName]);
+                } catch (rmError) {
+                    // Ignore removal errors, will fail on run anyway
+                }
+            }
+        }
+
+        // Step 4: Create new container
+        const args = [
+            'run', '-d',
+            '--name', containerName,
+            '-p', `${port}:${internalPort}`,
+            '--restart', restart,
+            '--memory', '512m',
+            '--cpus', '0.5',
+            ...volumes.flatMap(v => ['-v', v]),
+            ...Object.entries(env).flatMap(([k, v]) => ['-e', `${k}=${v}`]),
+            imageName
+        ];
+
+        await dockerExec(args);
+        return { success: true, action: 'created', port };
+
+    } catch (error: any) {
+        console.error(`Failed to start/create container ${containerName}:`, error);
+        return {
+            success: false,
+            action: 'created',
+            port,
+            error: error.message || 'Unknown error'
+        };
+    }
+}
 
 export const parseDockerPort = (ports?: string) => {
     if (!ports) return undefined;
@@ -109,12 +267,28 @@ export const resolveStartScript = (scripts: Record<string, string> | null) => {
 
 // global cache to throttle syncs
 const lastSync: { [key: string]: number } = {};
-const SYNC_COOLDOWN = 120000; // 2 minutes
+const SYNC_COOLDOWN = 300000; // 5 minutes - optimized for fast UI with background sync
+
+/**
+ * Clear sync cooldown for a user (for manual refresh)
+ */
+export function clearSyncCooldown(userId: string) {
+    delete lastSync[`docker-${userId}`];
+    delete lastSync[`repo-${userId}`];
+    delete lastSync[`all-${userId}`];
+}
+
+/**
+ * Get last sync timestamp for debugging
+ */
+export function getLastSyncTime(userId: string, type: 'docker' | 'repo' | 'all' = 'all'): number | null {
+    return lastSync[`${type}-${userId}`] || null;
+}
 
 // Track docker availability to avoid hanging on slow failures
 let lastDockerCheck = 0;
 let isDockerAvailable = true;
-const DOCKER_RECHECK_INTERVAL = 30000; // 30 seconds
+const DOCKER_RECHECK_INTERVAL = 10000; // 10 seconds - reduced for faster recovery
 let sharedContainerInfoPromise: Promise<Map<string, any> | null> | null = null;
 
 async function getSharedContainerInfo() {
@@ -129,7 +303,8 @@ async function getSharedContainerInfo() {
 
     sharedContainerInfoPromise = (async () => {
         try {
-            const { stdout: psOutput } = await execAsync('docker ps -a --format "{{.Names}}|{{.Status}}|{{.Ports}}"');
+            // Increased timeout for Windows/WSL2 - docker ps can be slow with many containers
+            const { stdout: psOutput } = await execAsync('docker ps -a --format "{{.Names}}|{{.Status}}|{{.Ports}}"', { timeout: 10000 });
             isDockerAvailable = true;
             lastDockerCheck = Date.now();
             return new Map(psOutput.split('\n').filter(Boolean).map(line => {

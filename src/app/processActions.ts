@@ -3,7 +3,8 @@
 import prisma from '@/lib/prisma';
 import { deepSerialize } from '@/lib/serialization';
 import { writeFile, readFile } from 'fs/promises';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
+import { promisify } from 'util';
 import { join } from 'path';
 import {
     ProcessInput,
@@ -15,10 +16,29 @@ import {
     getAvailablePort,
     isPortAvailable,
     resolveStartScript,
-    checkDockerAvailability
+    checkDockerAvailability,
+    waitForPortAvailable,
+    startOrCreateContainer
 } from '@/lib/processActionsCore';
+import { getActionableError, isDockerDaemonError, formatErrorForLog } from '@/lib/dockerErrors';
+import { broadcastProcesses } from '@/lib/processSocket';
 
 export { type ProcessInput };
+
+// Safe execution functions to prevent command injection
+const execFileAsync = promisify(execFile);
+
+/**
+ * Safely execute Docker commands without shell interpretation
+ * Prevents command injection attacks
+ */
+async function dockerExec(args: string[], options: { timeout?: number; cwd?: string } = {}): Promise<{ stdout: string; stderr: string }> {
+    return execFileAsync('docker', args, {
+        timeout: options.timeout || 30000,
+        cwd: options.cwd,
+        maxBuffer: 10 * 1024 * 1024 // 10MB buffer for large outputs
+    });
+}
 
 const DEFAULT_PREVIEW_PORT = 5050;
 
@@ -72,31 +92,94 @@ const ensurePublicAccess = async (processId: string, targetPort?: number) => {
 };
 
 /**
- * List all processes for the current user
+ * List all processes for the current user (optimized - no blocking sync)
+ * Pagination support for better performance with many processes
  */
-export async function listProcesses() {
+export async function listProcesses(options: { page?: number; limit?: number; triggerBackgroundSync?: boolean } = {}) {
     try {
         const user = await getDemoUser();
-        try {
-            await Promise.allSettled([
-                syncDockerAppProcesses(user.id),
-                syncRepoAppProcesses(user.id)
-            ]);
-        } catch (e: any) {
-            if (isDockerDaemonUnavailable(e)) {
-                console.warn('Docker daemon unavailable; skipping docker process sync');
-            } else {
-                throw e;
-            }
-        }
-        const processes = await prisma.processRegistry.findMany({
-            where: { userId: user.id },
-            orderBy: { createdAt: 'desc' }
-        });
+        const { page = 1, limit = 100, triggerBackgroundSync = true } = options;
 
-        return { success: true, processes: deepSerialize(processes) };
+        // Trigger background sync (non-blocking) if needed
+        if (triggerBackgroundSync) {
+            syncProcessesInBackground(user.id).catch(err =>
+                console.warn('Background process sync failed:', err)
+            );
+        }
+
+        // Fast read from database
+        const skip = (page - 1) * limit;
+
+        // Perform a quick health check broadcast if sync was skipped by cooldown
+        // This ensures the current state in DB is shared with all clients even if no heavy sync happened
+        broadcastProcesses().catch(() => { });
+
+        const [processes, total] = await Promise.all([
+            prisma.processRegistry.findMany({
+                where: { userId: user.id },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit
+            }),
+            prisma.processRegistry.count({ where: { userId: user.id } })
+        ]);
+
+        return {
+            success: true,
+            processes: deepSerialize(processes),
+            pagination: {
+                page,
+                limit,
+                total,
+                pages: Math.ceil(total / limit)
+            }
+        };
     } catch (error: any) {
         console.error('Error listing processes:', error);
+        return { success: false, message: error.message };
+    }
+}
+
+/**
+ * Background sync - non-blocking process sync
+ * Called automatically by listProcesses or manually via refreshProcesses
+ */
+async function syncProcessesInBackground(userId: string): Promise<void> {
+    try {
+        await Promise.allSettled([
+            syncDockerAppProcesses(userId),
+            syncRepoAppProcesses(userId)
+        ]);
+    } catch (e: any) {
+        if (isDockerDaemonUnavailable(e)) {
+            console.warn('Docker daemon unavailable; skipping docker process sync');
+        } else {
+            console.error('Background sync error:', e);
+        }
+    } finally {
+        // Always broadcast after sync attempt
+        broadcastProcesses().catch(() => { });
+    }
+}
+
+/**
+ * Manual refresh - forces immediate sync (useful for "Refresh" button)
+ */
+export async function refreshProcesses() {
+    try {
+        const user = await getDemoUser();
+
+        // Force sync by clearing cooldown
+        const { clearSyncCooldown } = await import('@/lib/processActionsCore');
+        clearSyncCooldown(user.id);
+
+        // Perform sync
+        await syncProcessesInBackground(user.id);
+
+        // Return fresh data
+        return listProcesses({ triggerBackgroundSync: false });
+    } catch (error: any) {
+        console.error('Error refreshing processes:', error);
         return { success: false, message: error.message };
     }
 }
@@ -123,6 +206,8 @@ export async function registerProcess(data: ProcessInput) {
             }
         });
 
+
+        broadcastProcesses().catch(() => { });
         return { success: true, message: 'Process registered successfully', process: deepSerialize(process) };
     } catch (error: any) {
         console.error('Error registering process:', error);
@@ -151,7 +236,8 @@ export async function stopProcess(id: string) {
 
             if (containerName) {
                 try {
-                    await execAsync(`docker stop ${containerName}`);
+                    // Safe: Stop container using array args
+                    await dockerExec(['stop', containerName]);
                 } catch (dockerError: any) {
                     if (!isDockerDaemonUnavailable(dockerError)) {
                         console.error('Error stopping docker container:', dockerError);
@@ -161,7 +247,8 @@ export async function stopProcess(id: string) {
 
             // Also stop and remove ngrok container
             try {
-                await execAsync(`docker rm -f ${ngrokName}`);
+                // Safe: Remove ngrok container
+                await dockerExec(['rm', '-f', ngrokName]);
             } catch (e: any) {
                 if (!isDockerDaemonUnavailable(e)) {
                     console.error('Error removing ngrok container:', e);
@@ -182,7 +269,8 @@ export async function stopProcess(id: string) {
             // Cleanup ngrok for local processes too
             try {
                 const ngrokName = `ngrok-${process.id}`;
-                await execAsync(`docker rm -f ${ngrokName}`);
+                // Safe: Remove ngrok container
+                await dockerExec(['rm', '-f', ngrokName]);
             } catch (e: any) {
                 if (!isDockerDaemonUnavailable(e)) {
                     console.error('Error removing ngrok container:', e);
@@ -199,6 +287,10 @@ export async function stopProcess(id: string) {
             }
         }
 
+        if (process.port) {
+            await waitForPortAvailable(process.port, 8000);
+        }
+
         // Update database
         const updated = await prisma.processRegistry.update({
             where: { id },
@@ -208,6 +300,8 @@ export async function stopProcess(id: string) {
             }
         });
 
+
+        broadcastProcesses().catch(() => { });
         return { success: true, message: 'Process stopped successfully', process: deepSerialize(updated) };
     } catch (error: any) {
         console.error('Error stopping process:', error);
@@ -233,7 +327,8 @@ export async function restartProcess(id: string) {
             const containerName = (process.metadata as any)?.containerName as string | undefined;
             if (containerName) {
                 try {
-                    await execAsync(`docker restart ${containerName}`);
+                    // Safe: Restart container using array args
+                    await dockerExec(['restart', containerName]);
                 } catch (dockerError: any) {
                     console.error('Error restarting docker container:', dockerError);
                     return { success: false, message: 'Failed to restart docker container' };
@@ -254,6 +349,8 @@ export async function restartProcess(id: string) {
             }
         });
 
+
+        broadcastProcesses().catch(() => { });
         return { success: true, message: 'Process restarted successfully', process: deepSerialize(updated) };
     } catch (error: any) {
         console.error('Error restarting process:', error);
@@ -330,10 +427,25 @@ export async function startProcess(id: string) {
                 let useExistingDockerfile = false;
 
                 const forcedDockerFile = (meta?.dockerFile as string | undefined);
+                const requestedRunMode = (meta?.runMode as string | undefined);
 
                 // Access global process for cwd, avoiding shadow
                 const currentDir = (global as any).process.cwd();
                 const absAppPath = (process as any).type === 'docker-dev' && appPath ? join(currentDir, appPath) : appPath || '';
+
+                if (!forcedDockerFile && requestedRunMode === 'dev') {
+                    try {
+                        const content = await readFile(join(absAppPath, 'Dockerfile.dev'), 'utf-8');
+                        useExistingDockerfile = true;
+                        dockerFileName = 'Dockerfile.dev';
+                        const exposeMatch = content.match(/EXPOSE\s+(\d+)/);
+                        if (exposeMatch) {
+                            internalPort = parseInt(exposeMatch[1]);
+                        }
+                    } catch {
+                        // If Dockerfile.dev doesn't exist, fall through to default logic
+                    }
+                }
 
                 if (forcedDockerFile) {
                     dockerFileName = forcedDockerFile;
@@ -349,20 +461,22 @@ export async function startProcess(id: string) {
                     }
                 } else {
                     // Check if a custom Dockerfile exists
-                    try {
-                        const existingDockerfileContent = await readFile(join(absAppPath, 'Dockerfile'), 'utf-8');
-                        useExistingDockerfile = true;
-                        dockerFileName = 'Dockerfile';
+                    if (!useExistingDockerfile) {
+                        try {
+                            const existingDockerfileContent = await readFile(join(absAppPath, 'Dockerfile'), 'utf-8');
+                            useExistingDockerfile = true;
+                            dockerFileName = 'Dockerfile';
 
-                        // Try to detect exposed port
-                        const exposeMatch = existingDockerfileContent.match(/EXPOSE\s+(\d+)/);
-                        if (exposeMatch) {
-                            internalPort = parseInt(exposeMatch[1]);
-                        } else if (existingDockerfileContent.includes('nginx')) {
-                            internalPort = 80;
+                            // Try to detect exposed port
+                            const exposeMatch = existingDockerfileContent.match(/EXPOSE\s+(\d+)/);
+                            if (exposeMatch) {
+                                internalPort = parseInt(exposeMatch[1]);
+                            } else if (existingDockerfileContent.includes('nginx')) {
+                                internalPort = 80;
+                            }
+                        } catch {
+                            // No existing Dockerfile, proceed with generation logic
                         }
-                    } catch {
-                        // No existing Dockerfile, proceed with generation logic
                     }
                 }
 
@@ -425,16 +539,139 @@ CMD ["npm", "run", "${startScript}"]
 
                 const dockerIsUp = await checkDockerAvailability();
                 if (!dockerIsUp) {
-                    console.warn(`[${process.name}] Skipping Docker commands (daemon marked as down)`);
-                    // Trigger the same error that would lead to fallback
-                    throw { message: 'daemon' };
+                    console.warn(`[Repo App ${process.name}] Docker daemon unavailable. Attempting local fallback...`);
+                    // For repo apps, immediately trigger local fallback instead of throwing
+                    const dockerError = { message: 'daemon', isDaemonError: true };
+                    // Jump directly to fallback block by setting flag
+                    (dockerError as any).stderr = 'daemon';
+                    throw dockerError;
                 }
 
                 try {
-                    await execAsync(`docker rm -f ${containerName}`).catch(() => { });
-                    // Try to build/run
-                    await execAsync(`docker build -t ${imageName} -f "${dockerfilePath}" "${absAppPath}"`);
-                    await execAsync(`docker run -d --name ${containerName} -p ${port}:${internalPort} ${imageName}`);
+                    // Check if container exists (running or stopped)
+                    let containerExists = false;
+                    let isRunning = false;
+                    let runningPort: number | undefined;
+
+                    try {
+                        const { stdout: inspectOut } = await dockerExec(['inspect', '--format', '{{.State.Running}}|{{.NetworkSettings.Ports}}', containerName]);
+                        const [runningStatus, portsJson] = inspectOut.trim().split('|');
+                        containerExists = true;
+                        isRunning = runningStatus === 'true';
+
+                        if (isRunning) {
+                            // Parse the port from the running container
+                            // Format: map[3000/tcp:[map[HostIp:0.0.0.0 HostPort:5050]]]
+                            const portMatch = portsJson.match(/HostPort:(\d+)/);
+                            if (portMatch) {
+                                runningPort = parseInt(portMatch[1]);
+                            }
+                            console.log(`✓ Container ${containerName} is already running on port ${runningPort || 'unknown'}`);
+                        } else {
+                            console.log(`✓ Container ${containerName} exists but is stopped`);
+                        }
+                    } catch (inspectError) {
+                        // Container doesn't exist, will create it
+                        containerExists = false;
+                        isRunning = false;
+                    }
+
+                    // If already running, just hook into it
+                    if (isRunning && runningPort) {
+                        const updated = await prisma.processRegistry.update({
+                            where: { id },
+                            data: {
+                                port: runningPort,
+                                status: 'running',
+                                startedAt: new Date(),
+                                stoppedAt: null,
+                                command: `docker start ${containerName}`,
+                                metadata: {
+                                    ...(process.metadata as any),
+                                    mode: 'docker-existing'
+                                }
+                            }
+                        });
+
+                        const tunnel = await ensurePublicAccess(updated.id, runningPort);
+                        const publicUrl = (tunnel as any)?.publicUrl || (tunnel as any)?.process?.metadata?.publicUrl;
+                        const finalProcess = publicUrl
+                            ? await prisma.processRegistry.findUnique({ where: { id: updated.id } })
+                            : updated;
+
+                        return {
+                            success: true,
+                            message: `Hooked into existing ${process.name} container`,
+                            previewUrl: publicUrl || `http://localhost:${runningPort}`,
+                            publicUrl,
+                            process: deepSerialize(finalProcess)
+                        };
+                    }
+
+                    // If container exists but is stopped, just start it
+                    if (containerExists && !isRunning) {
+                        console.log(`Starting stopped container ${containerName}...`);
+                        await dockerExec(['start', containerName]);
+
+                        // Get the port from the container
+                        const { stdout: portOut } = await dockerExec(['port', containerName]);
+                        const portMatch = portOut.match(/\d+\/tcp -> [^:]+:(\d+)/);
+                        const containerPort = portMatch ? parseInt(portMatch[1]) : port;
+
+                        const updated = await prisma.processRegistry.update({
+                            where: { id },
+                            data: {
+                                port: containerPort,
+                                status: 'running',
+                                startedAt: new Date(),
+                                stoppedAt: null,
+                                command: `docker start ${containerName}`,
+                                metadata: {
+                                    ...(process.metadata as any),
+                                    mode: 'docker-restarted'
+                                }
+                            }
+                        });
+
+                        const tunnel = await ensurePublicAccess(updated.id, containerPort);
+                        const publicUrl = (tunnel as any)?.publicUrl || (tunnel as any)?.process?.metadata?.publicUrl;
+                        const finalProcess = publicUrl
+                            ? await prisma.processRegistry.findUnique({ where: { id: updated.id } })
+                            : updated;
+
+                        return {
+                            success: true,
+                            message: `Restarted ${process.name} container`,
+                            previewUrl: publicUrl || `http://localhost:${containerPort}`,
+                            publicUrl,
+                            process: deepSerialize(finalProcess)
+                        };
+                    }
+
+                    // Container doesn't exist, build and run it
+                    // Safe: Remove any remnants (shouldn't exist but being safe)
+                    await dockerExec(['rm', '-f', containerName]).catch(() => { });
+
+                    // Safe: Build image with validated parameters
+                    console.log(`Building Docker image: ${imageName}`);
+                    await dockerExec([
+                        'build',
+                        '-t', imageName,
+                        '-f', dockerfilePath,
+                        absAppPath
+                    ], { timeout: 300000 }); // 5 minutes for build
+
+                    // Safe: Run container with explicit parameters
+                    console.log(`Starting container: ${containerName}`);
+                    await dockerExec([
+                        'run', '-d',
+                        '--name', containerName,
+                        '-p', `${port}:${internalPort}`,
+                        '--memory', '512m',
+                        '--cpus', '0.5',
+                        '--restart', 'unless-stopped',
+                        imageName
+                    ]);
 
                     const updated = await prisma.processRegistry.update({
                         where: { id },
@@ -462,14 +699,12 @@ CMD ["npm", "run", "${startScript}"]
                         process: deepSerialize(finalProcess)
                     };
                 } catch (dockerError: any) {
-                    // Check for Docker Daemon failure
-                    const isDaemonError = dockerError.message?.includes('pipe') ||
-                        dockerError.message?.includes('connect') ||
-                        dockerError.message?.includes('daemon');
+                    // Use actionable error messaging
+                    const actionable = getActionableError(dockerError, 'start container');
+                    console.error(formatErrorForLog(dockerError, 'Docker container start'));
 
-                    if (!isDaemonError) {
-                        console.error('Error starting docker container:', dockerError);
-                    }
+                    // Check if it's a daemon error for fallback logic
+                    const isDaemonError = isDockerDaemonError(dockerError);
 
                     if (isDaemonError && (meta?.source === 'repo-app' || process.type === 'docker-dev')) {
                         console.log('⚠️ Docker Daemon unreachable. Falling back to local execution...');
@@ -533,6 +768,8 @@ CMD ["npm", "run", "${startScript}"]
                     }
 
                     return { success: false, message: 'Failed to start docker container and fallback failed: ' + dockerError.message };
+                } finally {
+                    broadcastProcesses().catch(() => { });
                 }
             }
         }
@@ -692,6 +929,7 @@ export async function discoverProcesses() {
             }
         }
 
+        broadcastProcesses().catch(() => { });
         return { success: true, discovered: deepSerialize(discovered) };
     } catch (error: any) {
         console.error('Error discovering processes:', error);
@@ -713,7 +951,8 @@ export async function deleteProcess(id: string) {
             const containerName = (process.metadata as any)?.containerName as string | undefined;
             if (containerName) {
                 try {
-                    await execAsync(`docker rm -f ${containerName}`);
+                    // Safe: Remove container forcefully
+                    await dockerExec(['rm', '-f', containerName]);
                 } catch (dockerError: any) {
                     console.error('Error removing docker container:', dockerError);
                 }
@@ -724,6 +963,7 @@ export async function deleteProcess(id: string) {
             where: { id }
         });
 
+        broadcastProcesses().catch(() => { });
         return { success: true };
     } catch (error: any) {
         console.error('Error deleting process:', error);
@@ -749,7 +989,8 @@ export async function getDockerLogs(id: string) {
             return { success: false, message: 'Container name not found in metadata' };
         }
 
-        const { stdout, stderr } = await execAsync(`docker logs --tail 100 ${containerName}`);
+        // Safe: Get container logs using array args
+        const { stdout, stderr } = await dockerExec(['logs', '--tail', '100', containerName]);
         return { success: true, logs: stdout + stderr };
     } catch (error: any) {
         console.error('Error getting docker logs:', error);
@@ -842,6 +1083,7 @@ export async function reconfigureProcessPort(processId: string) {
             }
         });
 
+        broadcastProcesses().catch(() => { });
         return { success: true, port };
     } catch (error: any) {
         console.error('Failed to reconfigure port:', error);
@@ -854,7 +1096,7 @@ export async function reconfigureProcessPort(processId: string) {
  * Manage App Lifecycle (Start/Stop/Restart)
  * Optimized for local web apps (Vite, Next.js, etc.)
  */
-export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'restart' | 'status', target?: string, script?: string, stopOthers?: boolean }) {
+export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'restart' | 'status', target?: string, script?: string, stopOthers?: boolean, runMode?: 'dev' | 'prod' }) {
     try {
         const user = await getDemoUser();
         const root = process.cwd();
@@ -913,6 +1155,22 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
 
         if (args.action === 'start') {
             const enforcedPreviewPort = await ensurePreviewPortDefaults();
+
+            if (args.runMode && proc && isDockerProcess(proc)) {
+                const meta = (proc.metadata as any) || {};
+                const dockerFile = args.runMode === 'dev' ? 'Dockerfile.dev' : 'Dockerfile';
+                const updatedProc = await prisma.processRegistry.update({
+                    where: { id: proc.id },
+                    data: {
+                        metadata: {
+                            ...meta,
+                            runMode: args.runMode,
+                            dockerFile
+                        }
+                    }
+                });
+                proc = updatedProc;
+            }
             // STOP OTHERS IF REQUESTED
             if (args.stopOthers) {
                 const runningApps = await prisma.processRegistry.findMany({
@@ -927,7 +1185,7 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
                     console.log(`🛑 Stopping ${runningApps.length} other apps before start...`);
                     await Promise.all(runningApps.map(app => stopProcess(app.id)));
                     // Brief pause to ensure ports enable
-                    await new Promise(r => setTimeout(r, 1000));
+                    await Promise.all(runningApps.map(app => app.port ? waitForPortAvailable(app.port, 8000) : Promise.resolve()));
                 }
 
                 // Refresh proc in case we just stopped the target (if it was running)
@@ -1088,6 +1346,67 @@ export async function manageAppLifecycle(args: { action: 'start' | 'stop' | 'res
     }
 }
 
+export async function setAppRunMode(target: string, runMode: 'dev' | 'prod') {
+    try {
+        const user = await getDemoUser();
+        const root = process.cwd();
+        let appPath = root;
+        let appName = 'Root App';
+
+        if (target) {
+            if (!target.startsWith('/') && !target.includes(':') && !target.startsWith('.')) {
+                const repoAppPath = join(root, 'apps', target);
+                try {
+                    await readFile(join(repoAppPath, 'package.json'));
+                    appPath = repoAppPath;
+                    appName = target;
+                } catch {
+                    appPath = join(root, target);
+                    appName = target.split(/[\\/]/).pop() || 'App';
+                }
+            } else {
+                appPath = join(root, target);
+                appName = target.split(/[\\/]/).pop() || 'App';
+            }
+        }
+
+        const processName = `App: ${appName}`;
+        const proc = await prisma.processRegistry.findFirst({
+            where: {
+                userId: user.id,
+                OR: [
+                    { path: appPath },
+                    { path: `apps/${appName}` },
+                    { name: processName },
+                    { name: appName }
+                ]
+            }
+        });
+
+        if (!proc) {
+            return { success: false, message: 'Process not found. Start the app once to register it.' };
+        }
+
+        const meta = (proc.metadata as any) || {};
+        const dockerFile = runMode === 'dev' ? 'Dockerfile.dev' : 'Dockerfile';
+        const updated = await prisma.processRegistry.update({
+            where: { id: proc.id },
+            data: {
+                metadata: {
+                    ...meta,
+                    runMode,
+                    dockerFile
+                }
+            }
+        });
+
+        return { success: true, process: deepSerialize(updated) };
+    } catch (error: any) {
+        console.error('setAppRunMode error:', error);
+        return { success: false, message: error.message };
+    }
+}
+
 /**
  * Toggle Public Access (Ngrok Tunnel)
  */
@@ -1115,7 +1434,8 @@ export async function togglePublicAccess(id: string, options?: { mode?: 'toggle'
             }
 
             try {
-                await execAsync(`docker rm -f ${ngrokContainerName}`);
+                // Safe: Remove ngrok container
+                await dockerExec(['rm', '-f', ngrokContainerName]);
             } catch (e) {
                 // Ignore if already gone
             }
@@ -1163,19 +1483,36 @@ export async function togglePublicAccess(id: string, options?: { mode?: 'toggle'
         // Prefer fixed 4040 mapping; fall back to random if busy
         let apiPort = 4040;
         try {
-            await execAsync(`docker rm -f ${ngrokContainerName}`).catch(() => { });
-            await execAsync(
-                `docker run -d --name ${ngrokContainerName} -p 4040:4040 -e NGROK_AUTHTOKEN=${authToken} ngrok/ngrok http host.docker.internal:${targetPort}`
-            );
+            // Safe: Remove existing ngrok container
+            await dockerExec(['rm', '-f', ngrokContainerName]).catch(() => { });
+
+            // Safe: Run ngrok container with explicit parameters
+            await dockerExec([
+                'run', '-d',
+                '--name', ngrokContainerName,
+                '-p', '4040:4040',
+                '-e', `NGROK_AUTHTOKEN=${authToken}`,
+                'ngrok/ngrok',
+                'http',
+                `host.docker.internal:${targetPort}`
+            ]);
         } catch (e: any) {
             if (isDockerDaemonUnavailable(e)) {
                 return { success: false, message: 'Docker daemon unavailable; tunnel not started' };
             }
             try {
                 apiPort = 0; // we'll resolve the random published port below
-                await execAsync(
-                    `docker run -d --name ${ngrokContainerName} -P -e NGROK_AUTHTOKEN=${authToken} ngrok/ngrok http host.docker.internal:${targetPort}`
-                );
+
+                // Safe: Fallback with random port
+                await dockerExec([
+                    'run', '-d',
+                    '--name', ngrokContainerName,
+                    '-P', // Random port mapping
+                    '-e', `NGROK_AUTHTOKEN=${authToken}`,
+                    'ngrok/ngrok',
+                    'http',
+                    `host.docker.internal:${targetPort}`
+                ]);
             } catch (fallbackError: any) {
                 if (!isDockerDaemonUnavailable(fallbackError)) {
                     console.error('Failed to start ngrok container', fallbackError);
@@ -1193,7 +1530,8 @@ export async function togglePublicAccess(id: string, options?: { mode?: 'toggle'
             try {
                 // If random port, resolve it first
                 if (apiPort === 0) {
-                    const { stdout } = await execAsync(`docker port ${ngrokContainerName} 4040`).catch(() => ({ stdout: '' }));
+                    // Safe: Get container port mapping
+                    const { stdout } = await dockerExec(['port', ngrokContainerName, '4040']).catch(() => ({ stdout: '' }));
                     const match = stdout.match(/:(\d+)/);
                     if (match) apiPort = parseInt(match[1]);
                 }
@@ -1213,7 +1551,8 @@ export async function togglePublicAccess(id: string, options?: { mode?: 'toggle'
         }
 
         if (!publicUrl) {
-            await execAsync(`docker rm -f ${ngrokContainerName}`).catch(() => { });
+            // Safe: Cleanup failed ngrok container
+            await dockerExec(['rm', '-f', ngrokContainerName]).catch(() => { });
             return { success: false, message: 'Tunnel failed to initialize or provide public URL' };
         }
 

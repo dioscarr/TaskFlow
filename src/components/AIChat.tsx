@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Bot, Command, Copy, CornerDownLeft, Eye, File, FileCode, FileText, Image, Layout, Loader2, MessageSquare, MoreHorizontal, Paperclip, Play, Plus, RefreshCw, Send, Settings, Sparkles, Terminal, Trash2, X, Maximize2, Minimize2, CheckCircle2, ChevronDown, List, FolderOpen, Folder, FileJson, Square, BrainCircuit, Image as ImageIcon, ExternalLink, Check, ChevronRight, Edit2, Pin, PinOff, Search, Receipt, DollarSign, Save, AlignLeft, Lightbulb, Compass, Activity, Zap, ArrowDown, AlertTriangle, Globe, Monitor, GitBranch, Split } from 'lucide-react';
+import { ArrowRight, Bot, Command, Copy, CornerDownLeft, Eye, File, FileCode, FileText, Image, Layout, Layers, Loader2, MessageSquare, MoreHorizontal, Paperclip, Play, Plus, RefreshCw, Send, Settings, Sparkles, Terminal, Trash2, X, Maximize2, Minimize2, CheckCircle2, ChevronDown, List, FolderOpen, Folder, FileJson, Square, BrainCircuit, Image as ImageIcon, ExternalLink, Check, ChevronRight, Edit2, Pin, PinOff, Search, Receipt, DollarSign, Save, AlignLeft, Lightbulb, Compass, Activity, Zap, ArrowDown, AlertTriangle, Globe, Monitor, GitBranch, Split } from 'lucide-react';
 import { chatWithAI, chatWithAIStream, getPrompts, createPrompt, updatePrompt, setActivePrompt, deletePrompt, generateSystemPrompt, getIntentRules, getWorkspaceFiles, getChatSessionAgentStatus, approveLatestAgentJob, getAgentActivitiesForSession, cancelAllAgentJobs } from '@/app/actions';
 import { createChatSession, getChatSessions, getChatSession, addChatMessage, updateChatSessionTitle, deleteChatSession, deleteAllChatSessions } from '@/app/chatActions';
 import { toast } from 'sonner';
@@ -281,7 +281,7 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
                             </div>
                         ))}
                         {result.isTruncated && (
-                            <div className="px-2 py-1 text-[10px] text-white/30 italic">
+                            <div className="px-2 py-1 text-[10px] theme-text-quaternary italic">
                                 ... {result.total - result.entries.length} more items hidden
                             </div>
                         )}
@@ -352,14 +352,14 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
                         </div>
                     </div>
                     {isReplace && result.diffs && result.diffs.length > 0 && (
-                        <div className="mt-2 space-y-4 border-t border-white/5 pt-4">
+                        <div className="mt-2 space-y-4 border-t theme-border-subtle pt-4">
                             {result.diffs.map((diff: any, idx: number) => (
                                 <div key={idx} className="space-y-2">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <Split size={10} className="text-white/20" />
-                                        <span className="text-[9px] font-mono text-white/20 uppercase tracking-widest">Change #{idx + 1}</span>
+                                        <Split size={10} className="theme-text-quaternary" />
+                                        <span className="text-[9px] font-mono theme-text-quaternary uppercase tracking-widest">Change #{idx + 1}</span>
                                     </div>
-                                    <div className="rounded-lg overflow-hidden border border-white/5 flex flex-col">
+                                    <div className="rounded-lg overflow-hidden border theme-border-subtle flex flex-col">
                                         <div className="bg-red-500/10 p-2 text-[11px] font-mono border-b border-red-500/10 flex gap-2">
                                             <span className="text-red-400/50 select-none">-</span>
                                             <code className="text-red-300/80 line-through truncate whitespace-pre">{diff.target}</code>
@@ -388,18 +388,18 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
                     colorClass="text-emerald-400"
                     dotColor="bg-emerald-500"
                 />
-                <div className="rounded-xl border border-white/10 bg-[#1e1e1e] overflow-hidden shadow-xl">
-                    <div className="p-4 bg-white/5 border-b border-white/5 flex items-center justify-between">
+                <div className="rounded-xl border theme-border-medium bg-[#1e1e1e] overflow-hidden shadow-xl">
+                    <div className="p-4 theme-overlay-subtle border-b theme-border-subtle flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
                                 <Split size={16} />
                             </div>
                             <div>
-                                <h4 className="text-white font-medium text-sm">Batch Patch Applied</h4>
-                                <p className="text-white/30 text-[10px] font-mono truncate max-w-[200px]">{result.filePath}</p>
+                                <h4 className="theme-text-primary font-medium text-sm">Batch Patch Applied</h4>
+                                <p className="theme-text-quaternary text-[10px] font-mono truncate max-w-[200px]">{result.filePath}</p>
                             </div>
                         </div>
-                        <div className="text-[10px] text-white/30 font-mono">
+                        <div className="text-[10px] theme-text-quaternary font-mono">
                             {diffs.length} EDITS
                         </div>
                     </div>
@@ -408,11 +408,11 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
                         {diffs.map((diff: any, idx: number) => (
                             <div key={idx} className="space-y-2">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Variation {idx + 1}</span>
+                                    <span className="text-[9px] font-bold theme-text-quaternary uppercase tracking-widest">Variation {idx + 1}</span>
                                 </div>
-                                <div className="rounded-xl overflow-hidden border border-white/10 bg-[#0a0a0a] flex flex-col group shadow-lg">
+                                <div className="rounded-xl overflow-hidden border theme-border-medium bg-[#0a0a0a] flex flex-col group shadow-lg">
                                     <div className="relative">
-                                        <div className="bg-red-500/5 px-4 py-3 text-[11px] font-mono border-b border-white/5 flex gap-3 group-hover:bg-red-500/10 transition-colors">
+                                        <div className="bg-red-500/5 px-4 py-3 text-[11px] font-mono border-b theme-border-subtle flex gap-3 group-hover:bg-red-500/10 transition-colors">
                                             <span className="text-red-500/40 select-none font-bold">-</span>
                                             <code className="text-red-400/70 whitespace-pre scrollbar-none overflow-x-auto">{diff.target}</code>
                                         </div>
@@ -427,7 +427,7 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
                     </div>
 
                     {result.message && (
-                        <div className="px-4 py-2 bg-emerald-500/5 text-emerald-400/70 text-[10px] italic border-t border-white/5">
+                        <div className="px-4 py-2 bg-emerald-500/5 text-emerald-400/70 text-[10px] italic border-t theme-border-subtle">
                             {result.message}
                         </div>
                     )}
@@ -440,17 +440,17 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
         if (result.type === 'image' && result.results) {
             return (
                 <div className="mt-4 space-y-3">
-                    <p className="text-[10px] uppercase font-bold text-white/40 tracking-widest pl-1">Image Result</p>
+                    <p className="text-[10px] uppercase font-bold theme-text-tertiary tracking-widest pl-1">Image Result</p>
                     <div className="grid grid-cols-2 gap-2">
                         {result.results.map((img: any, i: number) => (
-                            <div key={i} className="relative group overflow-hidden rounded-xl bg-black/20 aspect-video border border-white/5 hover:border-sky-500/50 transition-all">
+                            <div key={i} className="relative group overflow-hidden rounded-xl bg-black/20 aspect-video border theme-border-subtle hover:border-sky-500/50 transition-all">
                                 <img
                                     src={img.url}
                                     alt={img.alt}
                                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-                                    <span className="text-[9px] text-white/80 line-clamp-1">{img.alt}</span>
+                                    <span className="text-[9px] theme-text-secondary line-clamp-1">{img.alt}</span>
                                 </div>
                             </div>
                         ))}
@@ -464,16 +464,16 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
                 <div className="mt-4 space-y-2">
                     <div className="flex items-center gap-2 px-1">
                         <Globe size={12} className="text-sky-400" />
-                        <span className="text-[10px] font-bold uppercase text-white/40 tracking-widest">Web Research</span>
+                        <span className="text-[10px] font-bold uppercase theme-text-tertiary tracking-widest">Web Research</span>
                     </div>
                     {result.results.map((item: any, i: number) => (
-                        <div key={i} className="p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group">
+                        <div key={i} className="p-3 rounded-xl theme-overlay-subtle border theme-border-subtle hover:theme-overlay-medium transition-all group">
                             <div className="flex items-start justify-between gap-4">
                                 <div>
                                     <h4 className="text-xs font-semibold text-sky-300 group-hover:text-sky-200 mb-1">{item.title}</h4>
-                                    <p className="text-[11px] text-white/60 leading-relaxed line-clamp-2">{item.snippet}</p>
+                                    <p className="text-[11px] theme-text-tertiary leading-relaxed line-clamp-2">{item.snippet}</p>
                                 </div>
-                                {item.url && <ExternalLink size={12} className="text-white/20 group-hover:text-white/40 flex-shrink-0 mt-1" />}
+                                {item.url && <ExternalLink size={12} className="theme-text-quaternary group-hover:theme-text-tertiary flex-shrink-0 mt-1" />}
                             </div>
                         </div>
                     ))}
@@ -492,15 +492,15 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
                         <Receipt size={14} />
                         <span className="text-[10px] font-black uppercase tracking-widest">Fiscal Intelligence</span>
                     </div>
-                    {data.date && <span className="text-[10px] text-white/40 font-mono">{data.date}</span>}
+                    {data.date && <span className="text-[10px] theme-text-tertiary font-mono">{data.date}</span>}
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                     <div>
-                        <p className="text-[9px] text-white/30 uppercase font-bold tracking-wider mb-1">Provider</p>
-                        <p className="text-sm text-white font-semibold truncate">{data.provider}</p>
+                        <p className="text-[9px] theme-text-quaternary uppercase font-bold tracking-wider mb-1">Provider</p>
+                        <p className="text-sm theme-text-primary font-semibold truncate">{data.provider}</p>
                     </div>
                     <div className="text-right">
-                        <p className="text-[9px] text-white/30 uppercase font-bold tracking-wider mb-1">Total</p>
+                        <p className="text-[9px] theme-text-quaternary uppercase font-bold tracking-wider mb-1">Total</p>
                         <p className="text-lg text-emerald-400 font-bold font-mono">${data.total?.toLocaleString()}</p>
                     </div>
                 </div>
@@ -516,12 +516,12 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
                     <span className="text-[10px] font-black uppercase tracking-[0.2em]">Abstract Summary</span>
                 </div>
                 <div className="relative">
-                    <p className="text-xs text-white/70 italic leading-relaxed tracking-tight pl-4 border-l-2 border-sky-500/30">
+                    <p className="text-xs theme-text-secondary italic leading-relaxed tracking-tight pl-4 border-l-2 border-sky-500/30">
                         {result.summary}
                     </p>
                 </div>
                 {result.fileName && (
-                    <div className="pt-2 text-[9px] text-white/20 font-bold uppercase tracking-widest flex justify-end">
+                    <div className="pt-2 text-[9px] theme-text-quaternary font-bold uppercase tracking-widest flex justify-end">
                         Source: {result.fileName}
                     </div>
                 )}
@@ -536,11 +536,11 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
                     <Plus size={14} />
                     <span className="text-[10px] font-black uppercase tracking-[0.2em]">Efficiency Audit</span>
                 </div>
-                <p className="text-xs text-white/50">I detected <span className="text-amber-300 font-bold">{result.count}</span> potential duplicate pairs.</p>
+                <p className="text-xs theme-text-secondary">I detected <span className="text-amber-300 font-bold">{result.count}</span> potential duplicate pairs.</p>
                 <div className="space-y-1 max-h-[120px] overflow-y-auto no-scrollbar">
                     {result.duplicates.slice(0, 3).map((d: any, ix: number) => (
-                        <div key={ix} className="p-2 rounded-lg bg-white/5 flex items-center justify-between gap-3 border border-white/5">
-                            <span className="text-[10px] text-white/60 truncate">{d.duplicate.name}</span>
+                        <div key={ix} className="p-2 rounded-lg theme-overlay-subtle flex items-center justify-between gap-3 border theme-border-subtle">
+                            <span className="text-[10px] theme-text-tertiary truncate">{d.duplicate.name}</span>
                             <span className="text-[9px] text-red-400/60 font-bold px-1.5 py-0.5 bg-red-400/10 rounded uppercase">Duplicate</span>
                         </div>
                     ))}
@@ -554,7 +554,7 @@ const ToolResultPreview = ({ tool, result }: { tool: string; result: any }) => {
         <div className="mt-3">
             <div className="flex items-center gap-2 mb-2 px-1">
                 <div className="w-1.5 h-1.5 rounded-full bg-sky-500/40" />
-                <span className="text-[9px] font-bold uppercase text-white/30 tracking-widest">Execution Trace</span>
+                <span className="text-[9px] font-bold uppercase theme-text-quaternary tracking-widest">Execution Trace</span>
             </div>
             <CodeBlock
                 language="json"
@@ -596,7 +596,7 @@ const ThinkingProcess = ({ content }: { content: string }) => {
                 const title = trimmed.replace(/###|\*\*/g, '').trim();
                 const titleLower = title.toLowerCase();
                 const matchedType = Object.keys(sectionTypes).find(key => titleLower.includes(key));
-                const sectionInfo = matchedType ? sectionTypes[matchedType] : { icon: FileText, color: 'text-white/40' };
+                const sectionInfo = matchedType ? sectionTypes[matchedType] : { icon: FileText, color: 'theme-text-tertiary' };
 
                 currentSection = {
                     title,
@@ -653,24 +653,24 @@ const ThinkingProcess = ({ content }: { content: string }) => {
             <div className="overflow-hidden rounded-[1.5rem] border border-[color:var(--border)] bg-foreground/[0.02] backdrop-blur-xl transition-all shadow-3xl hover:border-foreground/10 group-hover/thought:bg-foreground/[0.05]">
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className="w-full h-12 px-5 flex items-center justify-between transition-colors hover:bg-white/[0.02]"
+                    className="w-full h-12 px-5 flex items-center justify-between transition-colors hover:theme-overlay-subtle"
                 >
                     <div className="flex items-center gap-4">
                         <div className="flex -space-x-2">
                             {sections.slice(0, 4).map((s, i) => {
                                 const Icon = s.icon;
                                 return (
-                                    <div key={i} className={cn("w-6 h-6 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center shadow-xl", s.color)}>
+                                    <div key={i} className={cn("w-6 h-6 rounded-full bg-[color:var(--card)] border theme-border-medium flex items-center justify-center shadow-xl", s.color)}>
                                         <Icon size={11} strokeWidth={2.5} />
                                     </div>
                                 );
                             })}
                         </div>
-                        <span className="text-[11px] text-white/60 font-bold uppercase tracking-wider">
+                        <span className="text-[11px] theme-text-tertiary font-bold uppercase tracking-wider">
                             {isExpanded ? `Thinking (${sections.length})` : "Show thinking"}
                         </span>
                     </div>
-                    <ChevronDown size={16} className={cn("text-white/20 transition-transform duration-500", isExpanded && "rotate-180")} />
+                    <ChevronDown size={16} className={cn("theme-text-quaternary transition-transform duration-500", isExpanded && "rotate-180")} />
                 </button>
 
                 <AnimatePresence>
@@ -679,7 +679,7 @@ const ThinkingProcess = ({ content }: { content: string }) => {
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            className="border-t border-white/5 overflow-hidden"
+                            className="border-t theme-border-subtle overflow-hidden"
                         >
                             <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar bg-black/40">
                                 {sections.map((section, idx) => {
@@ -687,13 +687,13 @@ const ThinkingProcess = ({ content }: { content: string }) => {
                                     const isOpen = expandedSections.has(idx);
 
                                     return (
-                                        <div key={idx} className="border border-white/5 rounded-2xl overflow-hidden bg-white/[0.01]">
+                                        <div key={idx} className="border theme-border-subtle rounded-2xl overflow-hidden theme-overlay-subtle">
                                             <button
                                                 onClick={() => toggleSection(idx)}
-                                                className="w-full flex items-center justify-between p-4 hover:bg-white/[0.03] transition-colors group/section"
+                                                className="w-full flex items-center justify-between p-4 hover:theme-overlay-medium transition-colors group/section"
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    <div className={cn("p-2 rounded-xl bg-slate-900 border border-white/5 shadow-inner", section.color)}>
+                                                    <div className={cn("p-2 rounded-xl bg-[color:var(--card)] border theme-border-subtle shadow-inner", section.color)}>
                                                         <Icon size={14} strokeWidth={2.5} />
                                                     </div>
                                                     <span className={cn("text-[12px] font-black uppercase tracking-widest", section.color)}>
@@ -703,7 +703,7 @@ const ThinkingProcess = ({ content }: { content: string }) => {
                                                 <ChevronRight
                                                     size={14}
                                                     className={cn(
-                                                        "text-white/20 transition-transform duration-300",
+                                                        "theme-text-quaternary transition-transform duration-300",
                                                         isOpen && "rotate-90"
                                                     )}
                                                 />
@@ -718,7 +718,7 @@ const ThinkingProcess = ({ content }: { content: string }) => {
                                                         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                                                         className="border-t border-[color:var(--border)] bg-foreground/[0.02]"
                                                     >
-                                                        <div className="p-5 text-[13px] text-white/70 leading-relaxed font-medium space-y-3">
+                                                        <div className="p-5 text-[13px] theme-text-secondary leading-relaxed font-medium space-y-3">
                                                             {section.content.split('\n').map((line, i) => {
                                                                 const trimmed = line.trim();
                                                                 if (!trimmed) return null;
@@ -733,7 +733,7 @@ const ThinkingProcess = ({ content }: { content: string }) => {
                                                                     );
                                                                 }
 
-                                                                return <p key={i} className={cn(line.startsWith('  ') && "ml-5 text-white/40 italic font-mono text-[11px] leading-loose")}>{trimmed}</p>;
+                                                                return <p key={i} className={cn(line.startsWith('  ') && "ml-5 theme-text-tertiary italic font-mono text-[11px] leading-loose")}>{trimmed}</p>;
                                                             })}
                                                         </div>
                                                     </motion.div>
@@ -755,7 +755,7 @@ const CognitiveTimeline = ({ activities }: { activities: any[] }) => {
     if (!activities || activities.length === 0) return null;
 
     return (
-        <div className="my-3 pl-3 pr-2 border-l-2 border-white/5 space-y-3">
+        <div className="my-3 pl-3 pr-2 border-l-2 theme-border-subtle space-y-3">
             <div className="flex items-center gap-2 mb-2">
                 <Activity size={12} className="text-amber-400 opacity-60" />
                 <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/30">Live Agent Activity</h3>
@@ -785,7 +785,7 @@ const CognitiveTimeline = ({ activities }: { activities: any[] }) => {
                                 "text-[11px] leading-relaxed p-3 rounded-xl border backdrop-blur-md shadow-2xl transition-all",
                                 activity.type === 'error' ? "text-red-300 bg-red-500/5 border-red-500/20" :
                                     activity.type === 'thinking' ? "text-sky-100/90 bg-sky-500/5 border-sky-500/10" :
-                                        "text-zinc-300 bg-white/[0.02] border-white/5"
+                                        "text-zinc-300 theme-overlay-subtle theme-border-subtle"
                             )}>
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
@@ -794,7 +794,7 @@ const CognitiveTimeline = ({ activities }: { activities: any[] }) => {
                                             const match = /language-(\w+)/.exec(className || '');
                                             const codeString = String(children).replace(/\n$/, '');
                                             if (!match && !codeString.includes('\n')) {
-                                                return <code className="bg-white/10 px-1 py-0.5 rounded text-sky-400 font-mono" {...props}>{children}</code>;
+                                                return <code className="theme-overlay-medium px-1 py-0.5 rounded text-sky-400 font-mono" {...props}>{children}</code>;
                                             }
                                             return <CodeBlock language={match?.[1] || 'text'} code={codeString} />;
                                         },
@@ -848,7 +848,7 @@ const AgentStepBadge = ({ tool, status }: { tool: string, status: 'executing' | 
                 </div>
                 <div className="flex flex-col">
                     <span className="text-[10px] text-muted-foreground/30 font-black uppercase tracking-[0.2em] leading-none mb-1.5">Action Dispatched</span>
-                    <span className="text-[13px] font-mono font-black text-white tracking-tight">
+                    <span className="text-[13px] font-mono font-black theme-text-primary tracking-tight">
                         {tool.replace(/_/g, ' ')}
                     </span>
                 </div>
@@ -936,7 +936,7 @@ const MessageBubble = ({
                         remarkPlugins={[remarkGfm]}
                         components={{
                             table: ({ node, ...props }: any) => (
-                                <div className="table-container my-6 overflow-x-auto rounded-[1rem] border border-white/10 bg-black/40 shadow-2xl">
+                                <div className="table-container my-6 overflow-x-auto rounded-[1rem] border theme-border-medium bg-black/40 shadow-2xl">
                                     <table {...props} className="text-[12px] w-full border-collapse" />
                                 </div>
                             ),
@@ -953,7 +953,7 @@ const MessageBubble = ({
 
                                 if (isInline) {
                                     return (
-                                        <code className="bg-white/10 px-1.5 py-0.5 rounded-md font-mono text-[11px] text-sky-300 border border-white/5 mx-0.5" {...props}>
+                                        <code className="theme-overlay-medium px-1.5 py-0.5 rounded-md font-mono text-[11px] text-sky-300 border theme-border-subtle mx-0.5" {...props}>
                                             {children}
                                         </code>
                                     );
@@ -987,11 +987,11 @@ const MessageBubble = ({
                                     </li>
                                 );
                             },
-                            h1: ({ node, ...props }: any) => <h1 {...props} className="text-xl font-black text-white mb-4 mt-8 pb-3 border-b border-white/10 tracking-tight" />,
-                            h2: ({ node, ...props }: any) => <h2 {...props} className="text-lg font-bold text-white mb-3 mt-8 tracking-tight flex items-center gap-2 before:w-1 before:h-4 before:bg-sky-500 before:rounded-full" />,
-                            h3: ({ node, ...props }: any) => <h3 {...props} className="text-[15px] font-bold text-white mb-2 mt-6 tracking-tight" />,
+                            h1: ({ node, ...props }: any) => <h1 {...props} className="text-xl font-black theme-text-primary mb-4 mt-8 pb-3 border-b theme-border-medium tracking-tight" />,
+                            h2: ({ node, ...props }: any) => <h2 {...props} className="text-lg font-bold theme-text-primary mb-3 mt-8 tracking-tight flex items-center gap-2 before:w-1 before:h-4 before:bg-sky-500 before:rounded-full" />,
+                            h3: ({ node, ...props }: any) => <h3 {...props} className="text-[15px] font-bold theme-text-primary mb-2 mt-6 tracking-tight" />,
                             blockquote: ({ node, ...props }: any) => (
-                                <blockquote {...props} className="border-l-4 border-sky-500/40 pl-6 py-1 italic text-white/50 my-6 bg-white/[0.02] rounded-r-xl" />
+                                <blockquote {...props} className="border-l-4 border-sky-500/40 pl-6 py-1 italic theme-text-secondary my-6 theme-overlay-subtle rounded-r-xl" />
                             ),
                         }}
                     >
@@ -1000,14 +1000,14 @@ const MessageBubble = ({
 
                     {/* Tool Result Preview */}
                     {!isUser && msg.toolUsed && (
-                        <div className="pt-2 border-t border-white/5 mt-4">
+                        <div className="pt-2 border-t theme-border-subtle mt-4">
                             <ToolResultPreview tool={msg.toolUsed} result={msg.toolResult} />
                         </div>
                     )}
 
                     {/* File Meta */}
                     {!isUser && fileMeta && (
-                        <div className="mt-3 flex items-center gap-2 text-[10px] text-white/40 bg-white/5 p-2 rounded-lg inline-flex">
+                        <div className="mt-3 flex items-center gap-2 text-[10px] theme-text-tertiary theme-overlay-subtle p-2 rounded-lg inline-flex">
                             <FileIcon size={12} className="text-sky-300" />
                             <span className="truncate">{fileMeta.name}</span>
                         </div>
@@ -1016,13 +1016,13 @@ const MessageBubble = ({
 
                 {/* Footer / Actions */}
                 {!isUser && (
-                    <div className="px-3 py-2 bg-black/20 border-t border-white/5 flex items-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                    <div className="px-3 py-2 bg-black/20 border-t theme-border-subtle flex items-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
                         <button
                             onClick={() => {
                                 navigator.clipboard.writeText(msg.content);
                                 toast.success('Copied!');
                             }}
-                            className="p-1.5 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-colors"
+                            className="p-1.5 hover:theme-overlay-medium rounded-lg theme-text-tertiary hover:theme-text-primary transition-colors"
                             title="Copy Message"
                         >
                             <Copy size={12} />
@@ -1039,7 +1039,7 @@ const MessageBubble = ({
                         )}
 
                         {!isApproval && (
-                            <div className="ml-auto text-[10px] text-white/20 font-mono">
+                            <div className="ml-auto text-[10px] theme-text-quaternary font-mono">
                                 AI Assistant
                             </div>
                         )}
@@ -1151,7 +1151,7 @@ export default function AIChat({
     useEffect(() => {
         if (activeFile) {
             const context = {
-                id: activeFile.path || activeFile.id,
+                id: activeFile.id,
                 name: activeFile.name,
                 parentId: activeFile.parentId || null
             };
@@ -1484,8 +1484,9 @@ export default function AIChat({
 
     // Listen for set-active-app event from FileManager
     useEffect(() => {
-        const handleSetActiveApp = async (event: CustomEvent) => {
-            const { name, path } = event.detail;
+        const handleSetActiveApp = async (event: Event) => {
+            const customEvent = event as CustomEvent;
+            const { name, path } = customEvent.detail;
 
             // Find the folder in workspace files
             let appFolder = workspaceFiles.find(f =>
@@ -1556,10 +1557,10 @@ export default function AIChat({
             });
         };
 
-        window.addEventListener('set-active-app', handleSetActiveApp as EventListener);
+        window.addEventListener('set-active-app', handleSetActiveApp);
 
         return () => {
-            window.removeEventListener('set-active-app', handleSetActiveApp as EventListener);
+            window.removeEventListener('set-active-app', handleSetActiveApp);
         };
     }, [workspaceFiles]);
 
@@ -1738,7 +1739,7 @@ export default function AIChat({
     const renderSessionsView = () => (
         <div className="h-full p-6 space-y-4 overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between mb-4">
-                <h4 className="text-[10px] font-black uppercase text-white/30 tracking-widest">Chats</h4>
+                <h4 className="text-[10px] font-black uppercase theme-text-quaternary tracking-widest">Chats</h4>
                 <div className="flex items-center gap-2">
                     {chatSessions.length > 0 && (
                         <button
@@ -1760,7 +1761,7 @@ export default function AIChat({
             </div>
             <div className="space-y-3">
                 {chatSessions.length === 0 && (
-                    <div className="text-xs text-white/40">No previous chats yet.</div>
+                    <div className="text-xs theme-text-tertiary">No previous chats yet.</div>
                 )}
                 {chatSessions.map((session) => {
                     const preview = session.messages?.[0]?.content || 'No messages yet';
@@ -1773,7 +1774,7 @@ export default function AIChat({
                             key={session.id}
                             className={cn(
                                 "w-full p-4 rounded-2xl border transition-all group",
-                                isActive ? "bg-sky-600/10 border-sky-500/30" : "bg-white/5 border-white/5 hover:border-white/10"
+                                isActive ? "bg-sky-600/10 border-sky-500/30" : "theme-overlay-subtle theme-border-subtle hover:theme-border-medium"
                             )}
                         >
                             {isRenaming ? (
@@ -1790,7 +1791,7 @@ export default function AIChat({
                                             }
                                         }}
                                         placeholder="Enter new title..."
-                                        className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                        className="w-full theme-overlay-subtle border theme-border-medium rounded-lg px-3 py-2 text-xs theme-text-primary focus:outline-none focus:ring-1 focus:ring-sky-500"
                                         autoFocus
                                     />
                                     <div className="flex gap-2">
@@ -1805,7 +1806,7 @@ export default function AIChat({
                                                 setRenamingSessionId(null);
                                                 setRenamingSessionTitle('');
                                             }}
-                                            className="flex-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/60 rounded-lg text-[10px] font-bold transition-all"
+                                            className="flex-1 px-3 py-1.5 theme-overlay-subtle hover:theme-overlay-medium theme-text-tertiary rounded-lg text-[10px] font-bold transition-all"
                                         >
                                             Cancel
                                         </button>
@@ -1818,7 +1819,7 @@ export default function AIChat({
                                             onClick={() => openSession(session.id)}
                                             className="flex-1 text-left"
                                         >
-                                            <span className="text-[12px] font-bold text-white truncate">{session.title || 'New Chat'}</span>
+                                            <span className="text-[12px] font-bold theme-text-primary truncate">{session.title || 'New Chat'}</span>
                                         </button>
                                         <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
@@ -1826,7 +1827,7 @@ export default function AIChat({
                                                     setRenamingSessionId(session.id);
                                                     setRenamingSessionTitle(session.title || 'New Chat');
                                                 }}
-                                                className="p-1.5 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white rounded-lg transition-all"
+                                                className="p-1.5 theme-overlay-subtle hover:theme-overlay-medium theme-text-tertiary hover:theme-text-primary rounded-lg transition-all"
                                                 title="Rename"
                                             >
                                                 <Edit2 size={14} />
@@ -1841,10 +1842,10 @@ export default function AIChat({
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <p className="text-[10px] text-white/40 leading-relaxed line-clamp-2 flex-1">
+                                        <p className="text-[10px] theme-text-tertiary leading-relaxed line-clamp-2 flex-1">
                                             {preview}
                                         </p>
-                                        <span className="text-[10px] text-white/40 ml-2 shrink-0">{messageCount}</span>
+                                        <span className="text-[10px] theme-text-tertiary ml-2 shrink-0">{messageCount}</span>
                                     </div>
                                 </>
                             )}
@@ -2904,7 +2905,7 @@ export default function AIChat({
                                                     setActiveAppContext(null);
                                                     setChatScope('workspace');
                                                 }}
-                                                className="p-1 text-white/50 hover:text-white/80"
+                                                className="p-1 theme-text-secondary hover:theme-text-secondary/80"
                                                 title="Clear active app context"
                                             >
                                                 <X size={12} />
@@ -2936,14 +2937,14 @@ export default function AIChat({
                                 </button>
                                 <button
                                     onClick={() => setView(view === 'sessions' ? 'chat' : 'sessions')}
-                                    className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
+                                    className="p-2 hover:theme-overlay-subtle rounded-lg theme-text-tertiary hover:theme-text-primary transition-colors"
                                     title="Chat Sessions"
                                 >
                                     <MessageSquare size={18} />
                                 </button>
                                 <button
                                     onClick={() => setIsSettingsModalOpen(true)}
-                                    className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
+                                    className="p-2 hover:theme-overlay-subtle rounded-lg theme-text-tertiary hover:theme-text-primary transition-colors"
                                     title="Chat Settings"
                                 >
                                     <Settings size={18} />
@@ -2951,7 +2952,7 @@ export default function AIChat({
                                 {!embedded && (
                                     <button
                                         onClick={togglePin}
-                                        className="p-2 hover:bg-white/5 rounded-lg text-sky-400 transition-colors"
+                                        className="p-2 hover:theme-overlay-subtle rounded-lg text-sky-400 transition-colors"
                                         title="Unpin from UI"
                                     >
                                         <PinOff size={18} />
@@ -2995,8 +2996,8 @@ export default function AIChat({
                                                     <Paperclip size={32} />
                                                 </div>
                                                 <div className="text-center">
-                                                    <p className="text-white font-bold">Drop to Attach</p>
-                                                    <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest mt-1">Context Injection</p>
+                                                    <p className="theme-text-primary font-bold">Drop to Attach</p>
+                                                    <p className="theme-text-tertiary text-[10px] uppercase font-bold tracking-widest mt-1">Context Injection</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -3043,10 +3044,10 @@ export default function AIChat({
                                                         </div>
                                                     </div>
                                                     <div className="space-y-2 relative z-10">
-                                                        <p className="text-white/60 text-sm font-semibold">
+                                                        <p className="theme-text-tertiary text-sm font-semibold">
                                                             Premium AI Assistant
                                                         </p>
-                                                        <p className="text-white/40 text-[10px] leading-relaxed uppercase tracking-[0.3em] font-bold">
+                                                        <p className="theme-text-tertiary text-[10px] leading-relaxed uppercase tracking-[0.3em] font-bold">
                                                             Agent Ready
                                                         </p>
                                                     </div>
@@ -3061,10 +3062,10 @@ export default function AIChat({
                                                                     <Compass size={22} />
                                                                 </div>
                                                                 <div className="flex-1">
-                                                                    <h4 className="text-[11px] font-black text-white uppercase tracking-widest mb-1">Explore Idea Library</h4>
-                                                                    <p className="text-[10px] text-white/40 leading-relaxed font-medium">Browse high-quality strategic flows and multi-step task instructions.</p>
+                                                                    <h4 className="text-[11px] font-black theme-text-primary uppercase tracking-widest mb-1">Explore Idea Library</h4>
+                                                                    <p className="text-[10px] theme-text-tertiary leading-relaxed font-medium">Browse high-quality strategic flows and multi-step task instructions.</p>
                                                                 </div>
-                                                                <ChevronRight size={18} className="text-white/20 group-hover:translate-x-1 group-hover:text-sky-400 transition-all" />
+                                                                <ChevronRight size={18} className="theme-text-quaternary group-hover:translate-x-1 group-hover:text-sky-400 transition-all" />
                                                             </div>
                                                         </button>
 
@@ -3077,7 +3078,7 @@ export default function AIChat({
                                                                         if (!prev.trim()) return text;
                                                                         return `${prev.trim()} ${text}`;
                                                                     })}
-                                                                    className="group p-4 bg-gradient-to-br from-white/[0.08] to-white/[0.03] border border-white/10 rounded-2xl text-left text-xs text-white/50 hover:text-white/90 hover:border-white/20 hover:from-white/[0.12] hover:to-white/[0.06] transition-all duration-300 active:scale-[0.98] backdrop-blur-xl shadow-lg hover:shadow-xl relative overflow-hidden"
+                                                                    className="group p-4 theme-overlay-subtle border theme-border-medium rounded-2xl text-left text-xs theme-text-secondary hover:theme-text-primary hover:theme-border-strong hover:theme-overlay-medium transition-all duration-300 active:scale-[0.98] backdrop-blur-xl shadow-lg hover:shadow-xl relative overflow-hidden"
                                                                 >
                                                                     <div className="absolute inset-0 bg-gradient-to-r from-sky-500/0 via-emerald-500/5 to-amber-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                                                                     <div className="relative flex items-center gap-3">
@@ -3115,7 +3116,7 @@ export default function AIChat({
                                                 >
                                                     <div className="relative group w-full max-w-xl">
                                                         <div className="absolute inset-0 bg-gradient-to-r from-sky-500/20 via-emerald-500/20 to-amber-400/20 rounded-[1.5rem] blur-xl opacity-60 group-hover:opacity-100 transition-opacity" />
-                                                        <div className="relative bg-gradient-to-br from-white/[0.08] to-white/[0.03] px-6 py-5 rounded-[1.5rem] rounded-tl-none border border-white/10 backdrop-blur-xl shadow-2xl">
+                                                        <div className="relative theme-overlay-medium px-6 py-5 rounded-[1.5rem] rounded-tl-none border theme-border-medium backdrop-blur-xl shadow-2xl">
                                                             <div className="flex items-start gap-4">
                                                                 <div className="flex gap-1.5 pt-1">
                                                                     <div className="w-2.5 h-2.5 bg-gradient-to-r from-sky-400 to-emerald-400 rounded-full shadow-lg shadow-sky-400/50 animate-pulse" />
@@ -3265,20 +3266,43 @@ export default function AIChat({
                                                                 <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/40 font-bold">Agent</span>
                                                                 {isSwitchingAgent && <Loader2 size={12} className="animate-spin text-sky-400" />}
                                                             </div>
-                                                            <select
-                                                                value={activeAgentId}
-                                                                onChange={(e) => handleSetActive(e.target.value)}
-                                                                disabled={prompts.length === 0 || isSwitchingAgent}
-                                                                className="bg-foreground/5 border border-[color:var(--border)] rounded-xl px-3 py-1.5 text-[10px] text-foreground/80 focus:outline-none focus:border-sky-500/40"
-                                                                title="Switch agent"
-                                                            >
-                                                                {prompts.length === 0 && <option value="">No agents</option>}
-                                                                {prompts.map(p => (
-                                                                    <option key={p.id} value={p.id} className="bg-[color:var(--card)] text-foreground">
-                                                                        {p.name}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
+                                                            <div className="relative group/underwater">
+                                                                {/* Underwater wave animation */}
+                                                                <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none opacity-0 group-hover/underwater:opacity-100 transition-opacity duration-500">
+                                                                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/30 to-cyan-500/20 animate-[wave_3s_ease-in-out_infinite]"
+                                                                         style={{
+                                                                             backgroundSize: '200% 100%',
+                                                                             animation: 'wave 3s ease-in-out infinite'
+                                                                         }}
+                                                                    />
+                                                                    {/* Floating bubbles */}
+                                                                    <div className="absolute bottom-0 left-[20%] w-1 h-1 rounded-full bg-cyan-300/60 animate-[bubble_2s_ease-in_infinite]" />
+                                                                    <div className="absolute bottom-0 left-[50%] w-1.5 h-1.5 rounded-full bg-blue-200/50 animate-[bubble_2.5s_ease-in_infinite_0.5s]" />
+                                                                    <div className="absolute bottom-0 left-[75%] w-1 h-1 rounded-full bg-cyan-400/70 animate-[bubble_3s_ease-in_infinite_1s]" />
+                                                                </div>
+                                                                <select
+                                                                    value={activeAgentId}
+                                                                    onChange={(e) => handleSetActive(e.target.value)}
+                                                                    disabled={prompts.length === 0 || isSwitchingAgent}
+                                                                    className="relative bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-cyan-400/10 border border-cyan-500/30 rounded-xl px-3 py-1.5 text-[10px] text-cyan-100/90 focus:outline-none focus:border-cyan-400/60 focus:shadow-[0_0_20px_rgba(6,182,212,0.3)] backdrop-blur-xl transition-all duration-300 hover:shadow-[0_0_25px_rgba(6,182,212,0.4)] hover:border-cyan-400/50 cursor-pointer appearance-none pr-8 bg-right bg-no-repeat"
+                                                                    title="Switch agent"
+                                                                    style={{
+                                                                        backgroundImage: `linear-gradient(to bottom, transparent 0%, rgba(6, 182, 212, 0.1) 100%)`,
+                                                                        textShadow: '0 0 10px rgba(6, 182, 212, 0.5)'
+                                                                    }}
+                                                                >
+                                                                    {prompts.length === 0 && <option value="">No agents</option>}
+                                                                    {prompts.map(p => (
+                                                                        <option key={p.id} value={p.id} className="bg-[color:var(--card)] text-foreground">
+                                                                            {p.name}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                                {/* Dropdown arrow with underwater effect */}
+                                                                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                                    <ChevronDown size={14} className="text-cyan-300/70 group-hover/underwater:text-cyan-200 transition-colors" />
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                         <textarea
                                                             rows={1}
@@ -3288,13 +3312,13 @@ export default function AIChat({
                                                             placeholder={isLoading ? "AI is working above... you can queue another message" : (isBackgroundBusy ? "Background agent active. You can continue chatting..." : "Ask anything...")}
                                                             className={cn(
                                                                 "relative z-20 w-full bg-foreground/[0.03] backdrop-blur-xl border border-[color:var(--border)] rounded-[1.25rem] py-4 pl-5 pr-14 text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-sky-500/40 focus:bg-foreground/[0.05] transition-all duration-300 resize-none shadow-2xl shadow-black/5 font-medium",
-                                                                isLoading && "border-sky-500/20 bg-white/[0.03]"
+                                                                isLoading && "border-sky-500/20 theme-overlay-subtle"
                                                             )}
                                                             style={{ minHeight: '52px', maxHeight: '200px' }}
                                                         />
                                                         {isCommandMenuOpen && filteredCommands.length > 0 && (
                                                             <div className="absolute bottom-full mb-3 left-0 w-full z-50 bg-[color:var(--card)] border border-[color:var(--border)] rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl">
-                                                                <div className="text-[10px] text-white/40 px-4 py-2 border-b border-white/5 uppercase tracking-widest">Commands</div>
+                                                                <div className="text-[10px] theme-text-tertiary px-4 py-2 border-b theme-border-subtle uppercase tracking-widest">Commands</div>
                                                                 <div className="max-h-52 overflow-y-auto">
                                                                     {filteredCommands.map((cmd, idx) => (
                                                                         <button
@@ -3302,14 +3326,14 @@ export default function AIChat({
                                                                             onClick={() => applyCommand(cmd.command)}
                                                                             className={cn(
                                                                                 "w-full text-left px-4 py-2 flex items-center justify-between text-xs transition-colors",
-                                                                                idx === activeCommandIndex ? "bg-white/10 text-white" : "text-white/60 hover:text-white hover:bg-white/5"
+                                                                                idx === activeCommandIndex ? "theme-overlay-medium theme-text-primary" : "theme-text-tertiary hover:theme-text-primary hover:theme-overlay-subtle"
                                                                             )}
                                                                         >
                                                                             <div>
                                                                                 <div className="font-mono text-[11px]">{cmd.command}</div>
-                                                                                <div className="text-[10px] text-white/40">{cmd.description}</div>
+                                                                                <div className="text-[10px] theme-text-tertiary">{cmd.description}</div>
                                                                             </div>
-                                                                            <span className="text-[10px] text-white/30">{cmd.label}</span>
+                                                                            <span className="text-[10px] theme-text-quaternary">{cmd.label}</span>
                                                                         </button>
                                                                     ))}
                                                                 </div>
@@ -3324,7 +3348,7 @@ export default function AIChat({
                                                                     ? isLoading
                                                                         ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 hover:scale-110 active:scale-95 shadow-emerald-500/50"
                                                                         : "bg-gradient-to-r from-sky-600 to-emerald-500 text-white hover:from-sky-500 hover:to-emerald-400 hover:scale-110 active:scale-95 shadow-sky-500/50"
-                                                                    : "bg-white/5 text-white/20 cursor-not-allowed"
+                                                                    : "theme-overlay-subtle theme-text-quaternary cursor-not-allowed"
                                                             )}
                                                             title={isLoading ? "Queue next message" : "Send message"}
                                                         >
@@ -3332,7 +3356,7 @@ export default function AIChat({
                                                         </button>
                                                     </div>
                                                     {input.length > 0 && (
-                                                        <div className="absolute -top-6 right-0 text-[9px] text-white/30 font-mono">
+                                                        <div className="absolute -top-6 right-0 text-[9px] theme-text-quaternary font-mono">
                                                             {input.length} chars
                                                         </div>
                                                     )}
@@ -3347,7 +3371,7 @@ export default function AIChat({
                                 <div className="h-full p-6 overflow-y-auto custom-scrollbar">
                                     <div className={cn("space-y-4", embedded ? "max-w-3xl mx-auto" : "")}>
                                         <div className="flex items-center justify-between mb-4">
-                                            <h4 className="text-[10px] font-black uppercase text-white/30 tracking-widest">Archetypes</h4>
+                                            <h4 className="text-[10px] font-black uppercase theme-text-quaternary tracking-widest">Archetypes</h4>
                                             <button onClick={() => { setEditingPromptId(null); setNewPrompt({ name: '', description: '', prompt: '', tools: DEFAULT_SKILLS, workflows: [], triggerKeywords: [] }); setIsEditorOpen(true); }} className="p-2 bg-sky-500/80 hover:bg-sky-500 rounded-lg text-white transition-colors">
                                                 <Plus size={16} />
                                             </button>
@@ -3356,17 +3380,17 @@ export default function AIChat({
                                             {prompts.map(p => {
                                                 const stats = getPromptCapabilityStats(p);
                                                 return (
-                                                    <div key={p.id} className={cn("p-4 rounded-2xl border transition-all", p.isActive ? "bg-sky-500/10 border-sky-400/30" : "bg-white/5 border-white/5")}>
+                                                    <div key={p.id} className={cn("p-4 rounded-2xl border transition-all", p.isActive ? "bg-sky-500/10 border-sky-400/30" : "theme-overlay-subtle theme-border-subtle")}>
                                                         <div className="flex items-center justify-between gap-2">
-                                                            <span className="text-[12px] font-bold text-white truncate">{p.name}</span>
+                                                            <span className="text-[12px] font-bold theme-text-primary truncate">{p.name}</span>
                                                             <div className="flex gap-1 shrink-0">
-                                                                {!p.isActive && <button onClick={() => handleSetActive(p.id)} className="p-1.5 bg-white/5 text-white/40 hover:text-white rounded-lg"><Check size={14} /></button>}
-                                                                <button onClick={() => startEditing(p)} className="p-1.5 bg-white/5 text-white/40 hover:text-white rounded-lg"><Edit2 size={14} /></button>
+                                                                {!p.isActive && <button onClick={() => handleSetActive(p.id)} className="p-1.5 theme-overlay-subtle theme-text-tertiary hover:theme-text-primary rounded-lg"><Check size={14} /></button>}
+                                                                <button onClick={() => startEditing(p)} className="p-1.5 theme-overlay-subtle theme-text-tertiary hover:theme-text-primary rounded-lg"><Edit2 size={14} /></button>
                                                             </div>
                                                         </div>
-                                                        <div className="mt-2 flex items-center gap-2 text-[9px] text-white/30">
-                                                            <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10">Tools {stats.toolIds.length}</span>
-                                                            <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10">Skills {stats.skillIds.length}</span>
+                                                        <div className="mt-2 flex items-center gap-2 text-[9px] theme-text-quaternary">
+                                                            <span className="px-2 py-0.5 rounded-full theme-overlay-subtle border theme-border-medium">Tools {stats.toolIds.length}</span>
+                                                            <span className="px-2 py-0.5 rounded-full theme-overlay-subtle border theme-border-medium">Skills {stats.skillIds.length}</span>
                                                         </div>
                                                     </div>
                                                 );
@@ -3422,28 +3446,28 @@ export default function AIChat({
                                         </button>
                                         <button
                                             onClick={togglePin}
-                                            className="p-2.5 hover:bg-white/10 rounded-full transition-all text-white/40 hover:text-white"
+                                            className="p-2.5 hover:theme-overlay-medium rounded-full transition-all theme-text-tertiary hover:theme-text-primary"
                                             title="Pin to Dashboard"
                                         >
                                             <Pin size={20} />
                                         </button>
                                         <button
                                             onClick={() => setView(view === 'sessions' ? 'chat' : 'sessions')}
-                                            className="p-2.5 rounded-full transition-all border bg-white/5 border-white/5 text-white/40 hover:text-white"
+                                            className="p-2.5 rounded-full transition-all border theme-overlay-subtle theme-border-subtle theme-text-tertiary hover:theme-text-primary"
                                             title="Chat Sessions"
                                         >
                                             <MessageSquare size={20} />
                                         </button>
                                         <button
                                             onClick={() => setIsSettingsModalOpen(true)}
-                                            className="p-2.5 rounded-full transition-all border bg-white/5 border-white/5 text-white/40 hover:text-white"
+                                            className="p-2.5 rounded-full transition-all border theme-overlay-subtle theme-border-subtle theme-text-tertiary hover:theme-text-primary"
                                             title="Chat Settings"
                                         >
                                             <Settings size={20} />
                                         </button>
                                         <button
                                             onClick={() => setIsOpen(false)}
-                                            className="p-2.5 hover:bg-white/10 rounded-full transition-all text-white/40 hover:text-white hover:scale-110 active:scale-95"
+                                            className="p-2.5 hover:theme-overlay-medium rounded-full transition-all theme-text-tertiary hover:theme-text-primary hover:scale-110 active:scale-95"
                                         >
                                             <X size={20} />
                                         </button>
@@ -3488,8 +3512,8 @@ export default function AIChat({
                                                                 <Paperclip size={32} />
                                                             </div>
                                                             <div className="text-center">
-                                                                <p className="text-white font-bold">Drop to Attach</p>
-                                                                <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest mt-1">Context Injection</p>
+                                                                <p className="theme-text-primary font-bold">Drop to Attach</p>
+                                                                <p className="theme-text-tertiary text-[10px] uppercase font-bold tracking-widest mt-1">Context Injection</p>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -3546,7 +3570,7 @@ export default function AIChat({
                                                                     initial={{ opacity: 0, y: 10 }}
                                                                     animate={{ opacity: 1, y: 0 }}
                                                                     transition={{ delay: 0.2 }}
-                                                                    className="text-white/60 text-sm font-semibold"
+                                                                    className="theme-text-tertiary text-sm font-semibold"
                                                                 >
                                                                     Premium AI Assistant
                                                                 </motion.p>
@@ -3554,7 +3578,7 @@ export default function AIChat({
                                                                     initial={{ opacity: 0, y: 10 }}
                                                                     animate={{ opacity: 1, y: 0 }}
                                                                     transition={{ delay: 0.3 }}
-                                                                    className="text-white/40 text-[10px] leading-relaxed uppercase tracking-[0.3em] font-bold"
+                                                                    className="theme-text-tertiary text-[10px] leading-relaxed uppercase tracking-[0.3em] font-bold"
                                                                 >
                                                                     Agent Ready
                                                                 </motion.p>
@@ -3575,10 +3599,10 @@ export default function AIChat({
                                                                             <Compass size={22} />
                                                                         </div>
                                                                         <div className="flex-1">
-                                                                            <h4 className="text-[11px] font-black text-white uppercase tracking-widest mb-1">Create New App or Feature</h4>
-                                                                            <p className="text-[10px] text-white/40 leading-relaxed font-medium">Scaffold a modern app stack from scratch with one click.</p>
+                                                                            <h4 className="text-[11px] font-black theme-text-primary uppercase tracking-widest mb-1">Create New App or Feature</h4>
+                                                                            <p className="text-[10px] theme-text-tertiary leading-relaxed font-medium">Scaffold a modern app stack from scratch with one click.</p>
                                                                         </div>
-                                                                        <ChevronRight size={18} className="text-white/20 group-hover:translate-x-1 group-hover:text-sky-400 transition-all" />
+                                                                        <ChevronRight size={18} className="theme-text-quaternary group-hover:translate-x-1 group-hover:text-sky-400 transition-all" />
                                                                     </div>
                                                                 </motion.button>
 
@@ -3589,7 +3613,7 @@ export default function AIChat({
                                                                         animate={{ opacity: 1, x: 0 }}
                                                                         transition={{ delay: 0.5 + ix * 0.1 }}
                                                                         onClick={() => setInput(tip.text)}
-                                                                        className="group p-4 bg-gradient-to-br from-white/[0.08] to-white/[0.03] border border-white/10 rounded-2xl text-left text-xs text-white/50 hover:text-white/90 hover:border-white/20 hover:from-white/[0.12] hover:to-white/[0.06] transition-all duration-300 active:scale-[0.98] backdrop-blur-xl shadow-lg hover:shadow-xl relative overflow-hidden"
+                                                                        className="group p-4 theme-overlay-subtle border theme-border-medium rounded-2xl text-left text-xs theme-text-secondary hover:theme-text-primary hover:theme-border-strong hover:theme-overlay-medium transition-all duration-300 active:scale-[0.98] backdrop-blur-xl shadow-lg hover:shadow-xl relative overflow-hidden"
                                                                     >
                                                                         <div className="absolute inset-0 bg-gradient-to-r from-sky-500/0 via-emerald-500/5 to-amber-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                                                                         <div className="relative flex items-center gap-3">
@@ -3629,7 +3653,7 @@ export default function AIChat({
                                                                 {/* Glow effect */}
                                                                 <div className="absolute inset-0 bg-gradient-to-r from-sky-500/20 via-emerald-500/20 to-amber-400/20 rounded-[1.5rem] blur-xl opacity-60 group-hover:opacity-100 transition-opacity" />
 
-                                                                <div className="relative bg-gradient-to-br from-white/[0.08] to-white/[0.03] px-6 py-5 rounded-[1.5rem] text-white/40 flex items-center gap-4 rounded-tl-none border border-white/10 backdrop-blur-xl shadow-2xl">
+                                                                <div className="relative theme-overlay-medium px-6 py-5 rounded-[1.5rem] theme-text-tertiary flex items-center gap-4 rounded-tl-none border theme-border-medium backdrop-blur-xl shadow-2xl">
                                                                     <div className="flex gap-1.5">
                                                                         <motion.span
                                                                             animate={{
@@ -3661,12 +3685,12 @@ export default function AIChat({
                                                                             {isBackgroundBusy ? (backgroundJobLabel || "Computing") : "Computing"}...
                                                                         </span>
                                                                         {isBackgroundBusy && backgroundJobLabel && (
-                                                                            <span className="text-[8px] text-white/30 uppercase tracking-widest font-bold mt-0.5">
+                                                                            <span className="text-[8px] theme-text-quaternary uppercase tracking-widest font-bold mt-0.5">
                                                                                 Background Specialist Active
                                                                             </span>
                                                                         )}
                                                                         {backgroundJobMessage && (
-                                                                            <span className="text-[10px] text-white/50 mt-1 italic max-w-[300px] truncate block font-mono">
+                                                                            <span className="text-[10px] theme-text-secondary mt-1 italic max-w-[300px] truncate block font-mono">
                                                                                 {backgroundJobMessage}
                                                                             </span>
                                                                         )}
@@ -3700,7 +3724,7 @@ export default function AIChat({
                                                 </AnimatePresence>
 
                                                 {/* Input Area - Premium Design */}
-                                                <div className="relative p-6 border-t border-white/10 bg-gradient-to-b from-black/20 to-black/60 backdrop-blur-xl">
+                                                <div className="relative p-6 border-t theme-border-medium bg-gradient-to-b from-black/20 to-black/60 backdrop-blur-xl">
                                                     {/* Gradient accent line */}
                                                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-sky-500/50 to-transparent" />
 
@@ -3720,23 +3744,46 @@ export default function AIChat({
                                                             <div className="relative">
                                                                 <div className="mb-2 flex items-center justify-between">
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[9px] uppercase tracking-[0.2em] text-white/30 font-bold">Agent</span>
+                                                                        <span className="text-[9px] uppercase tracking-[0.2em] theme-text-quaternary font-bold">Agent</span>
                                                                         {isSwitchingAgent && <Loader2 size={12} className="animate-spin text-sky-400" />}
                                                                     </div>
-                                                                    <select
-                                                                        value={activeAgentId}
-                                                                        onChange={(e) => handleSetActive(e.target.value)}
-                                                                        disabled={prompts.length === 0 || isSwitchingAgent}
-                                                                        className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] text-white/80 focus:outline-none focus:border-sky-500/40"
-                                                                        title="Switch agent"
-                                                                    >
-                                                                        {prompts.length === 0 && <option value="">No agents</option>}
-                                                                        {prompts.map(p => (
-                                                                            <option key={p.id} value={p.id} className="bg-[color:var(--card)] text-foreground">
-                                                                                {p.name}
-                                                                            </option>
-                                                                        ))}
-                                                                    </select>
+                                                                    <div className="relative group/underwater">
+                                                                        {/* Underwater wave animation */}
+                                                                        <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none opacity-0 group-hover/underwater:opacity-100 transition-opacity duration-500">
+                                                                            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/30 to-cyan-500/20"
+                                                                                 style={{
+                                                                                     backgroundSize: '200% 100%',
+                                                                                     animation: 'wave 3s ease-in-out infinite'
+                                                                                 }}
+                                                                            />
+                                                                            {/* Floating bubbles */}
+                                                                            <div className="absolute bottom-0 left-[20%] w-1 h-1 rounded-full bg-cyan-300/60 animate-[bubble_2s_ease-in_infinite]" />
+                                                                            <div className="absolute bottom-0 left-[50%] w-1.5 h-1.5 rounded-full bg-blue-200/50 animate-[bubble_2.5s_ease-in_infinite_0.5s]" />
+                                                                            <div className="absolute bottom-0 left-[75%] w-1 h-1 rounded-full bg-cyan-400/70 animate-[bubble_3s_ease-in_infinite_1s]" />
+                                                                        </div>
+                                                                        <select
+                                                                            value={activeAgentId}
+                                                                            onChange={(e) => handleSetActive(e.target.value)}
+                                                                            disabled={prompts.length === 0 || isSwitchingAgent}
+                                                                            className="relative bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-cyan-400/10 border border-cyan-500/30 rounded-xl px-3 py-1.5 text-[10px] text-cyan-100/90 focus:outline-none focus:border-cyan-400/60 focus:shadow-[0_0_20px_rgba(6,182,212,0.3)] backdrop-blur-xl transition-all duration-300 hover:shadow-[0_0_25px_rgba(6,182,212,0.4)] hover:border-cyan-400/50 cursor-pointer appearance-none pr-8"
+                                                                            title="Switch agent"
+                                                                            style={{
+                                                                                backgroundImage: `linear-gradient(to bottom, transparent 0%, rgba(6, 182, 212, 0.1) 100%)`,
+                                                                                textShadow: '0 0 10px rgba(6, 182, 212, 0.5)'
+                                                                            }}
+                                                                        >
+                                                                            {prompts.length === 0 && <option value="">No agents</option>}
+                                                                            {prompts.map(p => (
+                                                                                <option key={p.id} value={p.id} className="bg-[color:var(--card)] text-foreground">
+                                                                                    {p.name}
+                                                                                </option>
+                                                                            ))}
+                                                                        </select>
+                                                                        {/* Dropdown arrow with underwater effect */}
+                                                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                                            <ChevronDown size={14} className="text-cyan-300/70 group-hover/underwater:text-cyan-200 transition-colors" />
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                                 <textarea
                                                                     rows={1}
@@ -3745,7 +3792,7 @@ export default function AIChat({
                                                                     onKeyDown={handleInputKeyDown}
                                                                     placeholder={isBackgroundBusy ? "Background agent active. You can continue chatting..." : "Ask anything..."}
                                                                     className={cn(
-                                                                        "relative z-20 w-full bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-[1.25rem] py-4 pl-5 text-[13px] text-white placeholder:text-white/30 focus:outline-none focus:border-sky-500/40 focus:bg-white/[0.08] transition-all duration-300 resize-none shadow-2xl shadow-black/20 font-medium",
+                                                                        "relative z-20 w-full theme-overlay-subtle backdrop-blur-xl border theme-border-medium rounded-[1.25rem] py-4 pl-5 text-[13px] theme-text-primary placeholder:theme-text-quaternary focus:outline-none focus:border-sky-500/40 focus:theme-overlay-medium transition-all duration-300 resize-none shadow-2xl shadow-black/20 font-medium",
                                                                         isBackgroundBusy ? "pr-24" : "pr-14"
                                                                     )}
                                                                     style={{
@@ -3754,8 +3801,8 @@ export default function AIChat({
                                                                     }}
                                                                 />
                                                                 {isCommandMenuOpen && filteredCommands.length > 0 && (
-                                                                    <div className="absolute bottom-full mb-3 left-0 w-full z-10 bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-                                                                        <div className="text-[10px] text-white/40 px-4 py-2 border-b border-white/5 uppercase tracking-widest">Commands</div>
+                                                                    <div className="absolute bottom-full mb-3 left-0 w-full z-10 bg-[#0f172a] border theme-border-medium rounded-2xl shadow-2xl overflow-hidden">
+                                                                        <div className="text-[10px] theme-text-tertiary px-4 py-2 border-b theme-border-subtle uppercase tracking-widest">Commands</div>
                                                                         <div className="max-h-52 overflow-y-auto">
                                                                             {filteredCommands.map((cmd, idx) => (
                                                                                 <button
@@ -3763,14 +3810,14 @@ export default function AIChat({
                                                                                     onClick={() => applyCommand(cmd.command)}
                                                                                     className={cn(
                                                                                         "w-full text-left px-4 py-2 flex items-center justify-between text-xs transition-colors",
-                                                                                        idx === activeCommandIndex ? "bg-white/10 text-white" : "text-white/60 hover:text-white hover:bg-white/5"
+                                                                                        idx === activeCommandIndex ? "theme-overlay-medium theme-text-primary" : "theme-text-tertiary hover:theme-text-primary hover:theme-overlay-subtle"
                                                                                     )}
                                                                                 >
                                                                                     <div>
                                                                                         <div className="font-mono text-[11px]">{cmd.command}</div>
-                                                                                        <div className="text-[10px] text-white/40">{cmd.description}</div>
+                                                                                        <div className="text-[10px] theme-text-tertiary">{cmd.description}</div>
                                                                                     </div>
-                                                                                    <span className="text-[10px] text-white/30">{cmd.label}</span>
+                                                                                    <span className="text-[10px] theme-text-quaternary">{cmd.label}</span>
                                                                                 </button>
                                                                             ))}
                                                                         </div>
@@ -3795,7 +3842,7 @@ export default function AIChat({
                                                                             ? isLoading
                                                                                 ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500 hover:scale-110 active:scale-95 shadow-green-500/50"
                                                                                 : "bg-gradient-to-r from-sky-600 to-emerald-500 text-white hover:from-sky-500 hover:to-emerald-400 hover:scale-110 active:scale-95 shadow-sky-500/50"
-                                                                            : "bg-white/5 text-white/20 cursor-not-allowed"
+                                                                            : "theme-overlay-subtle theme-text-quaternary cursor-not-allowed"
                                                                     )}
                                                                     title={isLoading ? "Queue next message" : "Send message"}
                                                                 >
@@ -3836,7 +3883,7 @@ export default function AIChat({
                                                 className="h-full flex flex-col p-7 overflow-y-auto custom-scrollbar bg-foreground/[0.02] space-y-6"
                                             >
                                                 <div className="flex items-center justify-between">
-                                                    <h4 className="text-white font-bold text-xl tracking-tight leading-none uppercase text-[12px] opacity-40 font-black">Agent Archetypes</h4>
+                                                    <h4 className="theme-text-primary font-bold text-xl tracking-tight leading-none uppercase text-[12px] opacity-40 font-black">Agent Archetypes</h4>
                                                     <button
                                                         onClick={() => {
                                                             setEditingPromptId(null);
@@ -3859,32 +3906,32 @@ export default function AIChat({
                                                                     "group relative overflow-hidden p-6 rounded-[2.5rem] border transition-all",
                                                                     p.isActive
                                                                         ? "bg-gradient-to-br from-sky-600/20 to-emerald-600/20 border-sky-500/40 shadow-xl shadow-sky-500/10"
-                                                                        : "bg-white/5 border-white/5 hover:border-white/10"
+                                                                        : "theme-overlay-subtle theme-border-subtle hover:theme-border-medium"
                                                                 )}
                                                             >
                                                                 <div className="flex items-start justify-between relative z-10 gap-4">
                                                                     <div className="space-y-1 flex-1">
                                                                         <div className="flex items-center gap-2">
-                                                                            <span className="text-white font-bold text-lg leading-tight">{p.name}</span>
+                                                                            <span className="theme-text-primary font-bold text-lg leading-tight">{p.name}</span>
                                                                             {p.isActive && (
                                                                                 <div className="px-2 py-0.5 bg-emerald-500 rounded-full text-[8px] font-black uppercase text-white shadow-lg tracking-widest">
                                                                                     Tactical
                                                                                 </div>
                                                                             )}
                                                                         </div>
-                                                                        <p className="text-xs text-white/40 leading-relaxed max-w-[280px] line-clamp-2">
+                                                                        <p className="text-xs theme-text-tertiary leading-relaxed max-w-[280px] line-clamp-2">
                                                                             {p.description || "Experimental prompt template."}
                                                                         </p>
-                                                                        <div className="mt-2 flex items-center gap-2 text-[9px] text-white/30">
-                                                                            <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10">Tools {stats.toolIds.length}</span>
-                                                                            <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10">Skills {stats.skillIds.length}</span>
+                                                                        <div className="mt-2 flex items-center gap-2 text-[9px] theme-text-quaternary">
+                                                                            <span className="px-2 py-0.5 rounded-full theme-overlay-subtle border theme-border-medium">Tools {stats.toolIds.length}</span>
+                                                                            <span className="px-2 py-0.5 rounded-full theme-overlay-subtle border theme-border-medium">Skills {stats.skillIds.length}</span>
                                                                         </div>
                                                                     </div>
                                                                     <div className="flex flex-col gap-2 shrink-0">
                                                                         <div className="flex gap-2">
                                                                             <button
                                                                                 onClick={() => startEditing(p)}
-                                                                                className="p-2.5 bg-white/5 text-white/40 hover:bg-white/20 hover:text-white rounded-xl transition-all border border-white/5"
+                                                                                className="p-2.5 theme-overlay-subtle theme-text-tertiary hover:theme-overlay-medium hover:theme-text-primary rounded-xl transition-all border theme-border-subtle"
                                                                                 title="Edit Instructions"
                                                                             >
                                                                                 <Edit2 size={16} />
@@ -3910,7 +3957,7 @@ export default function AIChat({
                                                                 </div>
 
                                                                 {/* Preview snippet */}
-                                                                <div className="mt-4 p-4 bg-black/40 rounded-2xl border border-white/5 text-[10px] text-white/30 font-mono line-clamp-2 leading-relaxed italic">
+                                                                <div className="mt-4 p-4 bg-black/40 rounded-2xl border theme-border-subtle text-[10px] theme-text-quaternary font-mono line-clamp-2 leading-relaxed italic">
                                                                     {p.prompt}
                                                                 </div>
                                                             </div>
@@ -3936,7 +3983,7 @@ export default function AIChat({
                             cn(
                                 "p-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center gap-3 transition-all border backdrop-blur-xl relative overflow-hidden group",
                                 isOpen
-                                    ? "bg-zinc-900 border-white/10 text-white/50"
+                                    ? "bg-[color:var(--card)] theme-border-medium theme-text-secondary"
                                     : "bg-gradient-to-br from-sky-600 to-emerald-600 border-sky-400/30 text-white"
                             )
                         }
@@ -3977,7 +4024,7 @@ export default function AIChat({
                             </div>
                             <button
                                 onClick={() => setIsSettingsModalOpen(false)}
-                                className="p-2 rounded-lg hover:bg-white/5 text-foreground/60 hover:text-foreground transition-colors"
+                                className="p-2 rounded-lg hover:theme-overlay-subtle text-foreground/60 hover:text-foreground transition-colors"
                                 title="Close settings"
                             >
                                 <X size={16} />
@@ -3991,11 +4038,24 @@ export default function AIChat({
                                     <button
                                         onClick={() => setChatScope('workspace')}
                                         className={cn(
-                                            "px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors border",
-                                            chatScope === 'workspace' ? "bg-sky-500/20 text-sky-200 border-sky-500/30" : "text-white/50 border-white/10 hover:text-white"
+                                            "relative px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-300 border overflow-hidden group/scope-ws",
+                                            chatScope === 'workspace'
+                                                ? "bg-gradient-to-br from-cyan-500/20 via-blue-500/15 to-cyan-400/20 text-cyan-100 border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                                                : "theme-text-secondary theme-border-medium hover:text-cyan-200 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]"
                                         )}
                                     >
-                                        <div className="flex items-center gap-2">
+                                        {/* Underwater wave animation */}
+                                        <div className="absolute inset-0 opacity-0 group-hover/scope-ws:opacity-100 transition-opacity duration-500 pointer-events-none">
+                                            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/30 to-cyan-500/20"
+                                                 style={{
+                                                     backgroundSize: '200% 100%',
+                                                     animation: 'wave 3s ease-in-out infinite'
+                                                 }}
+                                            />
+                                            <div className="absolute bottom-0 left-[30%] w-1 h-1 rounded-full bg-cyan-300/60 animate-[bubble_2s_ease-in_infinite]" />
+                                            <div className="absolute bottom-0 left-[65%] w-1 h-1 rounded-full bg-blue-200/50 animate-[bubble_2.5s_ease-in_infinite_0.5s]" />
+                                        </div>
+                                        <div className="flex items-center gap-2 relative z-10">
                                             <Folder size={14} />
                                             File Manager
                                         </div>
@@ -4003,11 +4063,24 @@ export default function AIChat({
                                     <button
                                         onClick={() => setChatScope('repo')}
                                         className={cn(
-                                            "px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors border",
-                                            chatScope === 'repo' ? "bg-emerald-500/20 text-emerald-200 border-emerald-500/30" : "text-white/50 border-white/10 hover:text-white"
+                                            "relative px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-300 border overflow-hidden group/scope-repo",
+                                            chatScope === 'repo'
+                                                ? "bg-gradient-to-br from-cyan-500/20 via-blue-500/15 to-cyan-400/20 text-cyan-100 border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                                                : "theme-text-secondary theme-border-medium hover:text-cyan-200 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]"
                                         )}
                                     >
-                                        <div className="flex items-center gap-2">
+                                        {/* Underwater wave animation */}
+                                        <div className="absolute inset-0 opacity-0 group-hover/scope-repo:opacity-100 transition-opacity duration-500 pointer-events-none">
+                                            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/30 to-cyan-500/20"
+                                                 style={{
+                                                     backgroundSize: '200% 100%',
+                                                     animation: 'wave 3s ease-in-out infinite'
+                                                 }}
+                                            />
+                                            <div className="absolute bottom-0 left-[25%] w-1 h-1 rounded-full bg-cyan-300/60 animate-[bubble_2s_ease-in_infinite]" />
+                                            <div className="absolute bottom-0 left-[70%] w-1 h-1 rounded-full bg-blue-200/50 animate-[bubble_2.5s_ease-in_infinite_0.5s]" />
+                                        </div>
+                                        <div className="flex items-center gap-2 relative z-10">
                                             <GitBranch size={14} />
                                             Repo Apps
                                         </div>
@@ -4017,52 +4090,97 @@ export default function AIChat({
 
                             <div className="space-y-2">
                                 <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Model</div>
-                                <div className="flex items-center gap-3 rounded-xl border border-[color:var(--border)] bg-white/5 px-3 py-2">
-                                    <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Model</span>
-                                    <select
-                                        value={selectedModel}
-                                        onChange={(e) => setSelectedModel(e.target.value)}
-                                        className="bg-transparent text-[12px] text-foreground/80 font-semibold tracking-wide focus:outline-none w-full"
-                                        title="Select model"
-                                    >
-                                        {MODEL_CATALOG.map(model => (
-                                            <option key={model.id} value={model.id} className="bg-[color:var(--card)] text-foreground">
-                                                {model.label}
-                                            </option>
-                                        ))}
-                                    </select>
+                                <div className="relative group/underwater">
+                                    {/* Underwater wave animation */}
+                                    <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none opacity-0 group-hover/underwater:opacity-100 transition-opacity duration-500">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/30 to-cyan-500/20"
+                                             style={{
+                                                 backgroundSize: '200% 100%',
+                                                 animation: 'wave 3s ease-in-out infinite'
+                                             }}
+                                        />
+                                        {/* Floating bubbles */}
+                                        <div className="absolute bottom-0 left-[20%] w-1 h-1 rounded-full bg-cyan-300/60 animate-[bubble_2s_ease-in_infinite]" />
+                                        <div className="absolute bottom-0 left-[50%] w-1.5 h-1.5 rounded-full bg-blue-200/50 animate-[bubble_2.5s_ease-in_infinite_0.5s]" />
+                                        <div className="absolute bottom-0 left-[75%] w-1 h-1 rounded-full bg-cyan-400/70 animate-[bubble_3s_ease-in_infinite_1s]" />
+                                    </div>
+                                    <div className="flex items-center gap-3 rounded-xl border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-cyan-400/10 backdrop-blur-xl px-3 py-2 hover:shadow-[0_0_25px_rgba(6,182,212,0.4)] hover:border-cyan-400/50 transition-all duration-300">
+                                        <span className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/70 font-bold">Model</span>
+                                        <select
+                                            value={selectedModel}
+                                            onChange={(e) => setSelectedModel(e.target.value)}
+                                            className="bg-transparent text-[12px] text-cyan-100/90 font-semibold tracking-wide focus:outline-none w-full cursor-pointer appearance-none pr-4"
+                                            title="Select model"
+                                            style={{
+                                                textShadow: '0 0 10px rgba(6, 182, 212, 0.5)'
+                                            }}
+                                        >
+                                            {MODEL_CATALOG.map(model => (
+                                                <option key={model.id} value={model.id} className="bg-[color:var(--card)] text-foreground">
+                                                    {model.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {/* Dropdown arrow with underwater effect */}
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                            <ChevronDown size={14} className="text-cyan-300/70 group-hover/underwater:text-cyan-200 transition-colors" />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <div className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold">Thinking Trace</div>
+                                    <div className="text-[10px] uppercase tracking-[0.2em] theme-text-tertiary font-bold">Thinking Trace</div>
                                     <button
                                         onClick={() => setShowThinkingTrace(prev => !prev)}
                                         className={cn(
-                                            "w-full px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors border flex items-center justify-between",
-                                            showThinkingTrace ? "bg-sky-500/20 text-sky-200 border-sky-500/30" : "text-white/50 border-white/10 hover:text-white"
+                                            "relative w-full px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-300 border flex items-center justify-between overflow-hidden group/thinking",
+                                            showThinkingTrace
+                                                ? "bg-gradient-to-br from-cyan-500/20 via-blue-500/15 to-cyan-400/20 text-cyan-100 border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                                                : "theme-text-secondary theme-border-medium hover:text-cyan-200 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]"
                                         )}
                                     >
-                                        <span>{showThinkingTrace ? 'Shown' : 'Hidden'}</span>
-                                        <Eye size={16} />
+                                        {/* Underwater wave animation */}
+                                        <div className="absolute inset-0 opacity-0 group-hover/thinking:opacity-100 transition-opacity duration-500 pointer-events-none">
+                                            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/30 to-cyan-500/20"
+                                                 style={{
+                                                     backgroundSize: '200% 100%',
+                                                     animation: 'wave 3s ease-in-out infinite'
+                                                 }}
+                                            />
+                                            <div className="absolute bottom-0 left-[35%] w-1 h-1 rounded-full bg-cyan-300/60 animate-[bubble_2s_ease-in_infinite]" />
+                                            <div className="absolute bottom-0 left-[65%] w-1 h-1 rounded-full bg-blue-200/50 animate-[bubble_2.5s_ease-in_infinite_0.5s]" />
+                                        </div>
+                                        <span className="relative z-10">{showThinkingTrace ? 'Shown' : 'Hidden'}</span>
+                                        <Eye size={16} className="relative z-10" />
                                     </button>
                                 </div>
                                 <div className="space-y-2">
-                                    <div className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold">Verbosity</div>
+                                    <div className="text-[10px] uppercase tracking-[0.2em] theme-text-tertiary font-bold">Verbosity</div>
                                     <div className="flex items-center gap-2">
                                         {(['concise', 'normal', 'verbose'] as const).map(level => (
                                             <button
                                                 key={level}
                                                 onClick={() => setVerbosity(level)}
                                                 className={cn(
-                                                    "flex-1 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors border",
+                                                    "relative flex-1 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-300 border overflow-hidden group/verb",
                                                     verbosity === level
-                                                        ? "bg-emerald-500/20 text-emerald-200 border-emerald-500/30"
-                                                        : "text-white/50 border-white/10 hover:text-white"
+                                                        ? "bg-gradient-to-br from-cyan-500/20 via-blue-500/15 to-cyan-400/20 text-cyan-100 border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                                                        : "theme-text-secondary theme-border-medium hover:text-cyan-200 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]"
                                                 )}
                                             >
-                                                {level}
+                                                {/* Underwater wave animation */}
+                                                <div className="absolute inset-0 opacity-0 group-hover/verb:opacity-100 transition-opacity duration-500 pointer-events-none">
+                                                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/30 to-cyan-500/20"
+                                                         style={{
+                                                             backgroundSize: '200% 100%',
+                                                             animation: 'wave 3s ease-in-out infinite'
+                                                         }}
+                                                    />
+                                                    <div className="absolute bottom-0 left-[40%] w-1 h-1 rounded-full bg-cyan-300/60 animate-[bubble_2s_ease-in_infinite]" />
+                                                </div>
+                                                <span className="relative z-10">{level}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -4088,7 +4206,7 @@ export default function AIChat({
                                         });
                                         setIsSettingsModalOpen(false);
                                     }}
-                                    className="px-4 py-2 rounded-xl bg-white/5 border border-[color:var(--border)] text-[11px] font-bold uppercase tracking-wider text-foreground/70 hover:text-foreground hover:bg-white/10 transition-colors"
+                                    className="px-4 py-2 rounded-xl theme-overlay-subtle border border-[color:var(--border)] text-[11px] font-bold uppercase tracking-wider text-foreground/70 hover:text-foreground hover:theme-overlay-medium transition-colors"
                                 >
                                     Manage Prompts
                                 </button>

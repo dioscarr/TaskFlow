@@ -1,11 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Folder, FileCode, ChevronRight, Loader2, RefreshCw, LayoutGrid } from 'lucide-react';
+import { Folder, FileCode, ChevronRight, Loader2, RefreshCw, LayoutGrid, ScrollText } from 'lucide-react';
 import { listRepoAppEntries } from '@/app/actions';
-import { listProcesses, manageAppLifecycle } from '@/app/processActions';
+import { listProcesses, manageAppLifecycle, setAppRunMode } from '@/app/processActions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import dynamic from 'next/dynamic';
+
+// Lazy load progress components for better performance
+const DockerBuildProgress = dynamic(() => import('./DockerBuildProgress'), { ssr: false });
+const ContainerStartProgress = dynamic(() => import('./ContainerStartProgress'), { ssr: false });
+const ContainerLogs = dynamic(() => import('./ContainerLogs'), { ssr: false });
 
 export type RepoEntry = {
     name: string;
@@ -23,6 +29,21 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
     const [entries, setEntries] = useState<RepoEntry[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [processes, setProcesses] = useState<any[]>([]);
+
+    // Progress viewer state
+    const [showBuildProgress, setShowBuildProgress] = useState(false);
+    const [showStartProgress, setShowStartProgress] = useState(false);
+    const [buildingApp, setBuildingApp] = useState<{
+        appName: string;
+        dockerfilePath: string;
+        context: string;
+        imageName: string;
+        containerName: string;
+    } | null>(null);
+
+    // Logs viewer state
+    const [showLogs, setShowLogs] = useState(false);
+    const [logsContainerName, setLogsContainerName] = useState<string | null>(null);
 
     const loadEntries = async (path: string = '') => {
         setIsLoading(true);
@@ -75,27 +96,58 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
             stopOthers = true;
         }
 
-        toast.info(stopOthers ? `Stopping others and starting ${appName}...` : `Starting ${appName}...`);
-        const res = await manageAppLifecycle({ action: 'start', target: appName, stopOthers }) as any;
+        const modeInput = window.prompt(`Run mode for ${appName} (dev or prod):`, 'dev');
+        if (!modeInput) return;
+        const runMode = modeInput.toLowerCase().startsWith('p') ? 'prod' : 'dev';
+
+        // First, try to start (will hook into existing if available)
+        toast.info(`Starting ${appName}...`);
+
+        const res = await manageAppLifecycle({
+            action: 'start',
+            target: appName,
+            stopOthers,
+            runMode
+        }) as any;
 
         if (res.success) {
-            toast.success(`Started ${appName}`);
-            if (res.previewUrl) {
-                window.dispatchEvent(new CustomEvent('set-vibe-preview', { detail: res.previewUrl }));
+            const isExisting = res.message?.includes('Hooked into existing');
+            const isRestarted = res.message?.includes('Restarted');
+
+            if (isExisting) {
+                // Connected to existing running container
+                toast.success(`🔗 Connected to running ${appName}`);
+                if (res.previewUrl) {
+                    window.dispatchEvent(new CustomEvent('set-vibe-preview', { detail: res.previewUrl }));
+                }
+                await loadEntries();
+            } else if (isRestarted) {
+                // Restarted stopped container
+                toast.success(`▶️ Restarted ${appName}`);
+                if (res.previewUrl) {
+                    window.dispatchEvent(new CustomEvent('set-vibe-preview', { detail: res.previewUrl }));
+                }
+                await loadEntries();
+            } else {
+                // New container was built and started
+                toast.success(`🎉 ${appName} is ready!`);
+                if (res.previewUrl) {
+                    window.dispatchEvent(new CustomEvent('set-vibe-preview', { detail: res.previewUrl }));
+                }
+                await loadEntries();
             }
         } else {
-            toast.error(`Failed to start: ${res.message || 'Unknown error'}`);
+            toast.error(`Failed to start ${appName}: ${res.message}`);
         }
-        await loadEntries(); // Refresh
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#050505] border-r border-white/5 w-64 min-w-[200px]">
-            <div className="p-3 border-b border-white/5 flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Explorer</span>
+        <div className="flex flex-col h-full bg-[#050505] border-r theme-border-subtle w-64 min-w-[200px]">
+            <div className="p-3 border-b theme-border-subtle flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-widest theme-text-tertiary">Explorer</span>
                 <button
                     onClick={() => loadEntries('')}
-                    className="p-1 hover:bg-white/10 rounded-md text-white/30 hover:text-white transition-colors"
+                    className="p-1 hover:theme-overlay-medium rounded-md text-white/30 hover:text-white transition-colors"
                 >
                     <RefreshCw size={12} />
                 </button>
@@ -104,7 +156,7 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
             <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
                 {isLoading && entries.length === 0 ? (
                     <div className="flex justify-center p-4">
-                        <Loader2 size={16} className="animate-spin text-white/20" />
+                        <Loader2 size={16} className="animate-spin theme-text-quaternary" />
                     </div>
                 ) : (
                     <div className="space-y-0.5">
@@ -115,21 +167,95 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
                             activeFilePath={activeFile?.path}
                             processes={processes}
                             onToggleApp={handleToggleApp}
+                            onShowLogs={(containerName: string) => {
+                                setLogsContainerName(containerName);
+                                setShowLogs(true);
+                            }}
                         />
                     </div>
                 )}
             </div>
+
+            {/* Progress Modals */}
+            {showBuildProgress && buildingApp && (
+                <DockerBuildProgress
+                    appName={buildingApp.appName}
+                    dockerfilePath={buildingApp.dockerfilePath}
+                    context={buildingApp.context}
+                    imageName={buildingApp.imageName}
+                    onComplete={async (success) => {
+                        setShowBuildProgress(false);
+                        if (success) {
+                            // Show start progress animation
+                            setShowStartProgress(true);
+
+                            // Actually start the container via backend
+                            try {
+                                const res = await manageAppLifecycle({
+                                    action: 'start',
+                                    target: buildingApp.appName,
+                                    runMode: 'dev'
+                                }) as any;
+
+                                // Start progress will auto-close after animation
+                                setTimeout(() => {
+                                    setShowStartProgress(false);
+                                    if (res.success) {
+                                        toast.success(`🎉 ${buildingApp.appName} is ready!`);
+                                        if (res.previewUrl) {
+                                            window.dispatchEvent(new CustomEvent('set-vibe-preview', { detail: res.previewUrl }));
+                                        }
+                                    }
+                                    loadEntries(); // Refresh
+                                }, 5000);
+                            } catch (error: any) {
+                                setShowStartProgress(false);
+                                toast.error(`Failed to start container: ${error.message}`);
+                            }
+                        } else {
+                            toast.error('Build failed. Check logs for details.');
+                        }
+                    }}
+                    onClose={() => {
+                        setShowBuildProgress(false);
+                        setBuildingApp(null);
+                    }}
+                />
+            )}
+
+            {showStartProgress && buildingApp && (
+                <ContainerStartProgress
+                    appName={buildingApp.appName}
+                    containerName={buildingApp.containerName}
+                    onComplete={() => {
+                        setShowStartProgress(false);
+                        setBuildingApp(null);
+                    }}
+                />
+            )}
+
+            {/* Live Logs Viewer */}
+            {showLogs && logsContainerName && (
+                <ContainerLogs
+                    containerName={logsContainerName}
+                    onClose={() => {
+                        setShowLogs(false);
+                        setLogsContainerName(null);
+                    }}
+                />
+            )}
         </div>
     );
 }
 
-const FileTree = ({ path, level, onSelect, activeFilePath, processes, onToggleApp }: {
+const FileTree = ({ path, level, onSelect, activeFilePath, processes, onToggleApp, onShowLogs }: {
     path: string,
     level: number,
     onSelect: (f: RepoEntry) => void,
     activeFilePath?: string,
     processes: any[],
-    onToggleApp: (name: string, status: string) => void
+    onToggleApp: (name: string, status: string) => void,
+    onShowLogs: (containerName: string) => void
 }) => {
     const [items, setItems] = useState<RepoEntry[]>([]);
     const [isOpen, setIsOpen] = useState(level === 0);
@@ -169,6 +295,7 @@ const FileTree = ({ path, level, onSelect, activeFilePath, processes, onToggleAp
                         activeFilePath={activeFilePath}
                         processes={processes}
                         onToggleApp={onToggleApp}
+                        onShowLogs={onShowLogs}
                     />
                 ))
             ) : null}
@@ -176,13 +303,14 @@ const FileTree = ({ path, level, onSelect, activeFilePath, processes, onToggleAp
     );
 }
 
-const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onToggleApp }: {
+const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onToggleApp, onShowLogs }: {
     item: RepoEntry,
     level: number,
     onSelect: (f: RepoEntry) => void,
     activeFilePath?: string,
     processes: any[],
-    onToggleApp: (name: string, status: string) => void
+    onToggleApp: (name: string, status: string) => void,
+    onShowLogs: (containerName: string) => void
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [children, setChildren] = useState<RepoEntry[]>([]);
@@ -203,6 +331,8 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onTogg
     }) : undefined;
 
     const isRunning = relatedProcess?.status === 'running';
+    const runMode = isAppRoot ? ((relatedProcess as any)?.metadata?.runMode as string | undefined) : undefined;
+    const nextRunMode = runMode === 'prod' ? 'dev' : 'prod';
 
     const toggleOpen = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -236,7 +366,7 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onTogg
             <div
                 onClick={handleClick}
                 className={cn(
-                    "group flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors text-white/60 hover:text-white hover:bg-white/5 select-none",
+                    "group flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors text-white/60 hover:text-white hover:theme-overlay-subtle select-none",
                     activeFilePath === item.path ? "bg-sky-500/10 text-sky-300" : ""
                 )}
                 style={{ paddingLeft: `${level * 12 + 8}px` }}
@@ -251,7 +381,7 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onTogg
                 <div className="shrink-0">
                     {item.type === 'folder' ? (
                         isAppRoot ? <LayoutGrid size={14} className="text-emerald-400" /> :
-                            <Folder size={14} className={isOpen ? "text-white" : "text-white/40"} />
+                            <Folder size={14} className={isOpen ? "text-white" : "theme-text-tertiary"} />
                     ) : (
                         <FileCode size={14} className="text-sky-400/60" />
                     )}
@@ -259,12 +389,74 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onTogg
 
                 <span className="text-xs truncate flex-1">{item.name}</span>
 
+                {isAppRoot && runMode && (
+                    <button
+                        onClick={async (e) => {
+                            e.stopPropagation();
+                            toast.info(`Switching ${item.name} to ${nextRunMode} mode...`);
+                            if (!isRunning) {
+                                const res = await setAppRunMode(item.name, nextRunMode as any) as any;
+                                if (res.success) {
+                                    toast.success(`Mode set to ${nextRunMode}`);
+                                } else {
+                                    toast.error(`Failed to switch mode: ${res.message || 'Unknown error'}`);
+                                }
+                                return;
+                            }
+                            let restartToastId: string | number | undefined;
+                            const restartToastTimer = setTimeout(() => {
+                                restartToastId = toast.info(`Restarting ${item.name} in ${nextRunMode} mode...`);
+                            }, 800);
+
+                            const stopRes = await manageAppLifecycle({
+                                action: 'stop',
+                                target: item.name
+                            }) as any;
+                            clearTimeout(restartToastTimer);
+                            if (!stopRes.success) {
+                                if (restartToastId !== undefined) {
+                                    (toast as any).dismiss?.(restartToastId);
+                                }
+                                toast.error(`Failed to stop: ${stopRes.message || 'Unknown error'}`);
+                                return;
+                            }
+                            const res = await manageAppLifecycle({
+                                action: 'start',
+                                target: item.name,
+                                stopOthers: false,
+                                runMode: nextRunMode as any
+                            }) as any;
+                            if (res.success) {
+                                toast.success(`Mode set to ${nextRunMode}`);
+                            } else {
+                                toast.error(`Failed to switch mode: ${res.message || 'Unknown error'}`);
+                            }
+                        }}
+                        className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded theme-overlay-medium theme-text-secondary hover:theme-overlay-strong"
+                        title={`Switch to ${nextRunMode}`}
+                    >
+                        {runMode}
+                    </button>
+                )}
+
                 {isAppRoot && (
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                        {/* Logs button (only when running) */}
+                        {isRunning && relatedProcess?.metadata?.containerName && (
+                            <button
+                                onClick={() => onShowLogs(relatedProcess.metadata.containerName)}
+                                className="p-1 rounded hover:theme-overlay-strong transition-all text-blue-400 hover:text-blue-300"
+                                title="View Logs"
+                            >
+                                <ScrollText size={12} />
+                            </button>
+                        )}
+
+                        {/* Play/Stop button */}
                         <button
                             onClick={() => onToggleApp(item.name, isRunning ? 'running' : 'stopped')}
                             className={cn(
-                                "p-1 rounded hover:bg-white/20 transition-all",
+                                "p-1 rounded hover:theme-overlay-strong transition-all",
                                 isRunning ? "text-red-400 hover:text-red-300" : "text-emerald-400 hover:text-emerald-300"
                             )}
                             title={isRunning ? "Stop App" : "Start App"}
@@ -293,10 +485,11 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onTogg
                             activeFilePath={activeFilePath}
                             processes={processes}
                             onToggleApp={onToggleApp}
+                            onShowLogs={onShowLogs}
                         />
                     ))}
                     {children.length === 0 && !loadState.loading && (
-                        <div className="py-1 px-4 text-[10px] text-white/20 italic" style={{ paddingLeft: `${(level + 1) * 12 + 24}px` }}>
+                        <div className="py-1 px-4 text-[10px] theme-text-quaternary italic" style={{ paddingLeft: `${(level + 1) * 12 + 24}px` }}>
                             Empty
                         </div>
                     )}

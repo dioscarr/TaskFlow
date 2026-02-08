@@ -48,7 +48,7 @@ export default function AgentActivityFeed() {
 
     return (
         <div className="w-full h-full flex flex-col bg-slate-950/30 backdrop-blur-xl border border-slate-800/50 rounded-2xl overflow-hidden shadow-2xl">
-            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
+            <div className="p-4 border-b theme-border-subtle flex items-center justify-between bg-white/5">
                 <div className="flex items-center gap-2">
                     <Activity size={18} className="text-sky-400" />
                     <h3 className="text-sm font-semibold text-white/90">Intelligence Command Center</h3>
@@ -62,12 +62,12 @@ export default function AgentActivityFeed() {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                 {loading && activities.length === 0 ? (
-                    <div className="text-center py-10 text-white/20 text-xs">Connecting to Agent Neural Log...</div>
+                    <div className="text-center py-10 theme-text-quaternary text-xs">Connecting to Agent Neural Log...</div>
                 ) : activities.length === 0 ? (
-                    <div className="text-center py-10 text-white/20 text-xs">No recent agent activity recorded.</div>
+                    <div className="text-center py-10 theme-text-quaternary text-xs">No recent agent activity recorded.</div>
                 ) : (
                     activities.map((item) => (
-                        <div key={item.id} className="group relative pl-6 border-l border-white/10 pb-2 last:pb-0">
+                        <div key={item.id} className="group relative pl-6 border-l theme-border-medium pb-2 last:pb-0">
                             {/* Timeline Node */}
                             <div className="absolute left-[-5px] top-0 w-2.5 h-2.5 rounded-full bg-slate-900 border border-white/20 group-hover:border-sky-400 group-hover:bg-sky-500/20 transition-all"></div>
 
@@ -83,12 +83,12 @@ export default function AgentActivityFeed() {
                                         {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                 </div>
-                                <p className="text-[11px] text-white/50 leading-relaxed group-hover:text-white/60 transition-colors">
+                                <p className="text-[11px] theme-text-secondary leading-relaxed group-hover:text-white/60 transition-colors">
                                     {item.message}
                                 </p>
                                 {item.toolUsed && (
                                     <div className="mt-1 flex gap-1">
-                                        <span className="px-1.5 py-0.5 rounded text-[9px] bg-white/5 border border-white/5 text-white/30 font-mono">
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] theme-overlay-subtle border theme-border-subtle text-white/30 font-mono">
                                             {item.toolUsed}
                                         </span>
                                     </div>

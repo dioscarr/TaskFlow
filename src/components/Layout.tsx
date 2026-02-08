@@ -33,7 +33,7 @@ function ProfileMenu() {
         <div className="relative">
             <button
                 onClick={() => setOpen(!open)}
-                className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-400/30 to-emerald-400/30 border border-white/20 hover:border-white/40 transition-all cursor-pointer shadow-[0_0_16px_rgba(255,255,255,0.08)] flex items-center justify-center text-white font-bold text-sm"
+                className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-400/30 to-emerald-400/30 border theme-border-medium hover:theme-border-strong transition-all cursor-pointer shadow-[0_0_16px_var(--overlay-medium)] flex items-center justify-center theme-text-primary font-bold text-sm"
             >
                 U
             </button>
@@ -41,23 +41,23 @@ function ProfileMenu() {
             <AnimatePresence>
                 {open && (
                     <>
-                        <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+                        <div className="fixed inset-0 z-[99998]" onClick={() => setOpen(false)} />
                         <motion.div
                             initial={{ opacity: 0, y: 8, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                            className="absolute right-0 top-12 z-50 w-56 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden"
+                            className="absolute right-0 top-12 z-[99999] w-56 bg-[color:var(--card)] backdrop-blur-xl border theme-border-medium rounded-xl shadow-2xl overflow-hidden"
                         >
-                            <div className="p-3 border-b border-white/10">
-                                <div className="font-medium text-white">User</div>
-                                <div className="text-xs text-white/50">user@example.com</div>
+                            <div className="p-3 border-b theme-border-medium">
+                                <div className="font-medium theme-text-primary">User</div>
+                                <div className="text-xs theme-text-tertiary">user@example.com</div>
                             </div>
 
                             <div className="p-2">
                                 <Link
                                     href="/settings"
                                     onClick={() => setOpen(false)}
-                                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                                    className="flex items-center gap-3 px-3 py-2 rounded-lg theme-text-secondary hover:theme-text-primary hover:theme-overlay-medium transition-colors"
                                 >
                                     <span>⚙️</span>
                                     <span>Settings</span>
@@ -65,7 +65,7 @@ function ProfileMenu() {
                                 <Link
                                     href="/settings"
                                     onClick={() => setOpen(false)}
-                                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                                    className="flex items-center gap-3 px-3 py-2 rounded-lg theme-text-secondary hover:theme-text-primary hover:theme-overlay-medium transition-colors"
                                 >
                                     <span>👤</span>
                                     <span>Profile</span>
@@ -73,14 +73,14 @@ function ProfileMenu() {
                                 <Link
                                     href="/settings"
                                     onClick={() => setOpen(false)}
-                                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                                    className="flex items-center gap-3 px-3 py-2 rounded-lg theme-text-secondary hover:theme-text-primary hover:theme-overlay-medium transition-colors"
                                 >
                                     <span>🔗</span>
                                     <span>Resources</span>
                                 </Link>
                             </div>
 
-                            <div className="p-2 border-t border-white/10">
+                            <div className="p-2 border-t theme-border-medium">
                                 <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors">
                                     <span>🚪</span>
                                     <span>Sign Out</span>
@@ -107,7 +107,7 @@ export default function Layout({ children, headerCenter }: { children: React.Rea
 
     return (
         <FocusContext.Provider value={{ isFocused, focusedItem, setFocusedItem }}>
-            <div className="relative min-h-screen overflow-hidden bg-background text-foreground transition-colors duration-500 font-sans selection:bg-primary/30 selection:text-white">
+            <div className="relative min-h-screen overflow-hidden bg-background text-foreground transition-colors duration-500 font-sans selection:bg-primary/30 selection:text-primary-foreground">
 
                 {/* Background Ambient Glows - Nano Banana Influence */}
                 <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
@@ -138,10 +138,10 @@ export default function Layout({ children, headerCenter }: { children: React.Rea
                         isFocused ? "scale-[0.98] opacity-20 pointer-events-none blur-xl" : "opacity-100"
                     )}>
                         {/* Navbar - Premium High-Blur */}
-                        <header className="relative flex items-center justify-between px-8 py-5 sticky top-0 z-20 border-b border-[color:var(--border)] bg-[color:var(--card)] backdrop-blur-3xl overflow-visible max-w-full after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-foreground/20 after:to-transparent">
+                        <header className="relative flex items-center justify-between px-8 py-5 sticky top-0 z-[9000] border-b border-[color:var(--border)] bg-[color:var(--card)] backdrop-blur-3xl overflow-visible max-w-full after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-foreground/20 after:to-transparent">
                             <Link href="/" className="flex items-center gap-4 group cursor-pointer">
-                                <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-400 via-emerald-400 to-cyan-300 shadow-[0_0_28px_rgba(56,189,248,0.35)] ring-1 ring-white/20 flex items-center justify-center font-black text-white text-xl transition-all group-hover:scale-110 group-active:scale-95">
-                                    <div className="absolute inset-0 bg-white/20 blur-sm rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-400 via-emerald-400 to-cyan-300 shadow-[0_0_28px_rgba(56,189,248,0.35)] ring-1 theme-border-medium flex items-center justify-center font-black theme-text-primary text-xl transition-all group-hover:scale-110 group-active:scale-95">
+                                    <div className="absolute inset-0 theme-overlay-medium blur-sm rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
                                     <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-300/80 shadow-[0_0_10px_rgba(251,191,36,0.6)]" />
                                     T
                                 </div>
@@ -153,7 +153,7 @@ export default function Layout({ children, headerCenter }: { children: React.Rea
 
                             {/* Centered Content Injection */}
                             {headerCenter && (
-                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30">
+                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[9010]">
                                     {headerCenter}
                                 </div>
                             )}
