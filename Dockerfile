@@ -1,1 +1,12 @@
-FROM node:20-alpine AS build`nWORKDIR /app`nCOPY package*.json ./`nRUN npm ci`nCOPY . .`nRUN npm run build`n`nFROM nginx:stable-alpine`nCOPY --from=build /app/dist /usr/share/nginx/html`nCOPY nginx.conf /etc/nginx/conf.d/default.conf`nEXPOSE 80`nCMD ["nginx", "-g", "daemon off;"]
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:stable-alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

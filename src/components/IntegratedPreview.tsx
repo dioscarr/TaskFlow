@@ -185,7 +185,7 @@ export default function IntegratedPreview({
                                         onClick={() => setUrlType('public')}
                                         className={cn(
                                             "px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1",
-                                            urlType === 'public' ? "bg-blue-500/20 text-blue-300" : "text-white/40 hover:text-white"
+                                            urlType === 'public' ? "bg-sky-500/20 text-sky-300" : "text-white/40 hover:text-white"
                                         )}
                                     >
                                         <Cloud size={10} />
@@ -236,7 +236,7 @@ export default function IntegratedPreview({
                             className={cn(
                                 "p-1.5 rounded-lg transition-all",
                                 viewMode === mode.id
-                                    ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                                    ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20"
                                     : "text-white/40 hover:text-white hover:bg-white/5"
                             )}
                         >
@@ -256,7 +256,7 @@ export default function IntegratedPreview({
                     {status === 'ready' && (
                         <button
                             onClick={() => window.open(activeUrl, '_blank')}
-                            className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-colors"
+                            className="p-2 text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 rounded-lg transition-colors"
                             title="Open in new tab"
                         >
                             <ExternalLink size={16} />
@@ -299,10 +299,10 @@ export default function IntegratedPreview({
                                         rotate: { duration: 10, repeat: Infinity, ease: "linear" },
                                         scale: { duration: 4, repeat: Infinity, ease: "easeInOut" }
                                     }}
-                                    className="w-48 h-48 rounded-full border border-blue-500/20 border-t-blue-500/80 border-l-cyan-500/60 flex items-center justify-center relative"
+                                    className="w-48 h-48 rounded-full border border-sky-500/20 border-t-sky-500/80 border-l-emerald-400/60 flex items-center justify-center relative"
                                 >
-                                    <div className="w-40 h-40 rounded-full border border-white/5 bg-gradient-to-br from-blue-500/10 to-transparent flex items-center justify-center">
-                                        <Cpu size={48} className="text-blue-400 animate-pulse" />
+                                    <div className="w-40 h-40 rounded-full border border-white/5 bg-gradient-to-br from-sky-500/10 to-transparent flex items-center justify-center">
+                                        <Cpu size={48} className="text-sky-400 animate-pulse" />
                                     </div>
                                     {[...Array(4)].map((_, i) => (
                                         <motion.div
@@ -312,7 +312,7 @@ export default function IntegratedPreview({
                                             className="absolute inset-0"
                                             style={{ rotate: i * 90 }}
                                         >
-                                            <div className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.8)] absolute -top-1.5 left-1/2 -translate-x-1/2" />
+                                            <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.8)] absolute -top-1.5 left-1/2 -translate-x-1/2" />
                                         </motion.div>
                                     ))}
                                 </motion.div>
@@ -321,7 +321,7 @@ export default function IntegratedPreview({
                             <div className="max-w-md space-y-4">
                                 <div className="space-y-1">
                                     <h2 className="text-xl font-black text-white tracking-tighter uppercase italic">
-                                        Deploying <span className="text-blue-400">Context</span>
+                                        Deploying <span className="text-sky-400">Context</span>
                                     </h2>
                                     <p className="text-white/40 text-[10px] font-medium tracking-wide">SYSTEM BOOT IN PROGRESS</p>
                                 </div>
@@ -333,7 +333,7 @@ export default function IntegratedPreview({
                                     </div>
                                     <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden border border-white/10 p-[1px]">
                                         <motion.div
-                                            className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full shadow-[0_0_15px_rgba(0,194,255,0.5)]"
+                                            className="h-full bg-gradient-to-r from-sky-600 to-emerald-400 rounded-full shadow-[0_0_15px_rgba(56,189,248,0.5)]"
                                             initial={{ width: 0 }}
                                             animate={{ width: `${((currentStep + 1) / BOOT_STEPS.length) * 100}%` }}
                                             transition={{ duration: 0.8 }}
@@ -362,7 +362,7 @@ export default function IntegratedPreview({
                                         <div className="p-4 h-32 overflow-y-auto text-[10px] space-y-1 custom-scrollbar">
                                             {logs.length > 0 ? logs.map((log, i) => (
                                                 <p key={i} className="text-zinc-500">
-                                                    <span className="text-blue-500/50 mr-2">[{new Date().toLocaleTimeString()}]</span>
+                                                    <span className="text-sky-500/50 mr-2">[{new Date().toLocaleTimeString()}]</span>
                                                     <span className="text-zinc-300">{log}</span>
                                                 </p>
                                             )) : (
@@ -418,7 +418,7 @@ export default function IntegratedPreview({
                                     />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center bg-zinc-900">
-                                        <Loader2 size={32} className="text-blue-500 animate-spin" />
+                                        <Loader2 size={32} className="text-sky-500 animate-spin" />
                                     </div>
                                 )}
                             </div>

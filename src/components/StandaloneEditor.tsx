@@ -41,7 +41,7 @@ export default function StandaloneEditor({
             height: '100%'
         },
         '.cm-content': {
-            caretColor: '#00c2ff',
+            caretColor: '#38bdf8',
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
             fontSize: '13px'
         },
@@ -55,30 +55,30 @@ export default function StandaloneEditor({
         },
         '.cm-activeLineGutter': {
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            color: '#00c2ff'
+            color: '#38bdf8'
         },
         '.cm-selectionBackground': {
-            backgroundColor: 'rgba(0, 194, 255, 0.25) !important'
+            backgroundColor: 'rgba(56, 189, 248, 0.25) !important'
         },
         '.cm-cursor': {
-            borderLeftColor: '#00c2ff',
+            borderLeftColor: '#38bdf8',
             borderLeftWidth: '2px'
         }
     }, { dark: true }), []);
 
     const codeHighlight = useMemo(() => HighlightStyle.define([
-        { tag: tags.keyword, color: '#ff007a', fontWeight: 'bold' },
-        { tag: [tags.string, tags.special(tags.string)], color: '#00ff9d' },
-        { tag: [tags.number, tags.bool, tags.null], color: '#ff9d00' },
+        { tag: tags.keyword, color: '#38bdf8', fontWeight: 'bold' },
+        { tag: [tags.string, tags.special(tags.string)], color: '#34d399' },
+        { tag: [tags.number, tags.bool, tags.null], color: '#fbbf24' },
         { tag: [tags.comment, tags.lineComment], color: '#666666', fontStyle: 'italic' },
-        { tag: tags.function(tags.variableName), color: '#00c2ff' },
-        { tag: tags.typeName, color: '#bd00ff' },
-        { tag: tags.tagName, color: '#ff007a' },
-        { tag: tags.attributeName, color: '#00c2ff' },
+        { tag: tags.function(tags.variableName), color: '#38bdf8' },
+        { tag: tags.typeName, color: '#22d3ee' },
+        { tag: tags.tagName, color: '#f472b6' },
+        { tag: tags.attributeName, color: '#38bdf8' },
         { tag: tags.variableName, color: '#ffffff' },
-        { tag: tags.propertyName, color: '#00c2ff' },
+        { tag: tags.propertyName, color: '#38bdf8' },
         { tag: tags.operator, color: '#ffffff' },
-        { tag: tags.className, color: '#00c2ff' }
+        { tag: tags.className, color: '#22d3ee' }
     ]), []);
 
     const languageExtension = useMemo(() => {
@@ -109,8 +109,8 @@ export default function StandaloneEditor({
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-2.5 bg-[#0a0a0a] border-b border-white/5">
                 <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-blue-500/10 rounded border border-blue-500/20">
-                        <Code2 size={14} className="text-blue-400" />
+                    <div className="p-1.5 bg-sky-500/10 rounded border border-sky-500/20">
+                        <Code2 size={14} className="text-sky-400" />
                     </div>
                     <div>
                         <h3 className="text-xs font-medium text-white/90 truncate max-w-[150px]">{fileName}</h3>
@@ -126,8 +126,8 @@ export default function StandaloneEditor({
                             className={cn(
                                 "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
                                 isSaving
-                                    ? "bg-blue-600/50 cursor-wait text-white/70"
-                                    : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 active:scale-95"
+                                    ? "bg-sky-600/50 cursor-wait text-white/70"
+                                    : "bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-500/20 active:scale-95"
                             )}
                         >
                             {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}

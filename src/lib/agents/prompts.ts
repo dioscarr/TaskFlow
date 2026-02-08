@@ -172,6 +172,10 @@ TOOLING & EXECUTION STANDARDS (ANTIGRAVITY LEVEL)
    - ✅ CORRECT: Call tool \`run_terminal_command({ command: 'npm run test' })\`
    - Always check the output. If a command fails, analyze the stderr.
 
+1.5. **TOOL CALLING**: When a tool is needed, call it directly using its function name and JSON arguments that match its schema. Do NOT fabricate outputs.
+    - If required arguments are missing, ask a short clarifying question.
+    - After a tool returns, incorporate the real result and continue.
+
 2. **FILE EDITING**: Do NOT overwrite entire files for small changes. Use \`replace_in_file\`.
    - ❌ WRONG: Calling \`create_file\` with the full content just to change one line.
    - ✅ CORRECT: Call \`replace_in_file({ fileId: '...', target: 'old code', replacement: 'new code' })\`.

@@ -205,7 +205,7 @@ export default function CodeEditorModal({
             height: '100%'
         },
         '.cm-content': {
-            caretColor: '#00c2ff', // Neon cyan
+            caretColor: '#38bdf8', // Neon sky
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
             fontSize: '13px'
         },
@@ -219,13 +219,13 @@ export default function CodeEditorModal({
         },
         '.cm-activeLineGutter': {
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            color: '#00c2ff'
+            color: '#38bdf8'
         },
         '.cm-selectionBackground': {
-            backgroundColor: 'rgba(0, 194, 255, 0.25) !important'
+            backgroundColor: 'rgba(56, 189, 248, 0.25) !important'
         },
         '.cm-cursor': {
-            borderLeftColor: '#00c2ff',
+            borderLeftColor: '#38bdf8',
             borderLeftWidth: '2px'
         }
     }, { dark: true }), []);
@@ -235,14 +235,14 @@ export default function CodeEditorModal({
         { tag: [tags.string, tags.special(tags.string)], color: '#00ff9d' }, // Neon Green for strings
         { tag: [tags.number, tags.bool, tags.null], color: '#ff9d00' }, // Neon Orange for constants
         { tag: [tags.comment, tags.lineComment], color: '#666666', fontStyle: 'italic' }, // Muted gray for comments
-        { tag: tags.function(tags.variableName), color: '#00c2ff' }, // Neon Cyan for functions
-        { tag: tags.typeName, color: '#bd00ff' }, // Neon Purple for types
+        { tag: tags.function(tags.variableName), color: '#38bdf8' }, // Neon Sky for functions
+        { tag: tags.typeName, color: '#34d399' }, // Emerald for types
         { tag: tags.tagName, color: '#ff007a' }, // Neon Pink for HTML tags
-        { tag: tags.attributeName, color: '#00c2ff' }, // Neon Cyan for attributes
+        { tag: tags.attributeName, color: '#38bdf8' }, // Neon Sky for attributes
         { tag: tags.variableName, color: '#ffffff' }, // White for variables
-        { tag: tags.propertyName, color: '#00c2ff' }, // Neon Cyan for properties
+        { tag: tags.propertyName, color: '#38bdf8' }, // Neon Sky for properties
         { tag: tags.operator, color: '#ffffff' },
-        { tag: tags.className, color: '#00c2ff' }
+        { tag: tags.className, color: '#38bdf8' }
     ]), []);
 
     const languageExtension = useMemo(() => {
@@ -292,10 +292,10 @@ export default function CodeEditorModal({
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 bg-[#0a0a0a] border-b border-white/5 select-none relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-transparent pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-sky-500/5 via-transparent to-transparent pointer-events-none" />
                         <div className="flex items-center gap-4 relative z-10">
-                            <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20 shadow-[0_0_15px_rgba(37,99,235,0.2)]">
-                                <Code2 className="text-blue-400" size={18} />
+                            <div className="p-2 bg-sky-500/10 rounded-lg border border-sky-500/20 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
+                                <Code2 className="text-sky-400" size={18} />
                             </div>
                             <div>
                                 <h3 className="text-sm font-medium text-white/90">{fileName}</h3>
@@ -309,7 +309,7 @@ export default function CodeEditorModal({
                                     }}
                                     className={cn(
                                         "px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-colors",
-                                        activeMode === 'edit' ? "bg-blue-500/20 text-blue-200" : "text-white/50 hover:text-white"
+                                        activeMode === 'edit' ? "bg-sky-500/20 text-sky-200" : "text-white/50 hover:text-white"
                                     )}
                                 >
                                     Edit
@@ -363,8 +363,8 @@ export default function CodeEditorModal({
                                     className={cn(
                                         "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all",
                                         isSaving
-                                            ? "bg-blue-600/50 cursor-wait text-white/70"
-                                            : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 active:scale-95"
+                                            ? "bg-sky-600/50 cursor-wait text-white/70"
+                                            : "bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-500/20 active:scale-95"
                                     )}
                                 >
                                     {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
@@ -397,7 +397,7 @@ export default function CodeEditorModal({
                             </div>
 
                             {/* Footer */}
-                            <div className="px-4 py-2 bg-[#00c2ff] text-black text-[10px] font-bold flex items-center justify-between pointer-events-none shadow-[0_-4px_20px_rgba(0,194,255,0.3)]">
+                            <div className="px-4 py-2 bg-[#38bdf8] text-black text-[10px] font-bold flex items-center justify-between pointer-events-none shadow-[0_-4px_20px_rgba(56,189,248,0.3)]">
                                 <div className="flex gap-4 uppercase tracking-tighter">
                                     <span>Ln {lines}, Col {content.length}</span>
                                     <span>UTF-8</span>

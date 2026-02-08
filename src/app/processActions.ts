@@ -57,7 +57,7 @@ const ensurePreviewPortDefaults = async (preferredPort: number = DEFAULT_PREVIEW
     await ensureEnvValue('NGROK_PORT', process.env.NGROK_PORT);
 
     try {
-        await execAsync(`powershell -Command "Stop-Process -Id (Get-NetTCPConnection -LocalPort ${normalized}).OwningProcess -Force"`);
+        await execAsync(`powershell -Command "$proc = (Get-NetTCPConnection -LocalPort ${normalized} -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -ne 0 } | Select-Object -First 1).OwningProcess; if ($proc) { Stop-Process -Id $proc -Force }"`);
     } catch { /* port already free */ }
 
     return normalized;
@@ -192,7 +192,7 @@ export async function stopProcess(id: string) {
         // Kill by port if no PID
         if (process.port && !process.pid) {
             try {
-                const cmd = `Stop-Process -Id (Get-NetTCPConnection -LocalPort ${process.port}).OwningProcess -Force`;
+                const cmd = `$proc = (Get-NetTCPConnection -LocalPort ${process.port} -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -ne 0 } | Select-Object -First 1).OwningProcess; if ($proc) { Stop-Process -Id $proc -Force }`;
                 await execAsync(`powershell -Command "${cmd}"`);
             } catch (portError: any) {
                 console.error('Error killing process by port:', portError);
@@ -410,7 +410,7 @@ CMD ["npm", "run", "${startScript}"]
                     try {
                         // Kill anything on this port first
                         // Windows/Powershell way
-                        await execAsync(`powershell -Command "Stop-Process -Id (Get-NetTCPConnection -LocalPort ${port}).OwningProcess -Force"`);
+                        await execAsync(`powershell -Command "$proc = (Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -ne 0 } | Select-Object -First 1).OwningProcess; if ($proc) { Stop-Process -Id $proc -Force }"`);
                     } catch (e) {
                         // Ignore if nothing running
                     }

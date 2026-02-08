@@ -6,6 +6,14 @@ First, run the development server:
 
 ```bash
 npm run dev
+# or run Next.js with the Omni-Shell attached
+npm run dev:omni-shell
+# or launch just the Omni-Shell
+npm run omni-shell
+# or run any app under apps/ (example)
+npm run dev:app -- --app=call
+# or run an app under apps/ with Omni-Shell (example)
+npm run dev:app:omni-shell -- --app=call
 # or
 yarn dev
 # or
@@ -15,6 +23,40 @@ bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## Docker App Runner
+
+Run any app under apps/ with a single reusable compose file.
+
+```bash
+# Dev (Vite) example
+APP_NAME=call docker compose -f docker-compose.app.yml --profile dev up --build
+
+# Prod (Nginx) example
+APP_NAME=call docker compose -f docker-compose.app.yml --profile prod up --build
+```
+
+Optional port overrides:
+
+```bash
+DEV_PORT=5050 PROD_PORT=8080 APP_NAME=call docker compose -f docker-compose.app.yml --profile dev up --build
+```
+
+VS Code task (TaskFlow UI / Explorer):
+
+```bash
+# Command Palette -> Tasks: Run Task -> Docker: App (dev/prod)
+```
+
+npm script:
+
+```bash
+npm run docker:app -- --app=call --profile=dev
+```
+
+Troubleshooting:
+
+- See [docs/docker-troubleshooting.md](docs/docker-troubleshooting.md) for daemon connection errors and recovery steps.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

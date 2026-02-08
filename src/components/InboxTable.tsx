@@ -199,7 +199,7 @@ export default function InboxTable({ tasks }: InboxTableProps) {
                             placeholder="Search inbox... (Ctrl+K)"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all placeholder:text-white/20"
                         />
                     </div>
 
@@ -212,7 +212,7 @@ export default function InboxTable({ tasks }: InboxTableProps) {
                                 className={cn(
                                     "px-4 py-1.5 rounded-lg text-xs font-medium transition-all",
                                     activeFilter === filter
-                                        ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                                        ? "bg-sky-600 text-white shadow-lg shadow-sky-500/20"
                                         : "text-white/40 hover:text-white/70"
                                 )}
                             >
@@ -253,14 +253,14 @@ export default function InboxTable({ tasks }: InboxTableProps) {
                                 className={cn(
                                     "group relative flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 border border-white/5 hover:border-white/10",
                                     "bg-white/5 hover:bg-white/10 backdrop-blur-sm",
-                                    task.status === 'unread' ? "shadow-[0_0_15px_-5px_theme(colors.blue.500/0.3)]" : ""
+                                    task.status === 'unread' ? "shadow-[0_0_15px_-5px_theme(colors.sky.500/0.35)]" : ""
                                 )}
                             >
                                 {/* Status Indicator */}
-                                <div className={cn("w-1.5 h-1.5 rounded-full", task.status === 'unread' ? "bg-blue-500" : "bg-white/20")} />
+                                <div className={cn("w-1.5 h-1.5 rounded-full", task.status === 'unread' ? "bg-sky-500" : "bg-white/20")} />
 
                                 {/* Sender Avatar/Icon */}
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-indigo-300 border border-white/10 shrink-0">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500/20 to-emerald-500/20 flex items-center justify-center text-sky-300 border border-white/10 shrink-0">
                                     {sender.avatar ? (
                                         <User size={18} />
                                     ) : (
@@ -320,7 +320,7 @@ export default function InboxTable({ tasks }: InboxTableProps) {
                     {searchQuery && (
                         <button
                             onClick={() => setSearchQuery('')}
-                            className="mt-4 text-blue-400 hover:text-blue-300 text-sm font-medium"
+                            className="mt-4 text-sky-400 hover:text-sky-300 text-sm font-medium"
                         >
                             Clear Search
                         </button>

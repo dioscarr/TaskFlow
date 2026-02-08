@@ -4,6 +4,7 @@ import { executeWithRetry } from '@/app/actions';
 import { SOFTWARE_ARCHITECT_PROMPT } from '@/lib/agents/prompts';
 import AI_CONFIG from '@/lib/aiConfig';
 import { deepSerialize } from '@/lib/serialization';
+import { resolveModelId } from '@/lib/modelCatalog';
 
 export async function POST(request: Request) {
     let body;
@@ -26,7 +27,8 @@ export async function POST(request: Request) {
         sessionId,
         verbosity = 'normal',
         activeAppName,
-        activeAppPath
+        activeAppPath,
+        model: requestedModel
     } = body || {};
 
     const encoder = new TextEncoder();
@@ -48,15 +50,18 @@ export async function POST(request: Request) {
                 const genAI = new GoogleGenerativeAI(apiKey);
 
                 // Construct System Instruction matching actions.ts logic
-                const toolInstructions = "\n\nYou have access to a rich library of TOOLS. Use them whenever necessary to fulfill the request.";
+                const enabledTools = DEFAULT_TOOLS;
+                const toolInstructions = "\n\nYou have access to a rich library of TOOLS. Use them whenever necessary to fulfill the request." +
+                    `\nENABLED TOOLS: ${enabledTools.join(', ')}`;
                 const systemInstruction = SOFTWARE_ARCHITECT_PROMPT + toolInstructions +
                     "\n\nMODE: STREAMING ASSISTANT." +
                     "\nTHINKING PROTOCOL: Use <thinking>...</thinking> tags at the start of your response for complex plans." +
                     (activeAppName ? `\nACTIVE APP: ${activeAppName} at ${activeAppPath}` : "");
 
-                const tools = [{ functionDeclarations: getToolSchemas(DEFAULT_TOOLS) }];
+                const tools = [{ functionDeclarations: getToolSchemas(enabledTools) }];
+                const selectedModel = resolveModelId(requestedModel, AI_CONFIG.fastModel || 'gemini-2.0-flash');
                 const model = genAI.getGenerativeModel({
-                    model: AI_CONFIG.fastModel || 'gemini-2.0-flash',
+                    model: selectedModel,
                     systemInstruction,
                     tools
                 });

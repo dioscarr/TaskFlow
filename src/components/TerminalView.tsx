@@ -13,16 +13,16 @@ interface TerminalViewProps {
 }
 
 const GLYPH_MAP: Record<string, React.ReactNode> = {
-    '◇': <Circle size={10} className="text-blue-400/60" />,
-    '│': <div className="w-px h-full bg-white/10 mx-auto" />,
-    '└': <div className="w-2 h-2 border-l border-b border-white/20 rounded-bl-sm -mt-2 ml-1" />,
+    '◇': <Circle size={10} className="text-sky-400/60" />,
+    '│': <div className="w-px h-full bg-foreground/10 mx-auto" />,
+    '└': <div className="w-2 h-2 border-l border-b border-foreground/20 rounded-bl-sm -mt-2 ml-1" />,
     '√': <CheckCircle2 size={12} className="text-emerald-400" />,
     '✔': <CheckCircle2 size={12} className="text-emerald-400" />,
     '×': <XCircle size={12} className="text-red-400" />,
     '✖': <XCircle size={12} className="text-red-400" />,
     '⚠': <AlertCircle size={12} className="text-amber-400" />,
-    'ℹ': <Info size={12} className="text-blue-400" />,
-    '»': <ChevronRight size={12} className="text-white/40" />,
+    'ℹ': <Info size={12} className="text-sky-400" />,
+    '»': <ChevronRight size={12} className="text-muted-foreground/40" />,
 };
 
 // Simple ANSI color parser
@@ -50,16 +50,16 @@ const parseAnsi = (text: string) => {
                     currentColorClass = 'text-amber-400';
                     break;
                 case '34': // Blue
-                    currentColorClass = 'text-blue-400';
+                    currentColorClass = 'text-sky-400';
                     break;
                 case '35': // Magenta
-                    currentColorClass = 'text-purple-400';
+                    currentColorClass = 'text-amber-400';
                     break;
                 case '36': // Cyan
-                    currentColorClass = 'text-cyan-400';
+                    currentColorClass = 'text-emerald-400';
                     break;
                 case '90': // Grey
-                    currentColorClass = 'text-white/30';
+                    currentColorClass = 'text-muted-foreground/30';
                     break;
                 case '1': // Bold
                     currentColorClass += ' font-bold';
@@ -110,11 +110,11 @@ export default function TerminalView({
     return (
         <div className={cn(
             "rounded-xl overflow-hidden border transition-all duration-300 shadow-2xl bg-[#0c0c14]/90 backdrop-blur-xl",
-            isError ? "border-red-500/30" : "border-white/10",
+            isError ? "border-red-500/30" : "border-[color:var(--border)]",
             className
         )}>
             {/* Terminal Header */}
-            <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/5">
+            <div className="flex items-center justify-between px-4 py-2 bg-foreground/5 border-b border-[color:var(--border)]">
                 <div className="flex items-center gap-4">
                     <div className="flex gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
@@ -123,12 +123,12 @@ export default function TerminalView({
                     </div>
                     <div className="flex items-center gap-2">
                         <Terminal size={12} className={cn(isError ? "text-red-400" : "text-emerald-400")} />
-                        <span className="text-[10px] font-mono font-bold text-white/40 uppercase tracking-widest">{title}</span>
+                        <span className="text-[10px] font-mono font-bold text-muted-foreground/40 uppercase tracking-widest">{title}</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[9px] font-mono text-white/20 uppercase tracking-wider font-bold">Local Shell</span>
+                    <span className="text-[9px] font-mono text-muted-foreground/20 uppercase tracking-wider font-bold">Local Shell</span>
                 </div>
             </div>
 
@@ -144,12 +144,12 @@ export default function TerminalView({
                 {/* Visual cursor at the end */}
                 <div className="mt-2 flex items-center gap-2">
                     <span className="text-emerald-400/50">❯</span>
-                    <div className="w-2 h-4 bg-blue-500/40 animate-pulse" />
+                    <div className="w-2 h-4 bg-sky-500/40 animate-pulse" />
                 </div>
             </div>
 
             {/* Terminal Footer/Status */}
-            <div className="px-4 py-1.5 bg-black/40 border-t border-white/5 flex items-center justify-between text-[9px] font-mono text-white/20">
+            <div className="px-4 py-1.5 bg-black/40 border-t border-[color:var(--border)] flex items-center justify-between text-[9px] font-mono text-muted-foreground/20">
                 <div className="flex gap-4">
                     <span>UTF-8</span>
                     <span>Bash</span>

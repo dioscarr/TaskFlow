@@ -1,0 +1,45 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "appName",
+      "type": "promptString",
+      "description": "App folder under apps/ (e.g., call)",
+      "default": "call"
+    },
+    {
+      "id": "profile",
+      "type": "pickString",
+      "description": "Run mode",
+      "options": ["dev", "prod"]
+    },
+    {
+      "id": "devPort",
+      "type": "promptString",
+      "description": "Host port for dev (container 5050)",
+      "default": "5050"
+    },
+    {
+      "id": "prodPort",
+      "type": "promptString",
+      "description": "Host port for prod (container 80)",
+      "default": "8080"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "Docker: App (dev/prod)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "$env:APP_NAME='${input:appName}'; $env:DEV_PORT='${input:devPort}'; $env:PROD_PORT='${input:prodPort}'; docker compose -f docker-compose.app.yml --profile ${input:profile} up --build"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

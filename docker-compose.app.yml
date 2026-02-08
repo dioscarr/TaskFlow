@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  app-dev:
+    profiles: ["dev"]
+    build:
+      context: ./apps/${APP_NAME}
+      dockerfile: Dockerfile.dev
+    ports:
+      - "${DEV_PORT:-5050}:5050"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./apps/${APP_NAME}:/app
+      - /app/node_modules
+
+  app-prod:
+    profiles: ["prod"]
+    build:
+      context: ./apps/${APP_NAME}
+      dockerfile: Dockerfile
+    ports:
+      - "${PROD_PORT:-8080}:80"
+    environment:
+      - NODE_ENV=production

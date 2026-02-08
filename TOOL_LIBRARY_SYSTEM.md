@@ -3,6 +3,23 @@
 ## Overview
 Streamlined tool management system where tools are defined once in a central library and can be enabled/disabled per AI agent through the UI.
 
+## Tool Usage Playbook
+
+Agents should follow these rules whenever tools are enabled:
+
+1. **Call tools directly** using the exact tool name and JSON arguments that match the schema.
+2. **Do not invent outputs**. Wait for the tool result before continuing.
+3. **Ask for missing args** only when the schema requires them and the info is not in context.
+4. **Prefer discovery tools** (like search/list/view) over asking for file IDs.
+
+Example:
+```json
+{
+    "tool": "list_dir",
+    "args": { "path": "src/components" }
+}
+```
+
 ## What We've Built So Far
 
 ### 1. Tool Library (`src/lib/toolLibrary.ts`) ✅

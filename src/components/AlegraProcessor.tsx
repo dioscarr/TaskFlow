@@ -37,12 +37,12 @@ export default function AlegraProcessor({ bills }: Props) {
     if (bills.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-32 text-center rounded-[3rem] bg-white/5 border border-white/5 border-dashed">
-                <div className="p-6 bg-blue-500/10 rounded-full mb-6">
-                    <Receipt size={48} className="text-blue-400 opacity-50" />
+                <div className="p-6 bg-sky-500/10 rounded-full mb-6">
+                    <Receipt size={48} className="text-sky-400 opacity-50" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">No Bills Prepared</h3>
                 <p className="text-white/40 max-w-md mx-6 leading-relaxed">
-                    Select your receipts from the <span className="text-blue-400 font-bold underline cursor-pointer">Files</span> tab.
+                    Select your receipts from the <span className="text-sky-400 font-bold underline cursor-pointer">Files</span> tab.
                     <br /><br />
                     <span className="text-white/60 font-medium">💡 Pro Tip:</span> If a receipt is split in 2 files, <span className="text-white/80 font-bold">select both</span> and ask the AI Agent to: <br />
                     <span className="italic">"Merge these two parts into a single Alegra bill."</span>
@@ -64,7 +64,7 @@ export default function AlegraProcessor({ bills }: Props) {
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <DollarSign className="text-blue-500" size={20} />
+                        <DollarSign className="text-sky-500" size={20} />
                         Alegra Fiscal Hub
                     </h2>
                     <p className="text-white/20 text-[9px] mt-0.5 uppercase tracking-widest font-bold">Gastos RD & DGII Compliance</p>
@@ -97,7 +97,7 @@ export default function AlegraProcessor({ bills }: Props) {
                                     "glass-card p-1 rounded-[2rem] border transition-all duration-500 overflow-hidden relative group",
                                     isExported
                                         ? "bg-black/40 border-white/5 opacity-80"
-                                        : "bg-white/5 border-white/10 hover:border-blue-500/30"
+                                        : "bg-white/5 border-white/10 hover:border-sky-500/30"
                                 )}
                             >
                                 <div className="p-6 space-y-4">
@@ -107,7 +107,7 @@ export default function AlegraProcessor({ bills }: Props) {
                                             "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 border shadow-xl",
                                             isExported
                                                 ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                                                : "bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse"
+                                                : "bg-sky-500/10 text-sky-400 border-sky-500/20 animate-pulse"
                                         )}>
                                             {isExported ? <><CheckCircle2 size={10} /> Closed & Paid</> : <><Sparkles size={10} /> Pending Review</>}
                                         </div>
@@ -116,7 +116,7 @@ export default function AlegraProcessor({ bills }: Props) {
                                     {/* Header Section */}
                                     <div className="flex items-start gap-5 relative z-10">
                                         <div className="p-5 bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-[2rem] border border-white/10 shadow-2xl group-hover:scale-110 transition-transform duration-500">
-                                            <Building2 size={24} className="text-blue-400" />
+                                            <Building2 size={24} className="text-sky-400" />
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ export default function AlegraProcessor({ bills }: Props) {
                                                     </span>
                                                     {bill.isVerified && <div className="w-1 h-1 rounded-full bg-emerald-500" />}
                                                 </div>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-400/80 bg-blue-400/5 px-3 py-1 rounded-lg border border-blue-500/20">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-sky-400/80 bg-sky-400/5 px-3 py-1 rounded-lg border border-sky-500/20">
                                                     NCF: {bill.ncf || 'PROV'}
                                                 </span>
                                                 {billAny.ncfType && (
@@ -152,24 +152,24 @@ export default function AlegraProcessor({ bills }: Props) {
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div className="p-5 bg-black/40 rounded-3xl border border-white/5 hover:border-white/10 transition-colors group/card">
                                             <div className="flex items-center gap-2 mb-2 opacity-30 group-hover/card:opacity-60 transition-opacity">
-                                                <Calendar size={14} className="text-blue-400" />
+                                                <Calendar size={14} className="text-sky-400" />
                                                 <span className="text-[10px] uppercase font-black tracking-[0.1em]">Reporting Date</span>
                                             </div>
                                             <div className="text-white font-bold text-lg">{bill.date}</div>
                                         </div>
                                         <div className="p-5 bg-black/40 rounded-3xl border border-white/5">
                                             <div className="flex items-center gap-2 mb-2 opacity-30">
-                                                <Paperclip size={14} className="text-blue-400" />
+                                                <Paperclip size={14} className="text-sky-400" />
                                                 <span className="text-[10px] uppercase font-black tracking-[0.1em]">Attachment</span>
                                             </div>
                                             <div className="text-white font-bold text-xs truncate max-w-[120px]">{bill.file?.name || 'Manual Entry'}</div>
                                         </div>
-                                        <div className="p-5 bg-blue-600/10 rounded-3xl border border-blue-500/20 shadow-inner group/amount">
-                                            <div className="flex items-center gap-2 mb-2 text-blue-400/60">
+                                        <div className="p-5 bg-sky-500/10 rounded-3xl border border-sky-500/20 shadow-inner group/amount">
+                                            <div className="flex items-center gap-2 mb-2 text-sky-400/60">
                                                 <DollarSign size={14} />
                                                 <span className="text-[10px] uppercase font-black tracking-[0.1em]">Total Gross</span>
                                             </div>
-                                            <div className="text-blue-400 font-bold text-xl tracking-tight">RD$ {bill.totalAmount.toLocaleString()}</div>
+                                            <div className="text-sky-400 font-bold text-xl tracking-tight">RD$ {bill.totalAmount.toLocaleString()}</div>
                                         </div>
                                     </div>
 
@@ -190,7 +190,7 @@ export default function AlegraProcessor({ bills }: Props) {
                                                             <span className="text-[9px] text-white/20 uppercase font-black tracking-widest">Unit Price: RD$ {item.price}</span>
                                                         </div>
                                                     </div>
-                                                    <div className="text-white font-black text-sm group-hover/item:text-blue-400 transition-colors">RD$ {(item.quantity * item.price).toLocaleString()}</div>
+                                                    <div className="text-white font-black text-sm group-hover/item:text-sky-400 transition-colors">RD$ {(item.quantity * item.price).toLocaleString()}</div>
                                                 </div>
                                             ))}
                                         </div>
@@ -203,7 +203,7 @@ export default function AlegraProcessor({ bills }: Props) {
                                                 <button
                                                     onClick={() => handleExport(bill)}
                                                     disabled={isExporting === bill.id}
-                                                    className="flex-1 py-5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-[0_15px_30px_rgba(37,99,235,0.3)] flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+                                                    className="flex-1 py-5 bg-sky-600 hover:bg-sky-500 disabled:bg-sky-600/50 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-[0_15px_30px_rgba(56,189,248,0.3)] flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
                                                 >
                                                     {isExporting === bill.id ? (
                                                         <><Loader2 size={20} className="animate-spin" /> Recording Gasto...</>

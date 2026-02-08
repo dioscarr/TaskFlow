@@ -237,7 +237,7 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onTogg
                 onClick={handleClick}
                 className={cn(
                     "group flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors text-white/60 hover:text-white hover:bg-white/5 select-none",
-                    activeFilePath === item.path ? "bg-blue-500/10 text-blue-300" : ""
+                    activeFilePath === item.path ? "bg-sky-500/10 text-sky-300" : ""
                 )}
                 style={{ paddingLeft: `${level * 12 + 8}px` }}
             >
@@ -253,7 +253,7 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onTogg
                         isAppRoot ? <LayoutGrid size={14} className="text-emerald-400" /> :
                             <Folder size={14} className={isOpen ? "text-white" : "text-white/40"} />
                     ) : (
-                        <FileCode size={14} className="text-blue-400/60" />
+                        <FileCode size={14} className="text-sky-400/60" />
                     )}
                 </div>
 

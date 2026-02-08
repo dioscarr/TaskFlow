@@ -34,8 +34,8 @@ export default function AgentActivityFeed() {
     }, []);
 
     const getIcon = (type: string, tool: string) => {
-        if (tool === 'configure_magic_folder') return <Sparkles size={16} className="text-purple-400" />;
-        if (tool === 'set_file_tags') return <Tag size={16} className="text-blue-400" />;
+        if (tool === 'configure_magic_folder') return <Sparkles size={16} className="text-emerald-400" />;
+        if (tool === 'set_file_tags') return <Tag size={16} className="text-sky-400" />;
         if (tool === 'synthesize_documents') return <FileText size={16} className="text-green-400" />;
 
         switch (type) {
@@ -50,7 +50,7 @@ export default function AgentActivityFeed() {
         <div className="w-full h-full flex flex-col bg-slate-950/30 backdrop-blur-xl border border-slate-800/50 rounded-2xl overflow-hidden shadow-2xl">
             <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
                 <div className="flex items-center gap-2">
-                    <Activity size={18} className="text-indigo-400" />
+                    <Activity size={18} className="text-sky-400" />
                     <h3 className="text-sm font-semibold text-white/90">Intelligence Command Center</h3>
                 </div>
                 <div className="flex items-center gap-2">
@@ -69,7 +69,7 @@ export default function AgentActivityFeed() {
                     activities.map((item) => (
                         <div key={item.id} className="group relative pl-6 border-l border-white/10 pb-2 last:pb-0">
                             {/* Timeline Node */}
-                            <div className="absolute left-[-5px] top-0 w-2.5 h-2.5 rounded-full bg-slate-900 border border-white/20 group-hover:border-indigo-400 group-hover:bg-indigo-500/20 transition-all"></div>
+                            <div className="absolute left-[-5px] top-0 w-2.5 h-2.5 rounded-full bg-slate-900 border border-white/20 group-hover:border-sky-400 group-hover:bg-sky-500/20 transition-all"></div>
 
                             <div className="flex flex-col gap-1">
                                 <div className="flex items-center justify-between">

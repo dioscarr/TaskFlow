@@ -68,7 +68,7 @@ export default function TaskDetail({ task, onClose }: { task: TaskWithData; onCl
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-white/10 glass bg-white/5">
                     <div className="flex items-center gap-4">
-                        <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
+                        <div className="p-2 bg-sky-500/20 rounded-lg text-sky-400">
                             <FileText size={24} />
                         </div>
                         <div>
@@ -126,7 +126,7 @@ export default function TaskDetail({ task, onClose }: { task: TaskWithData; onCl
                                 {tag}
                             </span>
                         ))}
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 border border-blue-500/20 text-blue-300 flex items-center gap-1">
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-sky-500/10 border border-sky-500/20 text-sky-300 flex items-center gap-1">
                             <Calendar size={12} /> {(() => {
                                 try {
                                     const d = new Date(task.createdAt);
@@ -164,13 +164,13 @@ export default function TaskDetail({ task, onClose }: { task: TaskWithData; onCl
                                 </div>
                             </button>
 
-                            <button className="flex items-center gap-3 px-4 py-3 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-lg transition-all group">
-                                <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
+                            <button className="flex items-center gap-3 px-4 py-3 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 rounded-lg transition-all group">
+                                <div className="w-8 h-8 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-400 group-hover:scale-110 transition-transform">
                                     <Calendar size={16} />
                                 </div>
                                 <div className="text-left">
-                                    <div className="text-sm font-semibold text-purple-100">Schedule Meeting</div>
-                                    <div className="text-xs text-purple-400/60">Find time in Calendar</div>
+                                    <div className="text-sm font-semibold text-sky-100">Schedule Meeting</div>
+                                    <div className="text-xs text-sky-400/60">Find time in Calendar</div>
                                 </div>
                             </button>
                         </div>

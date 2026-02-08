@@ -91,8 +91,8 @@ export default function FileEditPreviewModal({
                     {/* Header */}
                     <div className="flex items-center justify-between px-8 py-6 border-b border-white/5 bg-zinc-900/50 backdrop-blur-sm">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20 shadow-lg shadow-blue-500/5">
-                                <Edit3 className="text-blue-400" size={20} />
+                            <div className="p-3 bg-sky-500/10 rounded-2xl border border-sky-500/20 shadow-lg shadow-sky-500/5">
+                                <Edit3 className="text-sky-400" size={20} />
                             </div>
                             <div>
                                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white/40 mb-0.5">Live File Modification</h3>
@@ -139,13 +139,13 @@ export default function FileEditPreviewModal({
                                 ref={scrollRef}
                                 className="flex-1 p-8 overflow-y-auto custom-scrollbar font-mono text-sm leading-relaxed"
                             >
-                                <div className="max-w-none text-blue-50/70 whitespace-pre-wrap">
+                                <div className="max-w-none text-sky-50/70 whitespace-pre-wrap">
                                     {displayedContent}
                                     {isTyping && (
                                         <motion.span
                                             animate={{ opacity: [0, 1, 0] }}
                                             transition={{ repeat: Infinity, duration: 0.8 }}
-                                            className="inline-block w-2.5 h-5 bg-blue-500 ml-1 translate-y-1 shadow-[0_0_10px_rgba(37,99,235,0.8)]"
+                                            className="inline-block w-2.5 h-5 bg-sky-500 ml-1 translate-y-1 shadow-[0_0_10px_rgba(56,189,248,0.8)]"
                                         />
                                     )}
                                 </div>
@@ -153,7 +153,7 @@ export default function FileEditPreviewModal({
                                     <div className="flex flex-col items-center justify-center h-full gap-4 text-white/20 uppercase tracking-[0.3em] font-black text-xs">
                                         <div className="w-48 h-1 bg-white/5 rounded-full overflow-hidden">
                                             <motion.div
-                                                className="h-full bg-blue-600 shadow-[0_0_20px_rgba(37,99,235,0.5)]"
+                                                className="h-full bg-sky-600 shadow-[0_0_20px_rgba(56,189,248,0.5)]"
                                                 initial={{ width: 0 }}
                                                 animate={{ width: "100%" }}
                                                 transition={{ duration: 0.8 }}

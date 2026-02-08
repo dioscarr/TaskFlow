@@ -33,9 +33,9 @@ export default function EmojiCelebration({ emoji, onComplete }: CelebrationProps
         switch (emoji) {
             case '👍':
                 return {
-                    primary: 'rgba(59, 130, 246, 0.6)', // Blue
-                    secondary: 'rgba(96, 165, 250, 0.4)',
-                    glow: 'rgba(59, 130, 246, 0.3)'
+                    primary: 'rgba(56, 189, 248, 0.6)', // Sky
+                    secondary: 'rgba(125, 211, 252, 0.4)',
+                    glow: 'rgba(56, 189, 248, 0.3)'
                 };
             case '❤️':
                 return {
@@ -45,9 +45,9 @@ export default function EmojiCelebration({ emoji, onComplete }: CelebrationProps
                 };
             case '🎉':
                 return {
-                    primary: 'rgba(168, 85, 247, 0.6)', // Purple
-                    secondary: 'rgba(192, 132, 252, 0.4)',
-                    glow: 'rgba(168, 85, 247, 0.3)'
+                    primary: 'rgba(16, 185, 129, 0.6)', // Emerald
+                    secondary: 'rgba(52, 211, 153, 0.4)',
+                    glow: 'rgba(16, 185, 129, 0.3)'
                 };
             case '🤔':
                 return {
@@ -57,9 +57,9 @@ export default function EmojiCelebration({ emoji, onComplete }: CelebrationProps
                 };
             default:
                 return {
-                    primary: 'rgba(59, 130, 246, 0.6)',
-                    secondary: 'rgba(96, 165, 250, 0.4)',
-                    glow: 'rgba(59, 130, 246, 0.3)'
+                    primary: 'rgba(56, 189, 248, 0.6)',
+                    secondary: 'rgba(125, 211, 252, 0.4)',
+                    glow: 'rgba(56, 189, 248, 0.3)'
                 };
         }
     };

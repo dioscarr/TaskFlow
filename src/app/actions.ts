@@ -28,7 +28,7 @@ function safeRevalidatePath(path: string, type?: 'layout' | 'page') {
 }
 import { writeFile, readFile as readFileFS, rename, copyFile, mkdir } from 'fs/promises';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
-import { DEFAULT_TOOLS, getToolSchemas } from '@/lib/toolLibrary';
+import { getToolSchemas } from '@/lib/toolLibrary';
 import { DEFAULT_SKILLS } from '@/lib/skillsLibrary';
 import { getSkillSchemas } from '@/lib/skillsLibrary';
 import { executeSkill } from '@/lib/skillsExecution';
@@ -39,6 +39,7 @@ import { addChatMessage } from '@/app/chatActions';
 import { SOFTWARE_ARCHITECT_PROMPT, AGENT_ROLES, ORCHESTRATOR_AGENT_PROMPT, WORKER_AGENT_PROMPT } from '@/lib/agents/prompts';
 import { GeminiAgentAdapter } from '@/lib/agents/adapters';
 import AI_CONFIG from '@/lib/aiConfig';
+import { resolveModelId } from '@/lib/modelCatalog';
 import { serializeValue, deepSerialize } from '@/lib/serialization';
 
 // import { CognitiveAgent } from '@/lib/agents/CognitiveAgent';
@@ -1711,7 +1712,7 @@ export async function getPrompts() {
                     prompt,
                     userId: user.id,
                     isActive: false,
-                    tools: DEFAULT_TOOLS
+                    tools: DEFAULT_SKILLS
                 }
             });
         };
@@ -1749,6 +1750,16 @@ export async function getPrompts() {
                     name: "Code Reviewer",
                     description: "Analyzes code files for bugs, security, and optimization.",
                     prompt: "You are TaskFlow AI, a Senior Staff Engineer. Analyze technical files for architecture, security, and performance."
+                },
+                {
+                    name: "Software Architect",
+                    description: "Builds production-grade features with clean architecture, safe edits, and clear execution steps.",
+                    prompt: "You are TaskFlow AI, a senior software architect and implementer.\n\nGOALS:\n- Deliver correct, maintainable code with minimal churn.\n- Prefer small, safe edits and reuse existing patterns.\n- Ask concise clarification questions only when necessary.\n\nEXECUTION:\n- Inspect relevant files before editing.\n- Use available tests or mention missing coverage.\n- Explain tradeoffs briefly and keep responses tight."
+                },
+                {
+                    name: "Product Design Lead",
+                    description: "Crafts bold, premium UI direction with strong typography, color systems, and responsive layout guidance.",
+                    prompt: "You are TaskFlow AI, a product design lead focused on distinctive, high-clarity interfaces.\n\nPRIORITIES:\n- Define visual direction: typography, color palette, spacing, and layout grid.\n- Create clear hierarchy and strong composition.\n- Use CSS variables for theme tokens.\n- Ensure responsive behavior and accessible contrast.\n\nSTYLE:\n- Avoid generic layouts and safe defaults.\n- Be explicit about interaction states and motion where relevant."
                 }
             ];
 
@@ -1760,7 +1771,7 @@ export async function getPrompts() {
                         prompt: d.prompt,
                         userId: user.id,
                         isActive: d.name.includes("Receipt"),
-                        tools: DEFAULT_TOOLS
+                        tools: DEFAULT_SKILLS
                     }
                 });
             }
@@ -1776,6 +1787,16 @@ export async function getPrompts() {
             "Tool Agent",
             "Executes pre-approved tools reliably and reports results back to the main agent.",
             "You are TaskFlow AI's Tool Agent. Your sole job is to execute pre-approved tools and return concise results. Do not ask for approval. Do not re-plan. If a tool fails, report the failure and stop."
+        );
+        await ensurePrompt(
+            "Software Architect",
+            "Builds production-grade features with clean architecture, safe edits, and clear execution steps.",
+            "You are TaskFlow AI, a senior software architect and implementer.\n\nGOALS:\n- Deliver correct, maintainable code with minimal churn.\n- Prefer small, safe edits and reuse existing patterns.\n- Ask concise clarification questions only when necessary.\n\nEXECUTION:\n- Inspect relevant files before editing.\n- Use available tests or mention missing coverage.\n- Explain tradeoffs briefly and keep responses tight."
+        );
+        await ensurePrompt(
+            "Product Design Lead",
+            "Crafts bold, premium UI direction with strong typography, color systems, and responsive layout guidance.",
+            "You are TaskFlow AI, a product design lead focused on distinctive, high-clarity interfaces.\n\nPRIORITIES:\n- Define visual direction: typography, color palette, spacing, and layout grid.\n- Create clear hierarchy and strong composition.\n- Use CSS variables for theme tokens.\n- Ensure responsive behavior and accessible contrast.\n\nSTYLE:\n- Avoid generic layouts and safe defaults.\n- Be explicit about interaction states and motion where relevant."
         );
         return deepSerialize(prompts);
     } catch (error) {
@@ -1797,7 +1818,7 @@ async function ensureToolAgentPrompt(userId: string) {
             prompt: "You are TaskFlow AI's Tool Agent. Your sole job is to execute pre-approved tools and return concise results. Do not ask for approval. Do not re-plan. If a tool fails, report the failure and stop.",
             userId,
             isActive: false,
-            tools: DEFAULT_TOOLS
+            tools: DEFAULT_SKILLS
         }
     });
 }
@@ -1830,7 +1851,7 @@ export async function createPrompt(data: {
         const newPrompt = await prisma.aIPromptSet.create({
             data: {
                 ...data,
-                tools: data.tools || DEFAULT_TOOLS,
+                tools: data.tools || DEFAULT_SKILLS,
                 workflows: data.workflows || [],
                 triggerKeywords: data.triggerKeywords || [],
                 userId: user.id,
@@ -4127,7 +4148,7 @@ export async function createAgent(data: { name: string, systemPrompt: string, de
             name: data.name,
             prompt: data.systemPrompt,
             description: data.description || `Specialized agent: ${data.name}`,
-            tools: data.tools || DEFAULT_TOOLS
+            tools: data.tools || DEFAULT_SKILLS
         });
 
         if (res.success && res.prompt) {
@@ -4251,6 +4272,7 @@ export async function chatWithAI(
         verbosity?: 'concise' | 'normal' | 'verbose';
         activeAppPath?: string;
         activeAppName?: string;
+        model?: string;
     }
 ) {
     try {
@@ -4928,6 +4950,8 @@ You are TaskFlow AI, an intelligent fiscal agent for Alegra RD with advanced ski
 OPERATIONAL RULES:
     ${toolExecutionRule}
 0.5. DIRECT RESPONSE FIRST: For simple questions, greetings, explanations, or information requests, ALWAYS respond directly with text. DO NOT queue a background job for simple conversational responses. Only use tools when the user explicitly asks for file operations, code generation, or complex tasks.
+    0.6. TOOL CALLING: When a tool is needed, call it directly using the tool name and JSON arguments that match its schema. Do NOT guess results. Wait for tool output, then continue.
+    0.7. TOOL CLARITY: If required arguments are missing, ask a short clarifying question. Prefer reading/searching the workspace over asking for file IDs.
 1. SKILLS OVER TOOLS: Use SKILLS instead of individual tools. Skills are intelligent capabilities that handle complex tasks automatically.
 2. RECEIPT INTELLIGENCE: When processing receipts, use the 'receipt_intelligence' skill which handles vision analysis, business verification, report creation, and file organization in one call.
 3. WORKSPACE ORGANIZATION: Use 'workspace_organization' skill for organizing files - it intelligently creates folders, moves files, and applies highlighting.
@@ -4996,6 +5020,7 @@ ${appContextDNA ? JSON.stringify(appContextDNA) : 'None'}
             : DEFAULT_SKILLS;
 
         const baseInstruction = selectedPromptSet ? selectedPromptSet.prompt : defaultInstruction;
+        const enabledToolsList = enabledSkills.length > 0 ? enabledSkills.join(', ') : 'None';
 
         // --- COGNITIVE PLANNING (Multi-Agent Architecture) ---
         // Only active if explicitly requested via /v1 command
@@ -5111,6 +5136,8 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
                 "\n\nNOTE: If the user asks for complex multi-step planning, suggest they use the '/v1' command to activate the Cognitive Brain.";
         }
 
+            systemInstruction += `\n\nENABLED TOOLS: ${enabledToolsList}`;
+
         // Shared capabilities for both modes
         systemInstruction += "\nWEB/PREVIEW CAPABILITY: You can create full HTML web pages using 'create_html_file'. When you do this, the system will AUTOMATICALLY open a live preview for the user side-by-side with the chat. Use this for landing pages, reports, or any visual data representation." +
             "\nPROACTIVE SEARCH RULE: Always use 'search_files' if you are unsure which files to use for a report or task. Never ask the user for file IDs if you can find them yourself.";
@@ -5142,7 +5169,8 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
             tools = getSkillSchemas(DEFAULT_SKILLS);
         }
 
-        const model = genAI.getGenerativeModel({ model: AI_CONFIG.fastModel, systemInstruction, tools });
+        const selectedModel = resolveModelId(options?.model, AI_CONFIG.fastModel);
+        const model = genAI.getGenerativeModel({ model: selectedModel, systemInstruction, tools });
         let promptParts: any[] = [effectiveQuery + workflowInstructions];
 
         // Resolve all file IDs (including those inside folders)

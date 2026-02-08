@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Toaster } from 'sonner';
+import ClientProviders from '@/components/ClientProviders';
 import { ensureAgentWorkerAvailable } from '@/lib/agentWorkerBootstrap';
 
 export const metadata: Metadata = {
@@ -22,13 +22,9 @@ export default function RootLayout({
         className="antialiased"
         suppressHydrationWarning
       >
-        {children}
-        <Toaster
-          position="top-right"
-          richColors
-          closeButton
-          theme="dark"
-        />
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );

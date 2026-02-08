@@ -226,13 +226,13 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
             : null;
 
         return (
-            <div className="w-full h-full flex flex-col overflow-hidden bg-white">
+            <div className="w-full h-full flex flex-col overflow-hidden bg-[color:var(--card)]">
                 {(subApps.length > 0 || parentAppEntry) && (
-                    <div className="bg-[#1e1e1e] border-b border-white/5 px-4 py-2 flex items-center gap-2 overflow-x-auto shrink-0 shadow-sm custom-scrollbar">
+                    <div className="bg-[color:var(--card)] border-b border-[color:var(--border)] px-4 py-2 flex items-center gap-2 overflow-x-auto shrink-0 shadow-sm custom-scrollbar">
                         {parentAppEntry && (
                             <button
                                 onClick={() => setPreviewContent(parentAppEntry as any)}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-medium text-white/70 hover:text-white transition-colors"
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-medium text-foreground/70 hover:text-foreground transition-colors"
                             >
                                 <Folder size={12} className="rotate-180" />
                                 Parent App
@@ -242,7 +242,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                             <button
                                 key={app.folder.id}
                                 onClick={() => setPreviewContent(app.entry as any)}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-xs font-medium text-blue-200 transition-colors border border-blue-500/20"
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-sky-500/10 hover:bg-sky-500/20 text-xs font-medium text-sky-200 transition-colors border border-sky-500/20"
                             >
                                 <LayoutIcon size={12} />
                                 {app.folder.name}
@@ -251,7 +251,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                     </div>
                 )}
 
-                <div className="flex-1 relative bg-white">
+                <div className="flex-1 relative bg-[color:var(--background)]">
                     <iframe
                         src={previewUrl}
                         className="w-full h-full border-none"
@@ -264,12 +264,12 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
 
     return (
         <Layout headerCenter={
-            <div className="flex items-center gap-1 p-1 bg-black/40 backdrop-blur-md border border-white/5 rounded-lg shadow-xl overflow-hidden max-w-full">
+            <div className="relative flex items-center gap-1 p-1.5 bg-[color:var(--card)] backdrop-blur-xl border border-[color:var(--border)] rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.45)] overflow-hidden max-w-full before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-r before:from-white/5 before:via-transparent before:to-white/10 before:pointer-events-none">
                 <button
                     onClick={() => setViewMode('zen')}
                     className={cn(
-                        "p-2 rounded-md transition-all",
-                        viewMode === 'zen' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white"
+                        "p-2 rounded-lg transition-all group",
+                        viewMode === 'zen' ? "bg-white/15 text-foreground shadow-sm" : "text-foreground/40 hover:text-foreground hover:bg-white/5"
                     )}
                     title="Zen Chat"
                 >
@@ -278,8 +278,8 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                 <button
                     onClick={() => setViewMode('split')}
                     className={cn(
-                        "p-2 rounded-md transition-all",
-                        viewMode === 'split' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white"
+                        "p-2 rounded-lg transition-all",
+                        viewMode === 'split' ? "bg-white/15 text-foreground shadow-sm" : "text-foreground/40 hover:text-foreground hover:bg-white/5"
                     )}
                     title="Split View"
                 >
@@ -288,19 +288,19 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                 <button
                     onClick={() => setViewMode('classic')}
                     className={cn(
-                        "p-2 rounded-md transition-all",
-                        viewMode === 'classic' ? "bg-white/10 text-white shadow-sm border border-white/10" : "text-white/40 hover:text-white"
+                        "p-2 rounded-lg transition-all",
+                        viewMode === 'classic' ? "bg-white/15 text-foreground shadow-sm border border-white/15" : "text-foreground/40 hover:text-foreground hover:bg-white/5"
                     )}
                     title="Apps & Files"
                 >
                     <LayoutIcon size={16} />
                 </button>
-                <div className="w-px h-4 bg-white/10 mx-1" />
+                <div className="w-px h-4 bg-[color:var(--border)] mx-1" />
                 <button
                     onClick={() => setViewMode('vibe')}
                     className={cn(
-                        "p-2 rounded-md transition-all flex items-center gap-2",
-                        viewMode === 'vibe' ? "bg-emerald-500/20 text-emerald-300 shadow-sm border border-emerald-500/20" : "text-white/40 hover:text-white"
+                        "p-2 rounded-lg transition-all flex items-center gap-2",
+                        viewMode === 'vibe' ? "bg-emerald-500/20 text-emerald-200 shadow-sm border border-emerald-500/30" : "text-foreground/40 hover:text-foreground hover:bg-white/5"
                     )}
                     title="Vibe Mode (Full IDE)"
                 >
@@ -319,10 +319,10 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
 
             {viewMode === 'split' && (
                 <div className="w-full h-full flex items-stretch animate-in fade-in duration-500">
-                    <div className="w-1/2 border-r border-white/5 h-full">
+                    <div className="w-1/2 border-r border-[color:var(--border)] h-full">
                         <AIChat embedded />
                     </div>
-                    <div className="w-1/2 h-full bg-black/50 relative">
+                    <div className="w-1/2 h-full bg-[color:var(--card)] relative">
                         {previewContent ? (
                             <IntegratedPreview
                                 isOpen={true}
@@ -396,7 +396,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                             <div className="flex-1 overflow-hidden relative flex flex-col">
                                 <div className="px-4 py-3 bg-black/40 border-b border-white/5 flex items-center justify-between shrink-0">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                                        <div className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
                                         <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">
                                             {vibeRepoEntry ? vibeRepoEntry.name : (vibeFile ? vibeFile.name : 'Vibe Editor')}
                                         </h3>
@@ -406,7 +406,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                                             onClick={() => setShowVibeTerminal(!showVibeTerminal)}
                                             className={cn(
                                                 "flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold transition-all",
-                                                showVibeTerminal ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" : "bg-white/5 text-white/40 hover:text-white"
+                                                showVibeTerminal ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20" : "bg-white/5 text-white/40 hover:text-white"
                                             )}
                                         >
                                             <Terminal size={12} />
@@ -502,7 +502,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
             )}
             {viewMode === 'classic' && (
                 <div className="w-full h-full flex flex-col overflow-auto custom-scrollbar p-4 md:p-8 animate-in fade-in zoom-in-95 duration-300 min-w-0">
-                    <div className="flex items-center gap-2 mb-8 p-1 bg-white/5 w-fit rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2 mb-8 p-1.5 bg-white/5 w-fit rounded-xl border border-white/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)]">
                         <button onClick={() => setActiveTab('inbox')} className={cn("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all", activeTab === 'inbox' ? "bg-white/10 text-white shadow-sm" : "text-white/50 hover:text-white/80")}>
                             <Mail size={16} /> Inbox
                         </button>

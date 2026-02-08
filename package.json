@@ -9,6 +9,10 @@
     "dev:next": "next dev --webpack",
     "dev:turbo": "next dev --turbo",
     "dev:safe": "next dev --webpack",
+    "dev:omni-shell": "concurrently -n next,shell -c cyan,magenta \"npm run dev:next\" \"npm run omni-shell\"",
+    "dev:app": "node scripts/dev-app.mjs",
+    "dev:app:omni-shell": "node scripts/dev-app-omni.mjs",
+    "docker:app": "node scripts/docker-app.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -16,6 +20,7 @@
     "agent:start": "tsx src/cli/start-agent-worker.ts",
     "agent:monitor": "tsx src/cli/agent-monitor.ts",
     "shell": "tsx src/cli/interactive-shell.ts",
+    "omni-shell": "tsx src/cli/interactive-shell.ts",
     "db:migrate": "prisma migrate dev",
     "sync:files": "tsx src/scripts/sync_uploads.ts"
   },

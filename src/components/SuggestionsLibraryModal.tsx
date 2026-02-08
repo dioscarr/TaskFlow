@@ -120,7 +120,7 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                         {/* Header */}
                         <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                             <div className="flex items-center gap-4">
-                                <div className="p-3 bg-blue-600/20 rounded-2xl text-blue-400 border border-blue-500/20 shadow-xl shadow-blue-500/10">
+                                <div className="p-3 bg-sky-500/20 rounded-2xl text-sky-400 border border-sky-500/20 shadow-xl shadow-sky-500/10">
                                     <Compass size={24} />
                                 </div>
                                 <div>
@@ -141,7 +141,7 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                             {/* Workflow Type Indicator */}
                             {workflowType && (
                                 <div className="mb-4 flex items-center gap-2">
-                                    <span className="px-3 py-1 bg-blue-600/10 text-blue-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-500/10">
+                                    <span className="px-3 py-1 bg-sky-500/10 text-sky-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-sky-500/10">
                                         {workflowType.replace(/-/g, ' ')}
                                     </span>
                                     {workflowContext && (
@@ -152,18 +152,18 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                                 </div>
                             )}
                             <form onSubmit={handleSearch} className="relative group">
-                                <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-blue-400 transition-colors" size={20} />
+                                <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-sky-400 transition-colors" size={20} />
                                 <input
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="Search for industries (e.g. Real Estate, Fintech, E-commerce) or themes..."
-                                    className="w-full bg-white/5 border border-white/10 rounded-[1.8rem] pl-16 pr-44 py-5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/30 transition-all placeholder:text-white/10 font-medium"
+                                    className="w-full bg-white/5 border border-white/10 rounded-[1.8rem] pl-16 pr-44 py-5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/30 transition-all placeholder:text-white/10 font-medium"
                                 />
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all active:scale-95"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 px-8 py-3 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-sky-500/20 transition-all active:scale-95"
                                 >
                                     {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Globe size={16} />}
                                     Explore Ideas
@@ -191,18 +191,18 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                                             className={cn(
                                                 "w-full text-left p-6 rounded-[1.8rem] border transition-all duration-300 group relative overflow-hidden",
                                                 selectedSuggestion?.id === s.id
-                                                    ? "bg-blue-600/10 border-blue-500/30 shadow-xl shadow-blue-500/5"
+                                                    ? "bg-sky-500/10 border-sky-500/30 shadow-xl shadow-sky-500/5"
                                                     : "bg-white/[0.02] border-white/5 hover:border-white/10 hover:bg-white/5"
                                             )}
                                         >
                                             <div className="relative z-10">
-                                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-400/60 mb-2 block">{s.category}</span>
-                                                <h4 className="text-sm font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">{s.title}</h4>
+                                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-sky-400/60 mb-2 block">{s.category}</span>
+                                                <h4 className="text-sm font-bold text-white mb-2 group-hover:text-sky-300 transition-colors">{s.title}</h4>
                                                 <p className="text-[11px] text-white/40 line-clamp-2 leading-relaxed">{s.description}</p>
                                             </div>
                                             {selectedSuggestion?.id === s.id && (
                                                 <div className="absolute top-0 right-0 p-4">
-                                                    <Check size={14} className="text-blue-400" />
+                                                    <Check size={14} className="text-sky-400" />
                                                 </div>
                                             )}
                                         </button>
@@ -220,7 +220,7 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                                     >
                                         <div className="space-y-4">
                                             <div className="flex items-center gap-3">
-                                                <span className="px-3 py-1 bg-blue-600/10 text-blue-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-500/10">
+                                                <span className="px-3 py-1 bg-sky-500/10 text-sky-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-sky-500/10">
                                                     {selectedSuggestion.category}
                                                 </span>
                                                 <span className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Strategic Flow • ID: {selectedSuggestion.id}</span>
@@ -235,11 +235,11 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                                             <div className="space-y-4">
                                                 {selectedSuggestion.flow.map((step) => (
                                                     <div key={step.step} className="flex gap-6 p-6 bg-white/[0.02] rounded-[1.8rem] border border-white/5 group hover:border-white/10 transition-all">
-                                                        <div className="h-10 w-10 shrink-0 bg-blue-600/10 rounded-xl flex items-center justify-center text-blue-400 text-xs font-black shadow-inner border border-blue-500/10 group-hover:scale-110 transition-transform">
+                                                        <div className="h-10 w-10 shrink-0 bg-sky-500/10 rounded-xl flex items-center justify-center text-sky-400 text-xs font-black shadow-inner border border-sky-500/10 group-hover:scale-110 transition-transform">
                                                             {step.step}
                                                         </div>
                                                         <div>
-                                                            <h6 className="text-[13px] font-bold text-white mb-1 group-hover:text-blue-300 transition-colors uppercase tracking-wide">{step.task}</h6>
+                                                            <h6 className="text-[13px] font-bold text-white mb-1 group-hover:text-sky-300 transition-colors uppercase tracking-wide">{step.task}</h6>
                                                             <p className="text-[12px] text-white/40 leading-relaxed font-medium">{step.description}</p>
                                                         </div>
                                                     </div>
@@ -257,7 +257,7 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                                                 </div>
                                             </div>
                                             <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 relative overflow-hidden group">
-                                                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 <div className="prose prose-invert prose-xs max-w-none text-white/60 relative z-10 font-mono tracking-tight leading-loose">
                                                     <ReactMarkdown>{selectedSuggestion.agentInstructions}</ReactMarkdown>
                                                 </div>
@@ -268,7 +268,7 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                                         <div className="pt-8 flex items-center gap-4">
                                             <button
                                                 onClick={() => onApply(selectedSuggestion)}
-                                                className="flex-1 flex items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-[1.8rem] text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/20 transition-all active:scale-95"
+                                                className="flex-1 flex items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-sky-600 to-emerald-500 hover:from-sky-500 hover:to-emerald-400 text-white rounded-[1.8rem] text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-sky-500/20 transition-all active:scale-95"
                                             >
                                                 <Wand2 size={20} />
                                                 Initialize Strategic Flow
@@ -295,7 +295,7 @@ export default function SuggestionsLibraryModal({ isOpen, onClose, onApply, work
                         {/* Footer */}
                         <div className="px-10 py-5 bg-white/[0.01] border-t border-white/5 flex items-center justify-between text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">
                             <div className="flex items-center gap-6">
-                                <span className="flex items-center gap-2">AI Engine: <span className="text-blue-400">Tactical Research Agent</span></span>
+                                <span className="flex items-center gap-2">AI Engine: <span className="text-sky-400">Tactical Research Agent</span></span>
                             </div>
                             <div className="flex items-center gap-4">
                                 <span>Powered by Real-time Intelligence</span>

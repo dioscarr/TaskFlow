@@ -29,10 +29,17 @@ model User {
   processes     ProcessRegistry[]
   toolConfigs   ToolConfiguration[]
   appDeployments AppDeployment[]
+  
+  // Profile & Settings
+  profile       UserProfile?
+  appSettings   AppSettings[]
+  appResources  AppResource[]
+  credentials   ResourceCredential[]
  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
 
 model IntentRule {
   id        String   @id @default(cuid())
@@ -436,5 +443,189 @@ model ToolConfiguration {
   updatedAt       DateTime  @updatedAt
   
   @@index([userId, enabled])
+}
+
+// User Profile & Preferences
+model UserProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Profile Info
+  displayName     String?
+  avatarUrl       String?
+  bio             String?   @db.Text
+  timezone        String    @default("UTC")
+  locale          String    @default("en-US")
+  
+  // Preferences
+  theme           String    @default("system") // "light", "dark", "system"
+  compactMode     Boolean   @default(false)
+  notifications   Json      @default("{\"email\": true, \"push\": true, \"desktop\": true}")
+  
+  // AI Preferences
+  aiPersonality   String    @default("professional") // "professional", "casual", "technical"
+  defaultModel    String    @default("gemini-2.0-flash")
+  temperature     Float     @default(0.7)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// App-level Settings
+model AppSettings {
+  id              String    @id @default(cuid())
+  userId          String    
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  category        String    // "general", "ai", "integrations", "security", "advanced"
+  key             String
+  value           Json
+  description     String?
+  isSecret        Boolean   @default(false)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([userId, category, key])
+  @@index([userId, category])
+}
+
+// App Resource Configuration (follows Cloud Run / Replit / EDI patterns)
+model AppResource {
+  id              String    @id @default(cuid())
+  
+  // Identity
+  name            String    // user-friendly name
+  slug            String    // URL-safe identifier
+  type            String    // "api", "database", "storage", "compute", "ai-model", "messaging", "edi", "custom"
+  provider        String    // "firebase", "supabase", "gcp", "aws", "azure", "openai", "anthropic", "custom"
+  
+  // Status
+  status          String    @default("pending") // "pending", "active", "error", "disabled"
+  lastSyncedAt    DateTime?
+  healthStatus    String?   // "healthy", "degraded", "unhealthy", "unknown"
+  
+  // Configuration (based on Cloud Run YAML / Kubernetes specs)
+  spec            Json      // The main resource specification
+  /* spec structure example:
+    {
+      "apiVersion": "v1",
+      "kind": "ApiConnection",
+      "metadata": { "labels": {}, "annotations": {} },
+      "spec": {
+        "template": {
+          "containers": [{ "env": [], "resources": { "limits": {}, "requests": {} } }]
+        },
+        "traffic": [],
+        "scaling": { "minInstances": 0, "maxInstances": 10 }
+      }
+    }
+  */
+  
+  // Environment Variables (key-value pairs, similar to Replit Secrets)
+  envVars         Json      @default("[]")
+  /* envVars structure:
+    [
+      { "key": "API_KEY", "value": "secret", "isSecret": true, "scope": "runtime" },
+      { "key": "DEBUG", "value": "true", "isSecret": false, "scope": "build" }
+    ]
+  */
+  
+  // Resource Limits (Cloud Run style)
+  limits          Json      @default("{}")
+  /* limits structure:
+    {
+      "cpu": "1000m",
+      "memory": "512Mi",
+      "timeoutSeconds": 300,
+      "maxRequestsPerContainer": 80,
+      "minInstances": 0,
+      "maxInstances": 100
+    }
+  */
+  
+  // EDI Configuration (for EDI type resources)
+  ediConfig       Json?
+  /* ediConfig structure (X12 / EDIFACT):
+    {
+      "standard": "X12" | "EDIFACT",
+      "version": "005010X222A2",
+      "transactionSets": ["850", "810", "997"],
+      "interchange": { 
+        "senderId": "SENDERID", 
+        "receiverId": "RECEIVERID",
+        "qualifier": "ZZ"
+      },
+      "validation": { "strict": true, "autoAck": true }
+    }
+  */
+  
+  // Endpoints (auto-discovered or manually configured)
+  endpoints       Json      @default("[]")
+  /* endpoints structure:
+    [
+      { "name": "primary", "url": "https://...", "type": "rest", "auth": "bearer" },
+      { "name": "webhook", "url": "https://...", "type": "webhook", "events": ["create", "update"] }
+    ]
+  */
+  
+  // Credentials reference
+  credentials     ResourceCredential[]
+  
+  // Linked Apps
+  linkedApps      Json      @default("[]") // Array of app IDs that use this resource
+  
+  // Metadata
+  description     String?   @db.Text
+  documentation   String?   // URL to docs
+  icon            String?   @default("Box")
+  tags            String[]  @default([])
+  
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([userId, slug])
+  @@index([userId, type])
+  @@index([userId, provider])
+  @@index([status])
+}
+
+// Resource Credentials (encrypted secrets storage)
+model ResourceCredential {
+  id              String    @id @default(cuid())
+  
+  resourceId      String
+  resource        AppResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  
+  // Credential Info
+  name            String    // "api_key", "service_account", "oauth_token", etc.
+  type            String    // "api_key", "oauth2", "service_account", "basic_auth", "certificate"
+  
+  // Encrypted value (use app-level encryption)
+  encryptedValue  String    @db.Text
+  
+  // OAuth specific
+  accessToken     String?   @db.Text
+  refreshToken    String?   @db.Text
+  tokenExpiresAt  DateTime?
+  scopes          String[]  @default([])
+  
+  // Metadata
+  isActive        Boolean   @default(true)
+  lastUsedAt      DateTime?
+  expiresAt       DateTime?
+  
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([resourceId])
+  @@index([userId, type])
 }
 

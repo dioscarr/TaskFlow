@@ -74,14 +74,14 @@ const FilePreview = ({ file }: { file: WorkspaceFile }) => {
 
     if (!isImage) {
         return (
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/5 flex items-center justify-center text-blue-300">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/5 flex items-center justify-center text-sky-300">
                 {file.type === 'folder' && (
                     file.tags?.includes('app_root')
                         ? <div className="relative">
                             <LayoutGrid size={24} className="text-emerald-400 fill-emerald-500/20" />
                             <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-zinc-900" />
                         </div>
-                        : <Folder size={24} className="fill-blue-500/20 stroke-blue-400" />
+                        : <Folder size={24} className="fill-sky-500/20 stroke-sky-400" />
                 )}
                 {file.type === 'pdf' && <FileText size={24} className="text-red-400" />}
                 {!['folder', 'pdf'].includes(file.type) && (
@@ -1270,19 +1270,19 @@ export default function FileManager({ files }: FileManagerProps) {
                     <div className="flex items-center gap-6">
                         <div className="flex flex-col">
                             <div className="flex items-center gap-2 mb-1">
-                                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)] animate-pulse" />
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">System Explorer</span>
+                                <div className="w-2 h-2 rounded-full bg-sky-500 shadow-[0_0_10px_rgba(56,189,248,0.5)] animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">System Explorer</span>
                             </div>
-                            <h1 className="text-4xl font-black text-white tracking-tighter flex items-center gap-3">
+                            <h1 className="text-4xl font-black text-foreground tracking-tighter flex items-center gap-3">
                                 {explorerMode === 'repo' ? 'REPO' : 'FILES'}
-                                <span className="text-white/10 font-thin">/</span>
-                                <span className="text-blue-500/80">{searchQuery ? 'SEARCH' : (currentFolderId ? currentFolder?.name?.toUpperCase() : 'ROOT')}</span>
+                                <span className="text-foreground/10 font-thin">/</span>
+                                <span className="text-sky-400/80">{searchQuery ? 'SEARCH' : (currentFolderId ? currentFolder?.name?.toUpperCase() : 'ROOT')}</span>
                             </h1>
                         </div>
                     </div>
 
                     {/* Global Service Indicators */}
-                    <div className="hidden xl:flex items-center gap-4 px-6 py-2 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                    <div className="hidden xl:flex items-center gap-4 px-6 py-2 rounded-2xl bg-foreground/5 border border-[color:var(--border)] backdrop-blur-md">
                         <div className="flex items-center gap-2">
                             <div className="flex -space-x-2">
                                 {processes.filter(p => p.status === 'running').slice(0, 3).map((p, i) => (
@@ -1302,7 +1302,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                 <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Services</span>
                             </div>
                         </div>
-                        <div className="w-px h-6 bg-white/10" />
+                        <div className="w-px h-6 bg-foreground/10" />
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => setIsPreviewOpen(true)}
@@ -1320,11 +1320,11 @@ export default function FileManager({ files }: FileManagerProps) {
                                 onClick={() => setExplorerMode('workspace')}
                                 className={cn(
                                     "relative px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
-                                    explorerMode === 'workspace' ? "text-white" : "text-white/30 hover:text-white/60"
+                                    explorerMode === 'workspace' ? "text-foreground" : "text-muted-foreground/40 hover:text-foreground/70"
                                 )}
                             >
                                 {explorerMode === 'workspace' && (
-                                    <motion.div layoutId="mode-bg" className="absolute inset-0 bg-blue-600/20 border border-blue-500/30 rounded-lg shadow-[0_0_20px_rgba(59,130,246,0.15)]" />
+                                    <motion.div layoutId="mode-bg" className="absolute inset-0 bg-sky-600/20 border border-sky-500/30 rounded-lg shadow-[0_0_20px_rgba(56,189,248,0.18)]" />
                                 )}
                                 <span className="relative z-10 flex items-center gap-2"><Folder size={12} /> Workspace</span>
                             </button>
@@ -1332,11 +1332,11 @@ export default function FileManager({ files }: FileManagerProps) {
                                 onClick={() => setExplorerMode('repo')}
                                 className={cn(
                                     "relative px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
-                                    explorerMode === 'repo' ? "text-white" : "text-white/30 hover:text-white/60"
+                                    explorerMode === 'repo' ? "text-foreground" : "text-muted-foreground/40 hover:text-foreground/70"
                                 )}
                             >
                                 {explorerMode === 'repo' && (
-                                    <motion.div layoutId="mode-bg" className="absolute inset-0 bg-purple-600/20 border border-purple-500/30 rounded-lg shadow-[0_0_20px_rgba(168,85,247,0.15)]" />
+                                    <motion.div layoutId="mode-bg" className="absolute inset-0 bg-emerald-600/20 border border-emerald-500/30 rounded-lg shadow-[0_0_20px_rgba(16,185,129,0.18)]" />
                                 )}
                                 <span className="relative z-10 flex items-center gap-2"><Server size={12} /> Repo Apps</span>
                             </button>
@@ -1346,8 +1346,8 @@ export default function FileManager({ files }: FileManagerProps) {
 
                 <div className="flex items-center gap-4">
                     <div className="flex-1 relative group">
-                        <div className="absolute inset-0 bg-blue-500/5 rounded-2xl blur-xl group-focus-within:bg-blue-500/10 transition-all opacity-0 group-focus-within:opacity-100" />
-                        <div className="relative flex items-center bg-white/5 border border-white/10 hover:border-white/20 rounded-2xl px-4 py-3 transition-all focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:bg-white/10">
+                        <div className="absolute inset-0 bg-sky-500/5 rounded-2xl blur-xl group-focus-within:bg-sky-500/10 transition-all opacity-0 group-focus-within:opacity-100" />
+                        <div className="relative flex items-center bg-foreground/5 border border-[color:var(--border)] hover:border-foreground/20 rounded-2xl px-4 py-3 transition-all focus-within:ring-2 focus-within:ring-sky-500/30 focus-within:bg-foreground/10">
                             <Search className="text-white/20 mr-3" size={18} />
                             <input
                                 ref={searchInputRef}
@@ -1358,8 +1358,8 @@ export default function FileManager({ files }: FileManagerProps) {
                                 className="bg-transparent border-none text-sm text-white w-full focus:outline-none placeholder:text-white/20 font-medium"
                             />
                             <div className="flex items-center gap-1.5 ml-4">
-                                <kbd className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[10px] font-black text-white/40">CTRL</kbd>
-                                <kbd className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[10px] font-black text-white/40">K</kbd>
+                                <kbd className="px-2 py-1 rounded bg-foreground/5 border border-[color:var(--border)] text-[10px] font-black text-muted-foreground/40">CTRL</kbd>
+                                <kbd className="px-2 py-1 rounded bg-foreground/5 border border-[color:var(--border)] text-[10px] font-black text-muted-foreground/40">K</kbd>
                             </div>
                         </div>
                     </div>
@@ -1380,7 +1380,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     onClick={triggerUpload}
-                                    className="px-6 py-3 bg-blue-600/90 hover:bg-blue-600 text-white rounded-2xl transition-all text-sm font-bold shadow-[0_10px_30px_rgba(37,99,235,0.3)] flex items-center gap-2"
+                                    className="px-6 py-3 bg-sky-600/90 hover:bg-sky-600 text-white rounded-2xl transition-all text-sm font-bold shadow-[0_10px_30px_rgba(56,189,248,0.3)] flex items-center gap-2"
                                 >
                                     <UploadCloud size={20} />
                                     <span>UPLOAD</span>
@@ -1388,11 +1388,11 @@ export default function FileManager({ files }: FileManagerProps) {
                             </>
                         )}
                         <div className="w-px h-8 bg-white/10 mx-2" />
-                        <div className="flex p-1 bg-white/5 rounded-xl border border-white/10">
-                            <button onClick={() => setViewMode('grid')} className={cn("p-2 rounded-lg transition-all", viewMode === 'grid' ? "bg-white/10 text-white shadow-sm" : "text-white/30 hover:text-white/60")}>
+                        <div className="flex p-1 bg-foreground/5 rounded-xl border border-[color:var(--border)]">
+                            <button onClick={() => setViewMode('grid')} className={cn("p-2 rounded-lg transition-all", viewMode === 'grid' ? "bg-foreground/10 text-foreground shadow-sm" : "text-muted-foreground/40 hover:text-foreground/70")}>
                                 <LayoutGrid size={18} />
                             </button>
-                            <button onClick={() => setViewMode('list')} className={cn("p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-white/10 text-white shadow-sm" : "text-white/30 hover:text-white/60")}>
+                            <button onClick={() => setViewMode('list')} className={cn("p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-foreground/10 text-foreground shadow-sm" : "text-muted-foreground/40 hover:text-foreground/70")}>
                                 <List size={18} />
                             </button>
                         </div>
@@ -1408,15 +1408,15 @@ export default function FileManager({ files }: FileManagerProps) {
                                     setCurrentFolderId(null);
                                     setRepoCurrentPath(null);
                                 }}
-                                className="text-xs font-bold text-white/20 hover:text-blue-400 transition-colors uppercase tracking-widest whitespace-nowrap"
+                                className="text-xs font-bold text-muted-foreground/40 hover:text-sky-400 transition-colors uppercase tracking-widest whitespace-nowrap"
                             >
                                 ROOT
                             </button>
                             {explorerMode === 'workspace' ? (
                                 (currentFolder as any)?.path?.split(/[\/\\]/).filter(Boolean).map((part: string, i: number, arr: string[]) => (
                                     <React.Fragment key={i}>
-                                        <ChevronRight size={12} className="text-white/10 shrink-0" />
-                                        <span className={cn("text-xs font-bold uppercase tracking-widest whitespace-nowrap", i === arr.length - 1 ? "text-blue-400" : "text-white/40")}>
+                                        <ChevronRight size={12} className="text-foreground/10 shrink-0" />
+                                        <span className={cn("text-xs font-bold uppercase tracking-widest whitespace-nowrap", i === arr.length - 1 ? "text-sky-400" : "text-muted-foreground/60")}>
                                             {part}
                                         </span>
                                     </React.Fragment>
@@ -1430,7 +1430,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                                 const parts = repoCurrentPath?.split(/[\/\\]/).filter(Boolean) || [];
                                                 setRepoCurrentPath(parts.slice(0, i + 1).join('/'));
                                             }}
-                                            className={cn("text-xs font-bold uppercase tracking-widest whitespace-nowrap", i === arr.length - 1 ? "text-purple-400" : "text-white/40 hover:text-purple-400")}
+                                            className={cn("text-xs font-bold uppercase tracking-widest whitespace-nowrap", i === arr.length - 1 ? "text-emerald-400" : "text-white/40 hover:text-emerald-400")}
                                         >
                                             {part}
                                         </button>
@@ -1514,13 +1514,13 @@ export default function FileManager({ files }: FileManagerProps) {
                                         className={cn(
                                             "group relative cursor-pointer z-10 transition-all border",
                                             viewMode === 'grid' ? "p-4 rounded-xl" : "px-4 py-3 rounded-lg flex items-center gap-4",
-                                            selectedFileIds.has(file.id) ? "ring-2 ring-blue-500 bg-blue-500/20 border-blue-500/50" : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10",
-                                            (dragOverFolderId === file.id || dragOverFileId === file.id) ? "ring-2 ring-blue-500 bg-blue-500/20 scale-[1.05] z-30 shadow-xl shadow-blue-500/20" : ""
+                                            selectedFileIds.has(file.id) ? "ring-2 ring-sky-500 bg-sky-500/20 border-sky-500/50" : "bg-foreground/5 border-[color:var(--border)] hover:bg-foreground/[0.08] hover:border-foreground/20",
+                                            (dragOverFolderId === file.id || dragOverFileId === file.id) ? "ring-2 ring-sky-500 bg-sky-500/20 scale-[1.05] z-30 shadow-xl shadow-sky-500/20" : ""
                                         )}
                                         style={highlightStyles}
                                     >
                                         <div className="flex-1 min-w-0 flex items-center gap-3">
-                                            {file.type === 'folder' ? <Folder size={20} className="text-blue-400" /> : <FileText size={20} className="text-white/40" />}
+                                            {file.type === 'folder' ? <Folder size={20} className="text-sky-400" /> : <FileText size={20} className="text-muted-foreground/40" />}
                                             <span className="truncate text-sm font-medium" style={nameStyles}>{file.name}</span>
                                         </div>
                                     </motion.div>
@@ -1530,7 +1530,7 @@ export default function FileManager({ files }: FileManagerProps) {
 
                         {/* Empty State */}
                         {filteredFiles.length === 0 && (
-                            <div className="col-span-full py-20 flex flex-col items-center justify-center text-white/20">
+                            <div className="col-span-full py-20 flex flex-col items-center justify-center text-muted-foreground/30">
                                 <Folder size={48} className="mb-4 opacity-20" />
                                 <p className="text-lg font-medium">No files found</p>
                                 <p className="text-sm">This folder is empty</p>
@@ -1542,7 +1542,7 @@ export default function FileManager({ files }: FileManagerProps) {
                 {explorerMode === 'repo' && (
                     <div className="space-y-6">
                         {isRepoLoading ? (
-                            <div className="flex items-center justify-center py-20 text-white/40">
+                            <div className="flex items-center justify-center py-20 text-muted-foreground/60">
                                 <RefreshCw size={24} className="animate-spin mr-3" />
                                 <span className="text-sm font-bold uppercase tracking-widest">Initialising Repositories...</span>
                             </div>
@@ -1579,7 +1579,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                                 </div>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleInstallRepoApp(repoCurrentPath.split('/')[0] === appName ? repoCurrentPath : appName); }}
-                                                    className="h-8 px-4 rounded-xl text-[10px] font-black bg-blue-600 hover:bg-blue-500 text-white transition-all flex items-center gap-2"
+                                                    className="h-8 px-4 rounded-xl text-[10px] font-black bg-sky-600 hover:bg-sky-500 text-white transition-all flex items-center gap-2"
                                                 >
                                                     <Hammer size={12} /> PROVISION APP
                                                 </button>
@@ -1595,7 +1595,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                         <motion.div
                                             initial={{ opacity: 0, y: -10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="mb-6 p-4 rounded-3xl bg-blue-500/10 border border-blue-500/20 backdrop-blur-md flex items-center justify-between shadow-lg shadow-blue-500/5 ring-1 ring-blue-500/20"
+                                            className="mb-6 p-4 rounded-3xl bg-sky-500/10 border border-sky-500/20 backdrop-blur-md flex items-center justify-between shadow-lg shadow-sky-500/5 ring-1 ring-sky-500/20"
                                         >
                                             <div className="flex items-center gap-4">
                                                 <div className={cn(
@@ -1606,7 +1606,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                                     <span className="text-xs font-black text-white uppercase tracking-widest">{appName} Service</span>
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-[10px] font-bold text-white/40 uppercase tracking-tighter">{appProcess.status}</span>
-                                                        {port && <span className="text-[10px] font-mono text-blue-400 bg-blue-400/10 px-1 rounded">:{port}</span>}
+                                                        {port && <span className="text-[10px] font-mono text-sky-400 bg-sky-400/10 px-1 rounded">:{port}</span>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -1667,7 +1667,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); window.open(`http://localhost:${port}`, '_blank'); }}
                                                             title="Open In Browser"
-                                                            className="p-2 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg text-blue-400 transition-all border border-blue-500/30"
+                                                            className="p-2 bg-sky-500/20 hover:bg-sky-500/30 rounded-lg text-sky-400 transition-all border border-sky-500/30"
                                                         >
                                                             <Globe size={14} />
                                                         </button>
@@ -1723,14 +1723,14 @@ export default function FileManager({ files }: FileManagerProps) {
                                             layout
                                             whileHover={{ y: -4, transition: { duration: 0.2 } }}
                                             onClick={() => handleRepoEntryOpen(entry)}
-                                            className="relative group p-5 rounded-3xl bg-zinc-900/40 border border-white/5 hover:border-blue-500/30 transition-all cursor-pointer backdrop-blur-sm shadow-xl"
+                                            className="relative group p-5 rounded-3xl bg-[color:var(--card)] border border-[color:var(--border)] hover:border-sky-500/30 transition-all cursor-pointer backdrop-blur-sm shadow-xl"
                                         >
-                                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-transparent to-purple-500/0 group-hover:from-blue-500/5 group-hover:to-purple-500/5 rounded-3xl transition-all duration-500" />
+                                            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/0 via-transparent to-emerald-500/0 group-hover:from-sky-500/5 group-hover:to-emerald-500/5 rounded-3xl transition-all duration-500" />
                                             <div className="relative flex flex-col gap-4">
                                                 <div className="flex items-start justify-between">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="p-3 rounded-2xl bg-white/5 text-blue-400 group-hover:bg-blue-500/10 transition-colors relative shadow-inner">
-                                                            {entry.type === 'folder' ? <Folder size={22} className="fill-blue-400/10" /> : <FileText size={22} />}
+                                                        <div className="p-3 rounded-2xl bg-white/5 text-sky-400 group-hover:bg-sky-500/10 transition-colors relative shadow-inner">
+                                                            {entry.type === 'folder' ? <Folder size={22} className="fill-sky-400/10" /> : <FileText size={22} />}
                                                             {process && (
                                                                 <div className={cn(
                                                                     "absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-[#0A0A0A] shadow-lg",
@@ -1817,7 +1817,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                                                                     window.open(`http://localhost:${port}`, '_blank');
                                                                                 }}
                                                                                 title="Open App"
-                                                                                className="p-2 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg text-blue-400 transition-colors"
+                                                                                className="p-2 bg-sky-500/20 hover:bg-sky-500/30 rounded-lg text-sky-400 transition-colors"
                                                                             >
                                                                                 <Globe size={14} />
                                                                             </button>
@@ -1854,10 +1854,10 @@ export default function FileManager({ files }: FileManagerProps) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-10 bg-blue-600/10 backdrop-blur-sm border-2 border-blue-500 border-dashed rounded-3xl flex flex-col items-center justify-center pointer-events-none"
+                        className="absolute inset-0 z-10 bg-sky-600/10 backdrop-blur-sm border-2 border-sky-500 border-dashed rounded-3xl flex flex-col items-center justify-center pointer-events-none"
                     >
                         <div className="bg-zinc-900/90 p-6 rounded-2xl shadow-xl flex flex-col items-center animate-bounce">
-                            <UploadCloud size={48} className="text-blue-400 mb-2" />
+                            <UploadCloud size={48} className="text-sky-400 mb-2" />
                             <h3 className="text-xl font-bold text-white">Drop to Upload</h3>
                             <p className="text-white/50">Add files to {currentFolderId ? (files.find(f => f.id === currentFolderId)?.name) : 'Root'}</p>
                         </div>
@@ -1959,7 +1959,7 @@ export default function FileManager({ files }: FileManagerProps) {
                             placeholder={explorerMode === 'repo' ? 'Search repo apps...' : 'Search your files...'}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all placeholder:text-white/20"
                         />
                     </div>
                 )
@@ -1980,7 +1980,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                             setSelectedFileIds(new Set());
                                         }
                                     }}
-                                    className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-500/50"
+                                    className="w-4 h-4 rounded border-white/10 bg-white/5 text-sky-600 focus:ring-sky-500/50"
                                 />
                             </div>
                             <button
@@ -2005,19 +2005,19 @@ export default function FileManager({ files }: FileManagerProps) {
                             <motion.div
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                className="flex items-center gap-4 px-4 py-2 bg-blue-600/20 border border-blue-500/30 rounded-xl"
+                                className="flex items-center gap-4 px-4 py-2 bg-sky-600/20 border border-sky-500/30 rounded-xl"
                             >
-                                <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">
+                                <span className="text-xs font-bold text-sky-400 uppercase tracking-wider">
                                     {selectedFileIds.size} Selected
                                 </span>
-                                <div className="h-4 w-px bg-blue-500/30" />
+                                <div className="h-4 w-px bg-sky-500/30" />
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => {
                                             const selectedFiles = files.filter(f => selectedFileIds.has(f.id));
                                             setMovingFiles(selectedFiles);
                                         }}
-                                        className="p-1.5 hover:bg-white/10 rounded-md text-blue-400 transition-colors"
+                                        className="p-1.5 hover:bg-white/10 rounded-md text-sky-400 transition-colors"
                                         title="Move Selection"
                                     >
                                         <Move size={16} />
@@ -2097,23 +2097,23 @@ export default function FileManager({ files }: FileManagerProps) {
                                     ? "p-4 rounded-xl"
                                     : "px-4 py-3 rounded-lg flex items-center gap-4",
                                 selectedFileIds.has(file.id)
-                                    ? "ring-2 ring-blue-500 bg-blue-500/20 border-blue-500/50"
+                                    ? "ring-2 ring-sky-500 bg-sky-500/20 border-sky-500/50"
                                     : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10",
-                                (dragOverFolderId === file.id || dragOverFileId === file.id) ? "ring-2 ring-blue-500 bg-blue-500/20 scale-[1.05] z-30 shadow-xl shadow-blue-500/20" : ""
+                                (dragOverFolderId === file.id || dragOverFileId === file.id) ? "ring-2 ring-sky-500 bg-sky-500/20 scale-[1.05] z-30 shadow-xl shadow-sky-500/20" : ""
                             )}
                             style={highlightStyles}
                         >
                             {/* Reorder Indicators */}
                             {reorderTarget?.id === file.id && reorderTarget.position === 'before' && (
                                 <div className={cn(
-                                    "absolute bg-blue-500 z-50 rounded-full pointer-events-none",
-                                    viewMode === 'grid' ? "left-0 top-0 bottom-0 w-1 shadow-[0_0_10px_#3b82f6]" : "top-0 left-0 right-0 h-1 shadow-[0_0_10px_#3b82f6]"
+                                    "absolute bg-sky-500 z-50 rounded-full pointer-events-none",
+                                    viewMode === 'grid' ? "left-0 top-0 bottom-0 w-1 shadow-[0_0_10px_#38bdf8]" : "top-0 left-0 right-0 h-1 shadow-[0_0_10px_#38bdf8]"
                                 )} />
                             )}
                             {reorderTarget?.id === file.id && reorderTarget.position === 'after' && (
                                 <div className={cn(
-                                    "absolute bg-blue-500 z-50 rounded-full pointer-events-none",
-                                    viewMode === 'grid' ? "right-0 top-0 bottom-0 w-1 shadow-[0_0_10px_#3b82f6]" : "bottom-0 left-0 right-0 h-1 shadow-[0_0_10px_#3b82f6]"
+                                    "absolute bg-sky-500 z-50 rounded-full pointer-events-none",
+                                    viewMode === 'grid' ? "right-0 top-0 bottom-0 w-1 shadow-[0_0_10px_#38bdf8]" : "bottom-0 left-0 right-0 h-1 shadow-[0_0_10px_#38bdf8]"
                                 )} />
                             )}
 
@@ -2137,11 +2137,11 @@ export default function FileManager({ files }: FileManagerProps) {
                                                         setSelectedFileIds(newSelected);
                                                     }}
                                                     onClick={(e) => e.stopPropagation()}
-                                                    className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-500/50 cursor-pointer"
+                                                    className="w-4 h-4 rounded border-white/10 bg-white/5 text-sky-600 focus:ring-sky-500/50 cursor-pointer"
                                                 />
                                                 {file.type === 'folder' ? (
-                                                    <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 text-blue-400">
-                                                        <Folder size={24} className="fill-blue-500/20" />
+                                                    <div className="p-3 rounded-lg bg-gradient-to-br from-sky-500/10 to-sky-600/5 border border-sky-500/20 text-sky-400">
+                                                        <Folder size={24} className="fill-sky-500/20" />
                                                     </div>
                                                 ) : (
                                                     <FilePreview file={file} />
@@ -2197,7 +2197,7 @@ export default function FileManager({ files }: FileManagerProps) {
 
                                             {/* Magic Folder Indicator */}
                                             {file.type === 'folder' && (file as any).magicRule && (
-                                                <div className="flex items-center gap-1 text-purple-300 bg-purple-500/20 border border-purple-500/30 px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(168,85,247,0.2)]">
+                                                <div className="flex items-center gap-1 text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(16,185,129,0.2)]">
                                                     <Wand2 size={10} />
                                                     <span className="text-[9px] uppercase font-bold tracking-wider">{(file as any).magicRule}</span>
                                                 </div>
@@ -2248,11 +2248,11 @@ export default function FileManager({ files }: FileManagerProps) {
                                                 setSelectedFileIds(newSelected);
                                             }}
                                             onClick={(e) => e.stopPropagation()}
-                                            className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-500/50 cursor-pointer"
+                                            className="w-4 h-4 rounded border-white/10 bg-white/5 text-sky-600 focus:ring-sky-500/50 cursor-pointer"
                                         />
                                         {file.type === 'folder' ? (
-                                            <div className="p-2 rounded-md bg-blue-500/10 text-blue-400">
-                                                <Folder size={20} className="fill-blue-500/20" />
+                                            <div className="p-2 rounded-md bg-sky-500/10 text-sky-400">
+                                                <Folder size={20} className="fill-sky-500/20" />
                                             </div>
                                         ) : (
                                             ['image', 'png', 'jpg', 'jpeg'].includes(file.type) ? (
@@ -2331,7 +2331,7 @@ export default function FileManager({ files }: FileManagerProps) {
                         {searchQuery && (
                             <button
                                 onClick={() => setSearchQuery('')}
-                                className="mt-4 text-blue-400 hover:text-blue-300 text-sm font-medium"
+                                className="mt-4 text-sky-400 hover:text-sky-300 text-sm font-medium"
                             >
                                 Clear Search
                             </button>
@@ -2366,7 +2366,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                     placeholder="Folder Name"
                                     value={newFolderName}
                                     onChange={(e) => setNewFolderName(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50"
                                 />
                                 <div className="flex justify-end gap-3">
                                     <button
@@ -2378,7 +2378,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                     </button>
                                     <button
                                         type="submit"
-                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors font-medium shadow-lg shadow-blue-500/20"
+                                        className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors font-medium shadow-lg shadow-sky-500/20"
                                     >
                                         Create Folder
                                     </button>
@@ -2407,7 +2407,7 @@ export default function FileManager({ files }: FileManagerProps) {
                             className="relative w-full max-w-md glass-card rounded-2xl overflow-hidden border border-white/10 p-6 shadow-2xl"
                         >
                             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                                <Move size={20} className="text-blue-400" />
+                                <Move size={20} className="text-sky-400" />
                                 {movingFiles.length > 1
                                     ? `Move ${movingFiles.length} items`
                                     : `Move "${movingFiles[0].name}"`
@@ -2431,8 +2431,8 @@ export default function FileManager({ files }: FileManagerProps) {
                                             onClick={() => handleMove(folder.id)}
                                             className="w-full p-3 text-left hover:bg-white/5 rounded-lg flex items-center gap-3 text-white/70 transition-colors"
                                         >
-                                            <div className="w-8 h-8 rounded bg-blue-500/10 flex items-center justify-center text-blue-400">
-                                                <Folder size={16} className="fill-blue-500/20" />
+                                            <div className="w-8 h-8 rounded bg-sky-500/10 flex items-center justify-center text-sky-400">
+                                                <Folder size={16} className="fill-sky-500/20" />
                                             </div>
                                             <span>{folder.name}</span>
                                         </button>
@@ -2479,13 +2479,13 @@ export default function FileManager({ files }: FileManagerProps) {
                                     placeholder="Folder Name (e.g., Vacation Photos)"
                                     value={newFolderName}
                                     onChange={(e) => setNewFolderName(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50"
                                 />
                                 <div className="flex justify-between items-center">
                                     <button
                                         type="button"
                                         onClick={() => setNewFolderName('Group ' + new Date().toISOString().split('T')[0])}
-                                        className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                                        className="text-xs text-sky-400 hover:text-sky-300 transition-colors"
                                     >
                                         Auto-generate Name
                                     </button>
@@ -2501,7 +2501,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                     <button
                                         type="submit"
                                         disabled={isCreatingGroup}
-                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors font-medium shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                                        className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors font-medium shadow-lg shadow-sky-500/20 disabled:opacity-50"
                                     >
                                         {isCreatingGroup ? 'Creating...' : 'Create Group'}
                                     </button>
@@ -2530,7 +2530,7 @@ export default function FileManager({ files }: FileManagerProps) {
                             className="relative w-full max-w-md glass-card rounded-2xl overflow-hidden border border-white/10 p-6 shadow-2xl"
                         >
                             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                                <Edit2 size={20} className="text-blue-400" />
+                                <Edit2 size={20} className="text-sky-400" />
                                 Rename "{renamingFile.name}"
                             </h2>
                             <form onSubmit={handleRenameSubmit} className="space-y-4">
@@ -2540,7 +2540,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                     placeholder="New Name"
                                     value={newNameValue}
                                     onChange={(e) => setNewNameValue(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50"
                                 />
                                 <div className="flex justify-end gap-3">
                                     <button
@@ -2552,7 +2552,7 @@ export default function FileManager({ files }: FileManagerProps) {
                                     </button>
                                     <button
                                         type="submit"
-                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors font-medium shadow-lg shadow-blue-500/20"
+                                        className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors font-medium shadow-lg shadow-sky-500/20"
                                     >
                                         Rename
                                     </button>
@@ -2785,8 +2785,8 @@ export default function FileManager({ files }: FileManagerProps) {
                                 className="flex flex-col items-center gap-1 text-white/60 hover:text-white transition-colors"
                                 title="Synthesize Documents"
                             >
-                                <Sparkles size={18} className="text-purple-400" />
-                                <span className="text-[10px] font-bold uppercase tracking-tighter text-purple-400">Synthesize</span>
+                                <Sparkles size={18} className="text-emerald-400" />
+                                <span className="text-[10px] font-bold uppercase tracking-tighter text-emerald-400">Synthesize</span>
                             </button>
 
                             <button

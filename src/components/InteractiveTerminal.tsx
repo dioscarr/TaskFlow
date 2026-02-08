@@ -92,7 +92,7 @@ export default function InteractiveTerminal({ onClose, initialCommand }: { onClo
                     </div>
                     <div className="h-4 w-px bg-white/10 mx-1" />
                     <div className="flex items-center gap-2">
-                        <Terminal size={12} className="text-blue-400" />
+                        <Terminal size={12} className="text-sky-400" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Omni-Shell</span>
                     </div>
                 </div>
@@ -129,7 +129,7 @@ export default function InteractiveTerminal({ onClose, initialCommand }: { onClo
                                 entry.style === 'info' ? "text-cyan-400" : "text-white/60"
                     )}>
                         {entry.type === 'command' && (
-                            <span className="text-blue-500 font-bold shrink-0">❯</span>
+                            <span className="text-sky-500 font-bold shrink-0">❯</span>
                         )}
                         <span>{entry.content}</span>
                     </div>
@@ -137,7 +137,7 @@ export default function InteractiveTerminal({ onClose, initialCommand }: { onClo
 
                 {isExecuting && (
                     <div className="flex items-center gap-2 text-white/30 italic ml-4">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-ping" />
                         <span>Processing...</span>
                     </div>
                 )}
@@ -148,7 +148,7 @@ export default function InteractiveTerminal({ onClose, initialCommand }: { onClo
                 onSubmit={handleExecute}
                 className="px-4 py-3 bg-black/40 border-t border-white/5 flex items-center gap-3"
             >
-                <ChevronRight size={14} className="text-blue-400 shrink-0" />
+                <ChevronRight size={14} className="text-sky-400 shrink-0" />
                 <input
                     ref={inputRef}
                     type="text"
@@ -162,7 +162,7 @@ export default function InteractiveTerminal({ onClose, initialCommand }: { onClo
                 <button
                     type="submit"
                     disabled={isExecuting || !input.trim()}
-                    className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 disabled:opacity-30 disabled:hover:bg-blue-500/10 transition-all"
+                    className="p-1.5 rounded-lg bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 disabled:opacity-30 disabled:hover:bg-sky-500/10 transition-all"
                 >
                     <Send size={12} />
                 </button>

@@ -54,7 +54,7 @@ export default function CreateTaskModal() {
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-8 right-8 p-4 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg hover:shadow-blue-500/20 transition-all active:scale-95 group z-30"
+                className="fixed bottom-8 right-8 p-4 bg-sky-600 hover:bg-sky-500 text-white rounded-full shadow-lg hover:shadow-sky-500/20 transition-all active:scale-95 group z-30"
             >
                 <Plus size={24} className="group-hover:rotate-90 transition-transform" />
             </button>
@@ -93,7 +93,7 @@ export default function CreateTaskModal() {
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
                                         placeholder="What needs to be done?"
-                                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
                                         autoFocus
                                     />
                                 </div>
@@ -104,7 +104,7 @@ export default function CreateTaskModal() {
                                         onChange={(e) => setDescription(e.target.value)}
                                         placeholder="Add details..."
                                         rows={4}
-                                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
+                                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/50 resize-none"
                                     />
                                 </div>
 
@@ -119,7 +119,7 @@ export default function CreateTaskModal() {
                                     <button
                                         type="submit"
                                         disabled={isLoading || !title.trim()}
-                                        className="px-6 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-all flex items-center gap-2"
+                                        className="px-6 py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-all flex items-center gap-2"
                                     >
                                         {isLoading && <Loader2 size={16} className="animate-spin" />}
                                         Create Task

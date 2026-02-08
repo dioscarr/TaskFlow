@@ -477,7 +477,7 @@ export default function ProcessManager() {
                 {/* Immersive background glow */}
                 <div className={cn(
                     "absolute -top-24 -right-24 w-48 h-48 blur-[80px] opacity-20 transition-opacity duration-1000",
-                    isRunning ? "bg-emerald-500" : isError ? "bg-red-500" : "bg-violet-500"
+                    isRunning ? "bg-emerald-500" : isError ? "bg-red-500" : "bg-sky-500"
                 )} />
 
                 <div className="relative z-10 space-y-6">
@@ -489,14 +489,14 @@ export default function ProcessManager() {
                                 <div className="flex items-center gap-2">
                                     <span className={cn(
                                         "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border",
-                                        process.type === 'docker-app' ? "bg-violet-500/10 text-violet-400 border-violet-500/20" :
+                                        process.type === 'docker-app' ? "bg-sky-500/10 text-sky-400 border-sky-500/20" :
                                             process.type === 'dev-server' ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20" :
                                                 "bg-white/5 text-white/40 border-white/10"
                                     )}>
                                         {process.type === 'docker-app' ? 'Container' : process.type === 'dev-server' ? 'Local' : 'External'}
                                     </span>
                                     {process.port && (
-                                        <span className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-400 font-black font-mono tracking-tighter">
+                                        <span className="px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-[11px] text-sky-400 font-black font-mono tracking-tighter">
                                             :{process.port}
                                         </span>
                                     )}
@@ -524,7 +524,7 @@ export default function ProcessManager() {
 
                             {process.type === 'docker-app' && (
                                 <>
-                                    <button onClick={() => onRebuild(process.id)} disabled={isActioning} className="p-2.5 bg-violet-500/10 hover:bg-violet-500/20 rounded-xl text-violet-400 border border-violet-500/20 transition-all disabled:opacity-50" title="Rebuild System"><RefreshCw size={18} /></button>
+                                    <button onClick={() => onRebuild(process.id)} disabled={isActioning} className="p-2.5 bg-sky-500/10 hover:bg-sky-500/20 rounded-xl text-sky-400 border border-sky-500/20 transition-all disabled:opacity-50" title="Rebuild System"><RefreshCw size={18} /></button>
                                     <button onClick={() => onGetLogs(process.id)} disabled={isActioning} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-white/40 hover:text-white border border-white/5 transition-all disabled:opacity-50" title="System Logs"><Activity size={18} /></button>
                                 </>
                             )}
@@ -604,7 +604,7 @@ export default function ProcessManager() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                    <div className="p-2 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400">
                         <Activity size={20} />
                     </div>
                     <div>
@@ -621,7 +621,7 @@ export default function ProcessManager() {
                     <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
                         <button onClick={() => setFilter('all')} className={cn("px-3 py-1 rounded-lg text-xs", filter === 'all' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white')}>All</button>
                         <button onClick={() => setFilter('local')} className={cn("px-3 py-1 rounded-lg text-xs", filter === 'local' ? 'bg-emerald-500/10 text-emerald-300' : 'text-white/50 hover:text-white')}>Local</button>
-                        <button onClick={() => setFilter('container')} className={cn("px-3 py-1 rounded-lg text-xs", filter === 'container' ? 'bg-purple-500/10 text-purple-300' : 'text-white/50 hover:text-white')}>Container</button>
+                        <button onClick={() => setFilter('container')} className={cn("px-3 py-1 rounded-lg text-xs", filter === 'container' ? 'bg-sky-500/10 text-sky-300' : 'text-white/50 hover:text-white')}>Container</button>
                     </div>
                     <button
                         onClick={() => { handleDiscover(); }}
@@ -632,7 +632,7 @@ export default function ProcessManager() {
                     </button>
                     <button
                         onClick={() => loadProcesses({ showLoading: true })}
-                        className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl text-xs text-blue-400 border border-blue-500/20 transition-all"
+                        className="flex items-center gap-2 px-3 py-2 bg-sky-500/10 hover:bg-sky-500/20 rounded-xl text-xs text-sky-400 border border-sky-500/20 transition-all"
                     >
                         <RefreshCw size={14} />
                         <span>Refresh</span>
@@ -650,7 +650,7 @@ export default function ProcessManager() {
 
                         <button
                             onClick={() => setLiveEnabled(v => !v)}
-                            className={cn("px-2 py-1 rounded-md text-xs font-medium transition-all", liveEnabled ? 'bg-blue-500/10 text-blue-300' : 'text-white/50')}
+                            className={cn("px-2 py-1 rounded-md text-xs font-medium transition-all", liveEnabled ? 'bg-sky-500/10 text-sky-300' : 'text-white/50')}
                             title="Toggle Live Updates"
                         >
                             {liveEnabled ? 'Live: On' : 'Live: Off'}
@@ -704,7 +704,7 @@ export default function ProcessManager() {
                     <p className="text-white/40 text-sm">No processes registered</p>
                     <button
                         onClick={handleDiscover}
-                        className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl text-sm text-blue-400 border border-blue-500/20 transition-all"
+                        className="px-4 py-2 bg-sky-500/10 hover:bg-sky-500/20 rounded-xl text-sm text-sky-400 border border-sky-500/20 transition-all"
                     >
                         Discover Running Processes
                     </button>
@@ -783,7 +783,7 @@ export default function ProcessManager() {
                         >
                             <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/5">
                                 <div className="flex items-center gap-2">
-                                    <Activity size={16} className="text-blue-400" />
+                                    <Activity size={16} className="text-sky-400" />
                                     <h2 className="text-sm font-bold text-white uppercase tracking-wider">Container Logs</h2>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -794,7 +794,7 @@ export default function ProcessManager() {
                                         return url ? (
                                             <button
                                                 onClick={() => window.open(url, '_blank')}
-                                                className="px-2 py-1 rounded-md text-xs bg-blue-500/10 text-blue-300 border border-blue-500/20 hover:bg-blue-500/20 transition-colors"
+                                                className="px-2 py-1 rounded-md text-xs bg-sky-500/10 text-sky-300 border border-sky-500/20 hover:bg-sky-500/20 transition-colors"
                                             >
                                                 Open App
                                             </button>

@@ -180,7 +180,7 @@ export default function WorkflowDesigner({
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">Workflows</h3>
                     <button
                         onClick={addWorkflow}
-                        className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-all"
+                        className="p-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 rounded-lg transition-all"
                     >
                         <Plus size={14} />
                     </button>
@@ -211,11 +211,11 @@ export default function WorkflowDesigner({
                                 className={cn(
                                     "w-full flex items-center gap-3 p-3 rounded-2xl border transition-all text-left",
                                     activeWorkflowId === w.id
-                                        ? "bg-blue-600/10 border-blue-500/30 text-blue-400"
+                                        ? "bg-sky-500/10 border-sky-500/30 text-sky-400"
                                         : "bg-white/5 border-white/5 text-white/40 hover:bg-white/10 hover:border-white/10"
                                 )}
                             >
-                                <List size={14} className={activeWorkflowId === w.id ? "text-blue-500" : "text-white/20"} />
+                                <List size={14} className={activeWorkflowId === w.id ? "text-sky-500" : "text-white/20"} />
                                 <span className="text-xs font-bold truncate pr-6">{w.name}</span>
                             </button>
                             <button
@@ -240,15 +240,15 @@ export default function WorkflowDesigner({
                         <div className="bg-white/5 border border-white/10 rounded-3xl p-6">
                             <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-1">
-                                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-400 mb-1 ml-1 group-focus-within:text-blue-400 transition-colors">Workflow Identity</label>
+                                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-sky-400 mb-1 ml-1 group-focus-within:text-sky-400 transition-colors">Workflow Identity</label>
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
+                                        <div className="p-2 bg-sky-500/20 rounded-lg text-sky-400">
                                             <Edit3 size={16} />
                                         </div>
                                         <input
                                             value={activeWorkflow.name}
                                             onChange={e => updateActiveWorkflow({ name: e.target.value })}
-                                            className="bg-white/5 border border-white/10 focus:border-blue-500/50 focus:bg-white/10 px-4 py-2 rounded-xl text-lg font-bold text-white outline-none transition-all flex-1"
+                                            className="bg-white/5 border border-white/10 focus:border-sky-500/50 focus:bg-white/10 px-4 py-2 rounded-xl text-lg font-bold text-white outline-none transition-all flex-1"
                                             placeholder="Name your automation flow (e.g. Dominican Receipt Sync)..."
                                         />
                                     </div>
@@ -257,7 +257,7 @@ export default function WorkflowDesigner({
                                 <div className="flex flex-col gap-2">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <MessageSquare size={14} className="text-blue-400" />
+                                            <MessageSquare size={14} className="text-sky-400" />
                                             <h3 className="text-[10px] font-black uppercase tracking-widest text-white/60">Execution Triggers</h3>
                                         </div>
                                         <span className="text-[8px] text-white/30 uppercase font-bold">Press Enter or click Add</span>
@@ -283,7 +283,7 @@ export default function WorkflowDesigner({
                                                 onChange={e => setKeywordInput(e.target.value)}
                                                 onKeyDown={handleAddKeyword}
                                                 placeholder="e.g. sync, process, verify..."
-                                                className="bg-white/5 border border-white/5 hover:border-white/10 focus:border-blue-500/50 px-4 py-2 rounded-xl text-xs text-white placeholder:text-white/10 outline-none transition-all flex-1"
+                                                className="bg-white/5 border border-white/5 hover:border-white/10 focus:border-sky-500/50 px-4 py-2 rounded-xl text-xs text-white placeholder:text-white/10 outline-none transition-all flex-1"
                                             />
                                             <button
                                                 onClick={() => {
@@ -295,7 +295,7 @@ export default function WorkflowDesigner({
                                                         setKeywordInput('');
                                                     }
                                                 }}
-                                                className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/20 rounded-xl text-[10px] font-black uppercase transition-all"
+                                                className="px-4 py-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 border border-sky-500/20 rounded-xl text-[10px] font-black uppercase transition-all"
                                             >
                                                 Add Keyword
                                             </button>
@@ -345,7 +345,7 @@ export default function WorkflowDesigner({
                                                 <div className="flex items-center gap-2">
                                                     <span className={cn(
                                                         "text-[7px] font-bold uppercase px-1 py-0.5 rounded-sm",
-                                                        info.type === 'tool' ? "bg-purple-500/10 text-purple-400/60" : "bg-blue-500/10 text-blue-400/60"
+                                                        info.type === 'tool' ? "bg-emerald-500/10 text-emerald-400/60" : "bg-sky-500/10 text-sky-400/60"
                                                     )}>
                                                         {info.type}
                                                     </span>
@@ -480,7 +480,7 @@ export default function WorkflowDesigner({
                         <Edit3 size={48} className="mb-4 opacity-20" />
                         <h4 className="text-sm font-bold uppercase tracking-widest mb-2">Workspace Empty</h4>
                         <p className="text-[10px]">Select or create a workflow to begin configuring.</p>
-                        <button onClick={addWorkflow} className="mt-6 flex items-center gap-2 px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-xl text-xs font-bold hover:bg-blue-500/20 transition-all">
+                        <button onClick={addWorkflow} className="mt-6 flex items-center gap-2 px-4 py-2 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-xl text-xs font-bold hover:bg-sky-500/20 transition-all">
                             <Plus size={16} />
                             Create First Flow
                         </button>
@@ -515,11 +515,11 @@ export default function WorkflowDesigner({
                                         <div className="flex items-center justify-between w-full mb-1">
                                             <span className={cn(
                                                 "text-[7px] font-bold uppercase px-1 py-0.5 rounded-sm",
-                                                action.type === 'tool' ? "bg-purple-500/10 text-purple-400/60" : "bg-blue-500/10 text-blue-400/60"
+                                                action.type === 'tool' ? "bg-emerald-500/10 text-emerald-400/60" : "bg-sky-500/10 text-sky-400/60"
                                             )}>
                                                 {action.type}
                                             </span>
-                                            <ChevronRight size={12} className="text-white/0 group-hover:text-blue-500 transition-all outline-none" />
+                                            <ChevronRight size={12} className="text-white/0 group-hover:text-sky-500 transition-all outline-none" />
                                         </div>
                                         <div className="text-[11px] font-bold text-white mb-0.5">{action.name}</div>
                                         <div className="text-[9px] text-white/30 truncate w-full">{action.description}</div>
