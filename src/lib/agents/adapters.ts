@@ -1,6 +1,5 @@
-
-import { GenerativeModel, ChatSession } from "@google/generative-ai";
 import { AgentModel, Logger } from "./types";
+import type { LLMModel, LLMToolResult } from "../llm/types";
 
 export interface SkillExecutionContext {
     userId: string;
@@ -9,18 +8,18 @@ export interface SkillExecutionContext {
     query: string;
 }
 
-export class GeminiAgentAdapter implements AgentModel {
+export class ToolCallingAgentAdapter implements AgentModel {
     name: string;
-    private model: GenerativeModel;
+    private model: LLMModel;
     private context?: SkillExecutionContext;
-    private executeTool?: (name: string, args: any) => Promise<any>;
+    private executeTool?: (name: string, args: Record<string, unknown>) => Promise<unknown>;
     private logger?: Logger;
 
     constructor(
         name: string,
-        model: GenerativeModel,
+        model: LLMModel,
         context?: SkillExecutionContext,
-        executeTool?: (name: string, args: any) => Promise<any>,
+        executeTool?: (name: string, args: Record<string, unknown>) => Promise<unknown>,
         logger?: Logger
     ) {
         this.name = name;
@@ -34,18 +33,17 @@ export class GeminiAgentAdapter implements AgentModel {
         try {
             if (!this.executeTool) {
                 const result = await this.model.generateContent(prompt);
-                return result.response.text();
+                return result.text;
             }
 
             // Multi-turn tool execution support
             const chat = this.model.startChat();
-            let result = await chat.sendMessage(prompt);
-            let response = result.response;
+            let response = await chat.sendMessage(prompt);
             let turns = 0;
 
             while (turns < 20) { // Increased turns for complex tasks
-                const text = response.text();
-                const calls = response.functionCalls();
+                const text = response.text;
+                const calls = response.toolCalls;
 
                 // Log thoughts if there's text
                 if (text && this.logger) {
@@ -54,7 +52,7 @@ export class GeminiAgentAdapter implements AgentModel {
 
                 if (!calls || calls.length === 0) break;
 
-                const toolResults = [];
+                const toolResults: LLMToolResult[] = [];
                 for (const call of calls) {
                     const logMsg = `Using Tool: ${call.name}`;
                     if (this.logger) await this.logger(logMsg, 'info');
@@ -67,22 +65,21 @@ export class GeminiAgentAdapter implements AgentModel {
                     }
 
                     toolResults.push({
-                        functionResponse: {
-                            name: call.name,
-                            response: { result: toolResult }
-                        }
+                        name: call.name,
+                        result: toolResult
                     });
                 }
 
-                result = await chat.sendMessage(toolResults);
-                response = result.response;
+                response = await chat.sendMessage(toolResults);
                 turns++;
             }
 
-            return response.text();
+            return response.text;
         } catch (error) {
             console.error(`Agent ${this.name} failed:`, error);
             throw error;
         }
     }
 }
+
+export class GeminiAgentAdapter extends ToolCallingAgentAdapter { }

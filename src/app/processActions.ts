@@ -537,17 +537,16 @@ CMD ["npm", "run", "${startScript}"]
 
                 const dockerfilePath = join(absAppPath, dockerFileName);
 
-                const dockerIsUp = await checkDockerAvailability();
-                if (!dockerIsUp) {
-                    console.warn(`[Repo App ${process.name}] Docker daemon unavailable. Attempting local fallback...`);
-                    // For repo apps, immediately trigger local fallback instead of throwing
-                    const dockerError = { message: 'daemon', isDaemonError: true };
-                    // Jump directly to fallback block by setting flag
-                    (dockerError as any).stderr = 'daemon';
-                    throw dockerError;
-                }
-
                 try {
+                    const dockerIsUp = await checkDockerAvailability();
+                    if (!dockerIsUp) {
+                        console.warn(`[Repo App ${process.name}] Docker daemon unavailable. Attempting local fallback...`);
+                        const dockerError = new Error('daemon');
+                        (dockerError as any).isDaemonError = true;
+                        (dockerError as any).stderr = 'daemon';
+                        throw dockerError;
+                    }
+
                     // Check if container exists (running or stopped)
                     let containerExists = false;
                     let isRunning = false;

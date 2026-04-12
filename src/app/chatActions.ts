@@ -82,23 +82,35 @@ export async function addChatMessage(
         }
     }
 
-    const message = await prisma.chatMessage.create({
-        data: {
-            sessionId,
-            role,
-            content: finalContent,
-            fileIds: fileIds || [],
-            toolUsed,
-            thinking,
-            toolResult: toolResult && toolResult !== '{}' ? toolResult : undefined,
-            toolArgs: toolArgs || undefined
-        }
-    });
+    const { message } = await prisma.$transaction(async (tx) => {
+        await tx.chatSession.upsert({
+            where: { id: sessionId },
+            update: {},
+            create: {
+                id: sessionId,
+                title: 'Recovered Chat'
+            }
+        });
 
-    // Update session's updatedAt timestamp
-    await prisma.chatSession.update({
-        where: { id: sessionId },
-        data: { updatedAt: new Date() }
+        const createdMessage = await tx.chatMessage.create({
+            data: {
+                sessionId,
+                role,
+                content: finalContent,
+                fileIds: fileIds || [],
+                toolUsed,
+                thinking,
+                toolResult: toolResult && toolResult !== '{}' ? toolResult : undefined,
+                toolArgs: toolArgs || undefined
+            }
+        });
+
+        await tx.chatSession.update({
+            where: { id: sessionId },
+            data: { updatedAt: new Date() }
+        });
+
+        return { message: createdMessage };
     });
 
     return { success: true, message: deepSerialize(message) };

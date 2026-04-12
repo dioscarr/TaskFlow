@@ -1,7 +1,7 @@
 
 'use server';
 
-import { readdir, stat, unlink } from 'fs/promises';
+import { readdir, stat, unlink, rm } from 'fs/promises';
 import { join, resolve } from 'path';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,6 +15,7 @@ import { memory } from '@/lib/agents/memory';
 import { ensureAgentWorkerAvailable } from '@/lib/agentWorkerBootstrap';
 import { getAvailablePort, isPortAvailable, checkDockerAvailability, isDockerProcess, getDemoUser as getCoreDemoUser } from '@/lib/processActionsCore';
 import { manageAppLifecycle } from '@/app/processActions';
+import type { TruncationReport, TruncationResult } from '@/lib/contextBudget';
 
 /**
  * Safe wrapper for revalidatePath that doesn't crash in background/CLI contexts
@@ -29,6 +30,7 @@ function safeRevalidatePath(path: string, type?: 'layout' | 'page') {
 import { writeFile, readFile as readFileFS, rename, copyFile, mkdir } from 'fs/promises';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { getToolSchemas } from '@/lib/toolLibrary';
+import { getToolRisk } from '@/lib/toolLibrary';
 import { DEFAULT_SKILLS } from '@/lib/skillsLibrary';
 import { getSkillSchemas } from '@/lib/skillsLibrary';
 import { executeSkill } from '@/lib/skillsExecution';
@@ -38,9 +40,14 @@ import { TOOL_LIBRARY } from '@/lib/toolLibrary';
 import { addChatMessage } from '@/app/chatActions';
 import { SOFTWARE_ARCHITECT_PROMPT, AGENT_ROLES, ORCHESTRATOR_AGENT_PROMPT, WORKER_AGENT_PROMPT } from '@/lib/agents/prompts';
 import { GeminiAgentAdapter } from '@/lib/agents/adapters';
-import AI_CONFIG from '@/lib/aiConfig';
+import AI_CONFIG, { getProviderDefaultModel } from '@/lib/aiConfig';
 import { resolveModelId } from '@/lib/modelCatalog';
 import { serializeValue, deepSerialize } from '@/lib/serialization';
+import { generateTraceId, logWithTrace, TraceContext } from '@/lib/tracing';
+import { wrapGeminiModel } from '@/lib/llm/providers/gemini';
+import { createConfiguredModel } from '@/lib/llm/factory';
+import { normalizeFunctionDeclarations } from '@/lib/llm/tool-schema-mapper';
+import { sendCopilotMessage } from '@/lib/llm/providers/copilot';
 
 // import { CognitiveAgent } from '@/lib/agents/CognitiveAgent';
 // import { DesignAgent } from '@/lib/agents/DesignAgent';
@@ -121,6 +128,14 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
     if (actionId === 'create_task') return await createTask(args);
     if (actionId === 'create_folder') return await createFolder(args);
     if (actionId === 'create_html_file') return await createHtmlFile(args as any);
+    if (actionId === 'repo_context_pack') return await getRepoContextPack(args || {});
+    if (actionId === 'find_symbol_references') return await findSymbolReferences(args || {});
+    if (actionId === 'delete_file') {
+        if (!args?.confirm) return { success: false, message: 'Deletion requires confirm=true' };
+        return await deleteWorkspaceItem(args.fileId || args.id, true);
+    }
+    if (actionId === 'rename_file') return await renameFile(args.fileId || args.id, args.name);
+
     if (actionId === 'extract_alegra_bill') return await createAlegraBill(args);
     if (actionId === 'record_alegra_payment') return await recordAlegraPayment(args);
     if (actionId === 'verify_dgii_rnc') return await verifyRNC(args.rnc);
@@ -152,6 +167,8 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
     if (actionId === 'stop_all_agents') return await cancelAllAgentJobs();
     if (actionId === 'execute_command_in_app') return await executeCommandInApp(args);
     if (actionId === 'get_app_logs') return await getAppLogs(args);
+    if (actionId === 'wait') return await wait(args as any);
+    if (actionId === 'observe_status') return await observeStatus(args as any);
     if (actionId === 'apply_batch') return await applyBatch(args);
     if (actionId === 'highlight_file') return await highlightWorkspaceFile(args);
     if (actionId === 'move_attachments_to_folder') return await moveFilesToFolder(args.fileIds || [], args.folderId, args.nameConflictStrategy);
@@ -164,20 +181,14 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
     if (actionId === 'configure_magic_folder') return await configureMagicFolder({ ...args, sessionId: args.sessionId });
     if (actionId === 'synthesize_documents') return await synthesizeDocuments({ ...args, sessionId: args.sessionId });
     if (actionId === 'run_agent_orchestration' || actionId === 'run_agent_symphony') {
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
-        if (!apiKey) return { success: false, message: 'API Key missing' };
-
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
 
         // prepare tools
         const toolSchemas = Object.values(TOOL_LIBRARY).map(t => t.schema);
-        const toolsConfig = { functionDeclarations: toolSchemas };
-
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-            model: AI_CONFIG.smartModel,
-            tools: [toolsConfig],
-            systemInstruction: SOFTWARE_ARCHITECT_PROMPT
+        const model = createConfiguredModel({
+            purpose: 'smart',
+            systemInstruction: SOFTWARE_ARCHITECT_PROMPT,
+            tools: normalizeFunctionDeclarations(toolSchemas)
         });
 
         const logger = async (msg: string, type: 'info' | 'thinking' | 'error' = 'info') => {
@@ -235,14 +246,14 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
     if (actionId === 'search_web') return await searchWeb(args);
     if (actionId === 'focus_workspace_item') return await focusWorkspaceItem(args.itemId);
     if (actionId === 'execute_scaffold_vite') return await executeScaffoldVite(args);
-    if (actionId === 'enqueue_agent_job') return await enqueueAgentJob(args);
 
     // New High-Fidelity Tools
     if (actionId === 'view_file') return await viewFile(args);
     if (actionId === 'list_dir') return await listDir(args);
+    if (actionId === 'apply_patch') return await applyPatch(args);
     if (actionId === 'replace_in_file') return await replaceInFile(args);
     if (actionId === 'search_codebase') return await searchCodebase(args);
-    if (actionId === 'run_terminal_command') return await runTerminalCommand(args);
+    if (actionId === 'run_in_terminal') return await runTerminalCommand(args);
     if (actionId === 'manage_app_lifecycle') return await manageAppLifecycle(args);
 
     // Tools from library
@@ -257,11 +268,19 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
         if (schemaName === 'create_file') return await createMarkdownFile(args);
         if (schemaName === 'create_markdown_file') return await createMarkdownFile(args);
         if (schemaName === 'edit_file') return await editFile(args);
+        if (schemaName === 'repo_context_pack') return await getRepoContextPack(args || {});
+        if (schemaName === 'find_symbol_references') return await findSymbolReferences(args || {});
+        if (schemaName === 'delete_file') {
+            if (!args?.confirm) return { success: false, message: 'Deletion requires confirm=true' };
+            return await deleteWorkspaceItem(args.fileId || args.id, true);
+        }
+        if (schemaName === 'rename_file') return await renameFile(args.fileId || args.id, args.name);
         if (schemaName === 'read_file') return await readFile(args);
         if (schemaName === 'search_files') return await searchFiles(args);
         if (schemaName === 'ask_questions') return await askQuestions(args);
         if (schemaName === 'agent_delegate') return await agentDelegate(args);
         if (schemaName === 'execute_command') return await runTerminalCommand(args);
+        if (schemaName === 'run_in_terminal') return await runTerminalCommand(args);
         if (schemaName === 'extract_receipt_info') return await extractReceiptInfo(args);
         if (schemaName === 'generate_markdown_report') return await generateMarkdownReport(args);
         if (schemaName === 'organize_files') return await organizeFiles(args);
@@ -283,14 +302,14 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
         if (schemaName === 'synthesize_documents') return await synthesizeDocuments(args);
         if (schemaName === 'get_agent_activity') return await getAgentActivity(args);
         if (schemaName === 'create_html_file') return await createHtmlFile(args);
-        if (schemaName === 'enqueue_agent_job') return await enqueueAgentJob(args);
 
         // New Schema Mappings
         if (schemaName === 'view_file') return await viewFile(args);
         if (schemaName === 'list_dir') return await listDir(args);
+        if (schemaName === 'apply_patch') return await applyPatch(args);
         if (schemaName === 'replace_in_file') return await replaceInFile(args);
         if (schemaName === 'search_codebase') return await searchCodebase(args);
-        if (schemaName === 'run_terminal_command') return await runTerminalCommand(args);
+        if (schemaName === 'run_in_terminal') return await runTerminalCommand(args);
         if (schemaName === 'execute_command_in_app') return await executeCommandInApp(args);
         if (schemaName === 'get_app_logs') return await getAppLogs(args);
         if (schemaName === 'apply_batch') return await applyBatch(args);
@@ -307,14 +326,19 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
  * Executes an action with a small automatic retry policy and structured logging.
  * Uses AI_CONFIG.toolAutoRetry for retry attempts.
  */
-export async function executeWithRetry(actionId: string, args: any) {
+export async function executeWithRetry(actionId: string, args: any, context?: TraceContext) {
     const maxRetries = Number(AI_CONFIG.toolAutoRetry ?? 1);
     let attempt = 0;
     let lastResult: any = null;
 
     while (attempt <= maxRetries) {
         attempt++;
-        console.log(`🧩 Executing tool (${actionId}) attempt ${attempt}/${maxRetries + 1}`);
+        if (context) {
+            const traceId = typeof context === 'string' ? context : context.traceId;
+            console.log(`🧩 Executing tool (${actionId}) attempt ${attempt}/${maxRetries + 1} [Trace: ${traceId}]`);
+        } else {
+            console.log(`🧩 Executing tool (${actionId}) attempt ${attempt}/${maxRetries + 1}`);
+        }
         try {
             const res = await executeAction(actionId, args);
             if (res && res.success) {
@@ -861,10 +885,48 @@ export async function createFile(data: { name: string, type: string, size?: stri
 }
 
 export async function deleteFile(id: string) {
+    return await deleteWorkspaceItem(id, true);
+}
+
+async function deleteWorkspaceItem(id: string, recursive: boolean = true) {
     try {
+        const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+        if (!user) throw new Error('User not found');
+
+        const item = await prisma.workspaceFile.findFirst({ where: { id, userId: user.id } });
+        if (!item) {
+            return { success: false, message: `File or folder not found: ${id}` };
+        }
+
+        // If folder and recursive, delete children first
+        if (item.type === 'folder' && recursive) {
+            const children = await prisma.workspaceFile.findMany({ where: { parentId: id, userId: user.id } });
+            for (const child of children) {
+                await deleteWorkspaceItem(child.id, true);
+            }
+
+            // Remove folder directory if it exists on disk
+            const folderPath = getWorkspaceFolderPath(id);
+            try {
+                await rm(folderPath, { recursive: true, force: true });
+            } catch (e) {
+                // ignore if folder does not exist
+            }
+        }
+
+        // Delete physical file if stored
+        if (item.storagePath) {
+            const filePath = getWorkspaceFilePath(item);
+            try {
+                await unlink(filePath);
+            } catch (e) {
+                // ignore missing file on disk
+            }
+        }
+
         await prisma.workspaceFile.delete({ where: { id } });
         safeRevalidatePath('/');
-        return { success: true };
+        return { success: true, message: `${item.type === 'folder' ? 'Folder' : 'File'} deleted`, deletedId: id };
     } catch (error) {
         console.error('Failed to delete file:', error);
         return { success: false, error: 'Failed to delete file' };
@@ -883,6 +945,160 @@ export async function renameFile(id: string, name: string) {
         console.error('Failed to rename file:', error);
         return { success: false, error: 'Failed to rename file' };
     }
+}
+
+const REPO_IGNORE_DIRS = new Set([
+    'node_modules', '.next', '.git', '.turbo', '.cache', '.vercel', 'dist', 'build', 'out', '.idea', '.vscode', 'coverage', 'public/uploads'
+]);
+
+async function getRepoContextPack(opts: { depth?: number; maxEntries?: number; root?: string; appName?: string }) {
+    const depth = Number.isFinite(opts.depth) ? Math.max(1, Math.floor(opts.depth as number)) : 3;
+    const maxEntries = Number.isFinite(opts.maxEntries) ? Math.max(20, Math.floor(opts.maxEntries as number)) : 200;
+
+    // Determine root: explicit root > appName under apps/ > apps/ if exists > project root
+    const appsRoot = join(process.cwd(), 'apps');
+    const hasApps = fs.existsSync(appsRoot);
+    let rootDir = opts.root ? resolve(process.cwd(), opts.root) : null;
+
+    if (!rootDir && opts.appName) {
+        const candidate = join(appsRoot, opts.appName);
+        if (hasApps && fs.existsSync(candidate)) {
+            rootDir = candidate;
+        }
+    }
+
+    if (!rootDir && hasApps) {
+        rootDir = appsRoot;
+    }
+
+    if (!rootDir) {
+        rootDir = resolve(process.cwd(), '.');
+    }
+
+    const treeLines: string[] = [];
+    let count = 0;
+
+    const walk = async (dir: string, currentDepth: number, prefix: string) => {
+        if (currentDepth < 0 || count >= maxEntries) return;
+        let entries: fs.Dirent[] = [];
+        try {
+            entries = await readdir(dir, { withFileTypes: true });
+        } catch (e) {
+            return;
+        }
+
+        entries = entries
+            .filter(e => !REPO_IGNORE_DIRS.has(e.name))
+            .sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()) || a.name.localeCompare(b.name));
+
+        for (let i = 0; i < entries.length && count < maxEntries; i++) {
+            const entry = entries[i];
+            const isLast = i === entries.length - 1;
+            const connector = isLast ? '└─ ' : '├─ ';
+            const nextPrefix = prefix + (isLast ? '   ' : '│  ');
+            treeLines.push(`${prefix}${connector}${entry.name}${entry.isDirectory() ? '/' : ''}`);
+            count++;
+            if (entry.isDirectory() && currentDepth > 0) {
+                await walk(join(dir, entry.name), currentDepth - 1, nextPrefix);
+            }
+        }
+    };
+
+    await walk(rootDir, depth, '');
+
+    let pkg: any = null;
+    try {
+        const pkgRaw = await readFileFS(join(process.cwd(), 'package.json'), 'utf-8');
+        pkg = JSON.parse(pkgRaw);
+    } catch {
+        /* ignore */
+    }
+
+    const deps = pkg?.dependencies || {};
+    const devDeps = pkg?.devDependencies || {};
+    const scripts = pkg?.scripts || {};
+    const frameworks: string[] = [];
+    const depKeys = new Set<string>([...Object.keys(deps), ...Object.keys(devDeps)]);
+    if (depKeys.has('next')) frameworks.push('next');
+    if (depKeys.has('react')) frameworks.push('react');
+    if (depKeys.has('vite')) frameworks.push('vite');
+    if (depKeys.has('express')) frameworks.push('express');
+
+    const keyPaths = ['src/app', 'src/pages', 'src/routes', 'src/components', 'src/lib', 'apps']
+        .filter(p => fs.existsSync(join(process.cwd(), p)));
+
+    return {
+        success: true,
+        tree: treeLines.join('\n'),
+        entries: count,
+        packageJson: pkg ? {
+            name: pkg.name,
+            scripts,
+            dependencies: deps,
+            devDependencies: devDeps
+        } : null,
+        frameworks,
+        keyPaths,
+        root: rootDir.replace(process.cwd() + path.sep, '')
+    };
+}
+
+async function findSymbolReferences(opts: { symbols?: string[] | string; dir?: string; maxResults?: number }) {
+    const symbols = Array.isArray(opts.symbols) ? opts.symbols.filter(Boolean) : (opts.symbols ? [opts.symbols] : []);
+    if (!symbols.length) return { success: false, message: 'No symbols provided' };
+
+    const baseDir = resolve(process.cwd(), opts.dir || 'src');
+    const maxResults = Number.isFinite(opts.maxResults) ? Math.max(1, Math.floor(opts.maxResults as number)) : 80;
+    const matches: { file: string; line: number; preview: string; symbol: string }[] = [];
+
+    const walk = async (dir: string) => {
+        if (matches.length >= maxResults) return;
+        let entries: fs.Dirent[] = [];
+        try {
+            entries = await readdir(dir, { withFileTypes: true });
+        } catch {
+            return;
+        }
+
+        for (const entry of entries) {
+            if (REPO_IGNORE_DIRS.has(entry.name)) continue;
+            const fullPath = join(dir, entry.name);
+            if (entry.isDirectory()) {
+                await walk(fullPath);
+                if (matches.length >= maxResults) return;
+            } else {
+                let stats;
+                try { stats = await stat(fullPath); } catch { continue; }
+                if (stats.size > 512 * 1024) continue; // skip large files
+                let content: string;
+                try { content = await readFileFS(fullPath, 'utf-8'); } catch { continue; }
+                if (content.includes('\0')) continue; // likely binary
+                const lines = content.split(/\r?\n/);
+                symbols.forEach(sym => {
+                    if (matches.length >= maxResults) return;
+                    lines.forEach((line, idx) => {
+                        if (matches.length >= maxResults) return;
+                        if (line.includes(sym)) {
+                            matches.push({
+                                file: fullPath.replace(process.cwd() + path.sep, ''),
+                                line: idx + 1,
+                                preview: line.trim(),
+                                symbol: sym
+                            });
+                        }
+                    });
+                });
+            }
+        }
+    };
+
+    await walk(baseDir);
+
+    return {
+        success: true,
+        matches: matches.slice(0, maxResults),
+        truncated: matches.length >= maxResults
+    };
 }
 
 export async function uploadFile(formData: FormData) {
@@ -921,6 +1137,75 @@ export async function uploadFile(formData: FormData) {
     } catch (error) {
         console.error('Failed to upload file:', error);
         return { success: false, error: 'Upload failed' };
+    }
+}
+
+/**
+ * Pause execution for a specified duration
+ */
+export async function wait(args: { ms: number }) {
+    const duration = args.ms || 1000;
+    console.log(`⏳ Waiting for ${duration}ms...`);
+    await new Promise(resolve => setTimeout(resolve, duration));
+    return { success: true, waitedMs: duration };
+}
+
+/**
+ * Observe if a resource (port, file, URL) is available
+ */
+export async function observeStatus(args: { type: 'port' | 'file' | 'url' | 'process', target: string, timeout?: number }) {
+    const type = args.type;
+    const target = args.target;
+    const timeout = args.timeout || 5000;
+    const interval = 500;
+    const start = Date.now();
+
+    console.log(`👀 Observing ${type}: ${target} (timeout: ${timeout}ms)`);
+
+    try {
+        while (Date.now() - start < timeout) {
+            if (type === 'port') {
+                const port = parseInt(target);
+                if (!isNaN(port)) {
+                    const available = await isPortAvailable(port);
+                    // If available is false, it means something IS listening on that port (port is in use)
+                    // In this context, "success" usually means the app is up, so available === false
+                    if (!available) {
+                        return { success: true, message: `Port ${port} is active (something is listening).` };
+                    }
+                }
+            } else if (type === 'file') {
+                const isAbsolute = path.isAbsolute(target);
+                const resolvedPath = isAbsolute ? target : resolve(process.cwd(), target);
+                if (fs.existsSync(resolvedPath)) {
+                    return { success: true, message: `File exists: ${resolvedPath}` };
+                }
+            } else if (type === 'url') {
+                try {
+                    const response = await fetch(target, { method: 'HEAD' });
+                    if (response.ok) {
+                        return { success: true, message: `URL is accessible: ${target}` };
+                    }
+                } catch (e) {
+                    // Ignore and retry
+                }
+            } else if (type === 'process') {
+                try {
+                    const { stdout } = await execAsync(`tasklist /fi "imagename eq ${target}"`);
+                    if (stdout.toLowerCase().includes(target.toLowerCase())) {
+                        return { success: true, message: `Process found: ${target}` };
+                    }
+                } catch (e) {
+                    // Ignore and retry
+                }
+            }
+
+            await new Promise(resolve => setTimeout(resolve, interval));
+        }
+
+        return { success: false, message: `Observation timed out for ${type}: ${target}` };
+    } catch (e: any) {
+        return { success: false, message: `Observation error: ${e.message}` };
     }
 }
 
@@ -1739,12 +2024,35 @@ export async function getPrompts() {
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
         if (!user) throw new Error('User not found');
 
+        const FULLSTACK_DEFAULT_TOOLS = [
+            'list_dir',
+            'read_file',
+            'view_file',
+            'search_codebase',
+            'repo_context_pack',
+            'find_symbol_references',
+            'apply_patch',
+            'apply_batch',
+            'replace_in_file',
+            'edit_file',
+            'create_file',
+            'create_folder',
+            'rename_file',
+            'delete_file',
+            'manage_app_lifecycle',
+            'run_in_terminal',
+            'run_app_command',
+            'execute_command_in_app',
+            'get_app_logs',
+            'search_web'
+        ];
+
         const prompts = await prisma.aIPromptSet.findMany({
             where: { userId: user.id },
             orderBy: { createdAt: 'desc' }
         });
 
-        const ensurePrompt = async (name: string, description: string, prompt: string) => {
+        const ensurePrompt = async (name: string, description: string, prompt: string, tools?: string[]) => {
             const existing = await prisma.aIPromptSet.findFirst({ where: { name, userId: user.id } });
             if (existing) return;
             await prisma.aIPromptSet.create({
@@ -1754,7 +2062,7 @@ export async function getPrompts() {
                     prompt,
                     userId: user.id,
                     isActive: false,
-                    tools: DEFAULT_SKILLS
+                    tools: tools || DEFAULT_SKILLS
                 }
             });
         };
@@ -1799,6 +2107,11 @@ export async function getPrompts() {
                     prompt: "You are TaskFlow AI, a senior software architect and implementer.\n\nGOALS:\n- Deliver correct, maintainable code with minimal churn.\n- Prefer small, safe edits and reuse existing patterns.\n- Ask concise clarification questions only when necessary.\n\nEXECUTION:\n- Inspect relevant files before editing.\n- Use available tests or mention missing coverage.\n- Explain tradeoffs briefly and keep responses tight."
                 },
                 {
+                    name: "Full Stack Developer",
+                    description: "Autonomous full-stack builder that explores, edits, and validates end-to-end changes across frontend and backend.",
+                    prompt: "You are TaskFlow AI, a senior full-stack developer focused on end-to-end delivery.\n\nAUTONOMY:\n- Act without asking for permission on routine edits.\n- Always explore before editing: list dirs, read files, search.\n- Use apply_patch for targeted edits. Avoid large rewrites.\n\nAPP CONTEXT:\n- If an active app exists, only work inside apps/<activeApp>.\n- Find theme entrypoints (index.css, App.css, tailwind.config, globals, theme tokens).\n- Update the site holistically: layout, colors, typography, spacing.\n\nTOOLS:\n- Use list_dir/read_file/search_codebase to locate files.\n- Use apply_patch/edit_file to implement changes.\n- Run build/lint if present.\n\nOUTPUT:\n- Show what changed and why, keep it brief."
+                },
+                {
                     name: "Product Design Lead",
                     description: "Crafts bold, premium UI direction with strong typography, color systems, and responsive layout guidance.",
                     prompt: "You are TaskFlow AI, a product design lead focused on distinctive, high-clarity interfaces.\n\nPRIORITIES:\n- Define visual direction: typography, color palette, spacing, and layout grid.\n- Create clear hierarchy and strong composition.\n- Use CSS variables for theme tokens.\n- Ensure responsive behavior and accessible contrast.\n\nSTYLE:\n- Avoid generic layouts and safe defaults.\n- Be explicit about interaction states and motion where relevant."
@@ -1813,7 +2126,7 @@ export async function getPrompts() {
                         prompt: d.prompt,
                         userId: user.id,
                         isActive: d.name.includes("Receipt"),
-                        tools: DEFAULT_SKILLS
+                        tools: d.name === "Full Stack Developer" ? FULLSTACK_DEFAULT_TOOLS : DEFAULT_SKILLS
                     }
                 });
             }
@@ -1834,6 +2147,12 @@ export async function getPrompts() {
             "Software Architect",
             "Builds production-grade features with clean architecture, safe edits, and clear execution steps.",
             "You are TaskFlow AI, a senior software architect and implementer.\n\nGOALS:\n- Deliver correct, maintainable code with minimal churn.\n- Prefer small, safe edits and reuse existing patterns.\n- Ask concise clarification questions only when necessary.\n\nEXECUTION:\n- Inspect relevant files before editing.\n- Use available tests or mention missing coverage.\n- Explain tradeoffs briefly and keep responses tight."
+        );
+        await ensurePrompt(
+            "Full Stack Developer",
+            "Autonomous full-stack builder that explores, edits, and validates end-to-end changes across frontend and backend.",
+            "You are TaskFlow AI, a senior full-stack developer focused on end-to-end delivery.\n\nAUTONOMY:\n- Act without asking for permission on routine edits.\n- Always explore before editing: list dirs, read files, search.\n- Use apply_patch for targeted edits. Avoid large rewrites.\n\nAPP CONTEXT:\n- If an active app exists, only work inside apps/<activeApp>.\n- Find theme entrypoints (index.css, App.css, tailwind.config, globals, theme tokens).\n- Update the site holistically: layout, colors, typography, spacing.\n\nTOOLS:\n- Use list_dir/read_file/search_codebase to locate files.\n- Use apply_patch/edit_file to implement changes.\n- Run build/lint if present.\n\nOUTPUT:\n- Show what changed and why, keep it brief.",
+            FULLSTACK_DEFAULT_TOOLS
         );
         await ensurePrompt(
             "Product Design Lead",
@@ -3487,9 +3806,7 @@ export async function synthesizeDocuments(data: { fileIds: string[], outputFilen
         }
 
         const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-        if (!apiKey) return { success: false, message: 'API Key missing' };
-
-        const genAI = new GoogleGenerativeAI(apiKey);
+        const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
         const model = genAI.getGenerativeModel({ model: AI_CONFIG.smartModel });
 
         const prompt = `Synthesize the following documents into a single, cohesive master report. 
@@ -3777,7 +4094,7 @@ export async function processAgentJob(jobId: string) {
                 return result;
             }
 
-            // Fallback: Execute as atomic tool (e.g. run_terminal_command, list_dir)
+            // Fallback: Execute as atomic tool (e.g. run_in_terminal, list_dir)
             try {
                 // Reuse the main action router which contains all tool implementations
                 const actionResult = await executeAction(name, args);
@@ -3844,11 +4161,17 @@ If you attempt to edit files outside "apps/${activeRepoApp}/", your operation wi
 Always prefix file paths with "apps/${activeRepoApp}/" and use cwd: "apps/${activeRepoApp}" for terminal commands.`;
         }
 
-        const workerModel = genAI.getGenerativeModel({
-            model: AI_CONFIG.fastModel,
-            systemInstruction,
-            tools
-        });
+        const workerModel = AI_CONFIG.provider === 'github-copilot'
+            ? createConfiguredModel({
+                purpose: 'fast',
+                systemInstruction,
+                tools: normalizeFunctionDeclarations(allDecls)
+            })
+            : wrapGeminiModel(genAI.getGenerativeModel({
+                model: AI_CONFIG.fastModel,
+                systemInstruction,
+                tools
+            }));
 
         const logger = async (msg: string, type: 'info' | 'thinking' | 'error' = 'info') => {
             const logEntry = `[${new Date().toISOString()}] [Job ${jobId}] [${type.toUpperCase()}] ${msg}\n`;
@@ -4315,11 +4638,18 @@ export async function chatWithAI(
         activeAppPath?: string;
         activeAppName?: string;
         model?: string;
+        enabledToolIds?: string[];
+        allowHighRiskExecution?: boolean;
     }
 ) {
     try {
-        console.log(`💬 chatWithAI called with query: "${query}"`);
+        const traceId = generateTraceId();
+        const traceContext: TraceContext = { traceId, sessionId: options?.sessionId };
+        logWithTrace(traceContext, `chatWithAI request`, { query });
+
+        console.log(`💬 chatWithAI called with query: "${query}" [Trace: ${traceId}]`);
         let allowToolExecution = options?.allowToolExecution !== false;
+        let allowHighRiskExecution = options?.allowHighRiskExecution === true;
         const agentMode = options?.agentMode || 'chat';
         const verbosity = options?.verbosity || 'concise'; // Default to concise
         const isToolAgent = agentMode === 'tool-agent';
@@ -4382,6 +4712,94 @@ export async function chatWithAI(
         const isApprovalMessage = (text: string) => {
             const normalized = text.trim().toLowerCase();
             return /^(approve|approved|ok|okay|yes|yep|go ahead|proceed|run it|do it|execute|start)(\b|\!|\.|,|$)/.test(normalized);
+        };
+
+        const normalizeAppRoot = (activeAppPath?: string, activeAppName?: string) => {
+            const raw = activeAppPath || activeAppName;
+            if (!raw) return null;
+            const cleaned = raw.replace(/\\/g, '/').replace(/^\.\/?/, '').replace(/\/+$/, '');
+            if (!cleaned) return null;
+            return cleaned.startsWith('apps/') ? cleaned : `apps/${cleaned}`;
+        };
+
+        const normalizeRelativePath = (value: string) => {
+            return value.replace(/\\/g, '/').replace(/^\.\/?/, '').replace(/\/+$/, '');
+        };
+
+        const coerceAppPath = (value: string | undefined, appRoot: string) => {
+            if (!value || value.trim() === '' || value.trim() === '.') {
+                return { path: appRoot };
+            }
+
+            if (path.isAbsolute(value)) {
+                const normalized = normalizeRelativePath(value);
+                const normalizedRoot = normalizeRelativePath(appRoot);
+                if (normalized.includes(`${normalizedRoot}/`) || normalized.endsWith(`/${normalizedRoot}`)) {
+                    return { path: value };
+                }
+                return { error: `Workspace scope violation: "${value}" is outside ${appRoot}. Use paths under ${appRoot}/...` };
+            }
+
+            const rel = normalizeRelativePath(value);
+            const normalizedRoot = normalizeRelativePath(appRoot);
+
+            if (rel === normalizedRoot || rel.startsWith(`${normalizedRoot}/`)) {
+                return { path: rel };
+            }
+
+            if (rel.startsWith('apps/') && !rel.startsWith(`${normalizedRoot}/`)) {
+                return { error: `Workspace scope violation: "${value}" is outside ${appRoot}. Use paths under ${appRoot}/...` };
+            }
+
+            return { path: `${normalizedRoot}/${rel}` };
+        };
+
+        const scopeToolArgsForActiveApp = (toolName: string, args: any, appRoot: string | null) => {
+            if (!appRoot) return { args };
+            const scoped = { ...(args || {}) };
+
+            const applyPath = (key: string) => {
+                const current = typeof scoped[key] === 'string' ? scoped[key] : undefined;
+                const coerced = coerceAppPath(current, appRoot);
+                if (coerced.error) return coerced;
+                scoped[key] = coerced.path;
+                return { path: coerced.path };
+            };
+
+            if (toolName === 'list_dir') {
+                const result = applyPath('path');
+                return result.error ? { args: scoped, error: result.error } : { args: scoped };
+            }
+
+            if (toolName === 'view_file' || toolName === 'replace_in_file' || toolName === 'apply_batch') {
+                const result = applyPath('fileId');
+                return result.error ? { args: scoped, error: result.error } : { args: scoped };
+            }
+
+            if (toolName === 'apply_patch') {
+                const result = applyPath('filePath');
+                return result.error ? { args: scoped, error: result.error } : { args: scoped };
+            }
+
+            if (toolName === 'search_codebase') {
+                if (!scoped.dir || scoped.dir === './src' || scoped.dir === 'src') {
+                    scoped.dir = `${appRoot}/src`;
+                    return { args: scoped };
+                }
+                const result = applyPath('dir');
+                return result.error ? { args: scoped, error: result.error } : { args: scoped };
+            }
+
+            if (toolName === 'run_in_terminal') {
+                if (!scoped.cwd) {
+                    scoped.cwd = appRoot;
+                    return { args: scoped };
+                }
+                const result = applyPath('cwd');
+                return result.error ? { args: scoped, error: result.error } : { args: scoped };
+            }
+
+            return { args: scoped };
         };
 
         const normalizeKeyword = (value: string) => value.toLowerCase().trim();
@@ -4479,6 +4897,7 @@ export async function chatWithAI(
         // Command detection: /v1 triggers the heavy Cognitive Architecture
         const isCognitiveCommand = cleanQuery.trim().startsWith('/v1');
         const effectiveQuery = isCognitiveCommand ? cleanQuery.replace('/v1', '').trim() : cleanQuery;
+        const activeAppRoot = normalizeAppRoot(options?.activeAppPath, options?.activeAppName);
 
         // Short-circuit casual greetings: quick in-session response, no tools or background work
         if (!isCognitiveCommand && isShort && isCasual && !isApprove) {
@@ -4598,45 +5017,9 @@ export async function chatWithAI(
         };
 
         if (sessionId && isApprovalMessage(cleanQuery)) {
-            const approval = await approveLatestAgentJob(sessionId);
-            if (approval.success) {
-                if (demoUser) {
-                    await logAgentActivity({
-                        type: 'success',
-                        title: 'Background Agent Approved',
-                        message: `Job ${approval.job?.id || ''} approved by user.`,
-                        toolUsed: 'enqueue_agent_job',
-                        userId: demoUser.id,
-                        sessionId: sessionId
-                    });
-                }
-                return {
-                    success: true,
-                    text: '✅ Approved. Background agent started.'
-                };
-            }
-
-            const lastAssistantText = getLastAssistantText();
-            const lastUserText = getLastNonApprovalUserText() || getLastUserText();
-            if (lastAssistantText && isApprovalRequest(lastAssistantText)) {
-                await enqueueAgentJob({
-                    sessionId,
-                    type: 'chat_task',
-                    payload: {
-                        query: lastUserText || query,
-                        fileIds,
-                        history,
-                        currentFolder,
-                        currentFolderId,
-                        allowToolExecution: true
-                    },
-                    approved: true
-                });
-
-                return { success: true, text: '✅ Approved. Background agent started.' };
-            }
-
-            return { success: true, text: 'No pending background job to approve.' };
+            // Treat explicit approval as consent to run tools inline; no background queueing.
+            allowToolExecution = true;
+            allowHighRiskExecution = true;
         }
 
         const extractLastMarkdownTable = (text: string) => {
@@ -4983,16 +5366,18 @@ You are TaskFlow AI, an intelligent fiscal agent for Alegra RD with advanced ski
 
         const toolExecutionRule = isToolAgent
             ? '0. TOOL AGENT: Tools are pre-approved. Execute immediately; do NOT request approval or queue jobs.'
-            : '0. CONSULT FIRST: Never execute tools or skills without explicit user approval. You MUST ask for confirmation before any tool processing.';
+            : allowToolExecution
+                ? '0. TOOL EXECUTION: Tools are allowed. Execute directly when needed. Ask clarifying questions only if required arguments are missing. For high-risk tools, request approval when required.'
+                : '0. CONSULT FIRST: Never execute tools or skills without explicit user approval. You MUST ask for confirmation before any tool processing.';
         const backgroundRule = isToolAgent
             ? ''
-            : '13. BACKGROUND EXECUTION: Queue background work immediately using enqueue_agent_job when tools are required. Do NOT wait for user approval or execute tools directly in chat.';
+            : '13. BACKGROUND EXECUTION: Do NOT use enqueue_agent_job. For normal edits (UI tweaks, single-file changes, quick fixes), run tools directly (read/apply_patch/run_in_terminal/manage_app_lifecycle). Only queue work if the user explicitly asks to schedule/queue it.';
 
         const toolInstructions = `
 OPERATIONAL RULES:
     ${toolExecutionRule}
 0.5. DIRECT RESPONSE FIRST: For simple questions, greetings, explanations, or information requests, ALWAYS respond directly with text. DO NOT queue a background job for simple conversational responses. Only use tools when the user explicitly asks for file operations, code generation, or complex tasks.
-    0.6. TOOL CALLING: When a tool is needed, call it directly using the tool name and JSON arguments that match its schema. Do NOT guess results. Wait for tool output, then continue.
+    0.6. TOOL CALLING: When a tool is needed, call it directly using the tool name and JSON arguments that match its schema. Do NOT guess results. Wait for tool output, then continue. Do not queue work unless the user explicitly asks to schedule it.
     0.7. TOOL CLARITY: If required arguments are missing, ask a short clarifying question. Prefer reading/searching the workspace over asking for file IDs.
 1. SKILLS OVER TOOLS: Use SKILLS instead of individual tools. Skills are intelligent capabilities that handle complex tasks automatically.
 2. RECEIPT INTELLIGENCE: When processing receipts, use the 'receipt_intelligence' skill which handles vision analysis, business verification, report creation, and file organization in one call.
@@ -5037,12 +5422,12 @@ OPERATIONAL RULES:
          2. Links use relative paths, not absolute or storage IDs.
          3. An 'index.html' entry point exists.
      ${backgroundRule}
-14. COMMAND EXECUTION: For any terminal commands (npm, docker, npx, git, etc.), ALWAYS use the 'execute_command' tool.
+14. COMMAND EXECUTION: For terminal commands (npm, docker, npx, git, etc.), use 'run_in_terminal' (or 'execute_command' when required by the tool list).
 
 15. LIVE SERVERS & PREVIEWS:
-     - PREVIEWING: If a dev server or container is running (see 'activeProcesses'), you can tell the user to "Open the Preview tab" to see the live site at the provided URL.
-     - AUTO-START: If the user creates or modifies a project and wants to see it, and no process is running, suggest starting the dev server via 'execute_command'.
-     - PREMIUM EXPERIENCE: If you make a visual change (CSS/UI), proactively mention that the preview is available.
+    - PREVIEWING: If a dev server or container is running (see 'activeProcesses'), you can tell the user to "Open the Preview tab" to see the live site at the provided URL.
+    - AUTO-START: If the user creates or modifies a project and wants to see it, and no process is running, suggest starting the dev server via 'manage_app_lifecycle'.
+    - PREMIUM EXPERIENCE: If you make a visual change (CSS/UI), proactively mention that the preview is available.
 
 ACTIVE PROCESSES (LIVE):
 ${JSON.stringify(activeProcesses.map(p => ({
@@ -5057,9 +5442,42 @@ ${appContextDNA ? JSON.stringify(appContextDNA) : 'None'}
    `;
 
         // Load skills dynamically from skills library
-        const enabledSkills = (selectedPromptSet && Array.isArray(selectedPromptSet.tools) && selectedPromptSet.tools.length > 0)
-            ? selectedPromptSet.tools.filter(skillId => skillId !== 'extract_alegra_bill') // Temporarily disable Alegra export
-            : DEFAULT_SKILLS;
+        const toolRegistryIds = Object.keys(TOOL_LIBRARY);
+
+        const initialTools = Array.isArray(options?.enabledToolIds) && options.enabledToolIds.length > 0
+            ? options.enabledToolIds.filter(id => toolRegistryIds.includes(id))
+            : (selectedPromptSet && Array.isArray(selectedPromptSet.tools) && selectedPromptSet.tools.length > 0
+                ? selectedPromptSet.tools.filter(id => toolRegistryIds.includes(id))
+                : DEFAULT_SKILLS);
+
+        // P3-TOOL-ROUTING: Intent-based filtering
+        let routedTools = initialTools;
+        const explicitToolsRequested = options?.enabledToolIds && options.enabledToolIds.length > 0;
+
+        // Only route if using default configuration (no explicit tools, no custom prompt set)
+        if (!explicitToolsRequested && !selectedPromptSet) {
+            const { classifyIntent, getToolsForIntent } = await import('@/lib/toolRouting');
+            // We use fileIds for count but don't have types yet. classifyIntent handles empty types gracefully.
+            const intentResult = classifyIntent(cleanQuery, fileIds, []);
+            console.log(`🧭 Intent: ${intentResult.intent} (${(intentResult.confidence * 100).toFixed(0)}%)`);
+
+            const allowedTools = new Set(getToolsForIntent(intentResult.intent));
+            routedTools = initialTools.filter(t => allowedTools.has(t));
+
+            // Generous Fallback: If routing stripped too much, revert to general chat
+            if (routedTools.length < 3) {
+                console.log('⚠️ Routing too restrictive, falling back to general chat tools');
+                const general = new Set(getToolsForIntent('general_chat'));
+                routedTools = initialTools.filter(t => general.has(t));
+            }
+
+            if (initialTools.length !== routedTools.length) {
+                console.log(`📉 Tool Reduction: ${initialTools.length} -> ${routedTools.length} tools`);
+            }
+        }
+
+        const enabledSkills = routedTools
+            .filter(skillId => skillId !== 'extract_alegra_bill'); // Temporarily disable Alegra export
 
         const baseInstruction = selectedPromptSet ? selectedPromptSet.prompt : defaultInstruction;
         const enabledToolsList = enabledSkills.length > 0 ? enabledSkills.join(', ') : 'None';
@@ -5178,7 +5596,7 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
                 "\n\nNOTE: If the user asks for complex multi-step planning, suggest they use the '/v1' command to activate the Cognitive Brain.";
         }
 
-            systemInstruction += `\n\nENABLED TOOLS: ${enabledToolsList}`;
+        systemInstruction += `\n\nENABLED TOOLS: ${enabledToolsList}`;
 
         // Shared capabilities for both modes
         systemInstruction += "\nWEB/PREVIEW CAPABILITY: You can create full HTML web pages using 'create_html_file'. When you do this, the system will AUTOMATICALLY open a live preview for the user side-by-side with the chat. Use this for landing pages, reports, or any visual data representation." +
@@ -5212,17 +5630,45 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
         }
 
         const selectedModel = resolveModelId(options?.model, AI_CONFIG.fastModel);
-        const model = genAI.getGenerativeModel({ model: selectedModel, systemInstruction, tools });
         let promptParts: any[] = [effectiveQuery + workflowInstructions];
+
+        // P3-CONTEXT-BUDGET: Intelligent context budget with model-aware limits and smart truncation
+        const { getContextBudget, prioritizeFiles, getTruncationStrategy, generateTruncationReport } = await import('@/lib/contextBudget');
+
+        const maxContextChars = getContextBudget(selectedModel, promptParts[0].length);
+        let remainingContext = Math.max(0, maxContextChars - promptParts[0].length);
+        const truncationResults: TruncationResult[] = [];
+
+        console.log(`📊 Context Budget: ${maxContextChars} chars available (model: ${selectedModel})`);
+
+        const appendToPrompt = (text: string) => {
+            if (remainingContext <= 0) return false;
+            const slice = text.slice(0, remainingContext);
+            promptParts[0] += slice;
+            remainingContext -= slice.length;
+            return slice.length === text.length;
+        };
 
         // Resolve all file IDs (including those inside folders)
         const resolvedFileIds = new Set<string>(fileIds);
 
-        for (const fileId of resolvedFileIds) {
-            const file = await prisma.workspaceFile.findUnique({ where: { id: fileId } });
-            if (!file) continue;
+        // P3-CONTEXT-BUDGET: Fetch all files and prioritize them
+        const allFilesToProcess = await Promise.all(
+            Array.from(resolvedFileIds).map(id =>
+                prisma.workspaceFile.findUnique({ where: { id } })
+            )
+        );
 
-            promptParts[0] += `\n(File: ${file.name})`;
+        const validFiles = allFilesToProcess.filter(f => f !== null) as any[];
+        const userSelectedIds = new Set(fileIds); // All provided fileIds are user-selected
+        const prioritizedFiles = prioritizeFiles(validFiles, userSelectedIds);
+
+        console.log(`📁 Processing ${prioritizedFiles.length} files (prioritized by relevance)`);
+
+        for (const prioritizedFile of prioritizedFiles) {
+            const file = prioritizedFile;
+
+            appendToPrompt(`\n(File: ${file.name})`);
 
             // Strict extension check for Gemini Vision
             const ext = file.name.split('.').pop()?.toLowerCase() || '';
@@ -5244,12 +5690,34 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
                                 mimeType
                             }
                         });
+
+                        // Track as non-truncated (images don't count against text budget)
+                        truncationResults.push({
+                            filename: file.name,
+                            originalSize: fileBuffer.length,
+                            truncatedSize: fileBuffer.length,
+                            truncated: false,
+                            percentage: 100,
+                            strategy: 'image'
+                        });
                     }
                 } catch (err) {
                     console.error(`Error reading image file ${file.name}:`, err);
                 }
             } else if (file.type === 'pdf') {
                 try {
+                    if (remainingContext <= 0) {
+                        appendToPrompt(`\n[Context budget exhausted - PDF skipped: ${file.name}]`);
+                        truncationResults.push({
+                            filename: file.name,
+                            originalSize: 0,
+                            truncatedSize: 0,
+                            truncated: true,
+                            percentage: 0,
+                            strategy: 'skipped'
+                        });
+                        continue;
+                    }
                     const fileBuffer = await readFileFS(getWorkspaceFilePath(file));
                     const parseModule: any = await import('pdf-parse');
                     const parser = parseModule?.default?.default ?? parseModule?.default ?? parseModule;
@@ -5257,13 +5725,197 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
                         throw new Error('pdf-parse module did not resolve to a function');
                     }
                     const data = await parser(fileBuffer);
-                    promptParts[0] += `\n\n=== CONTENT OF PDF: ${file.name} ===\n${data.text}\n=== END OF PDF ===\n`;
+                    const pdfText = data.text;
+                    const pdfBlock = `\n\n=== CONTENT OF PDF: ${file.name} ===\n${pdfText}\n=== END OF PDF ===\n`;
+
+                    // P3-CONTEXT-BUDGET: Apply smart truncation if needed
+                    const strategy = getTruncationStrategy('pdf');
+                    const availableSpace = remainingContext - 100; // Reserve space for markers
+
+                    if (pdfBlock.length > availableSpace) {
+                        const result = strategy.truncate(pdfText, availableSpace);
+                        const truncatedBlock = `\n\n=== CONTENT OF PDF: ${file.name} (truncated) ===\n${result.content}\n=== END OF PDF ===\n`;
+                        appendToPrompt(truncatedBlock);
+
+                        truncationResults.push({
+                            filename: file.name,
+                            originalSize: pdfText.length,
+                            truncatedSize: result.content.length,
+                            truncated: result.truncated,
+                            percentage: result.percentage,
+                            strategy: strategy.name
+                        });
+                    } else {
+                        appendToPrompt(pdfBlock);
+                        truncationResults.push({
+                            filename: file.name,
+                            originalSize: pdfText.length,
+                            truncatedSize: pdfText.length,
+                            truncated: false,
+                            percentage: 100,
+                            strategy: 'none'
+                        });
+                    }
                 } catch (e) {
                     console.error(`Error parsing PDF ${file.name}:`, e);
+                }
+            } else {
+                const textLikeExts = new Set([
+                    'txt', 'md', 'markdown', 'json', 'jsonl', 'csv', 'log',
+                    'ts', 'tsx', 'js', 'jsx', 'css', 'scss', 'html', 'xml',
+                    'yml', 'yaml'
+                ]);
+                const textLikeTypes = new Set([
+                    'text', 'markdown', 'md', 'json', 'jsonl', 'csv', 'log',
+                    'ts', 'tsx', 'js', 'jsx', 'css', 'scss', 'html', 'xml',
+                    'yml', 'yaml'
+                ]);
+
+                if (textLikeExts.has(ext) || textLikeTypes.has(file.type)) {
+                    try {
+                        if (remainingContext <= 0) {
+                            appendToPrompt(`\n[Context budget exhausted - file skipped: ${file.name}]`);
+                            truncationResults.push({
+                                filename: file.name,
+                                originalSize: 0,
+                                truncatedSize: 0,
+                                truncated: true,
+                                percentage: 0,
+                                strategy: 'skipped'
+                            });
+                            continue;
+                        }
+                        const textContent = await readFileFS(getWorkspaceFilePath(file), 'utf-8');
+                        const block = `\n\n=== CONTENT OF FILE: ${file.name} ===\n${textContent}\n=== END OF FILE ===\n`;
+
+                        // P3-CONTEXT-BUDGET: Apply smart truncation based on file type
+                        const strategy = getTruncationStrategy(ext);
+                        const availableSpace = remainingContext - 100; // Reserve space for markers
+
+                        if (block.length > availableSpace) {
+                            const result = strategy.truncate(textContent, availableSpace);
+                            const truncatedBlock = `\n\n=== CONTENT OF FILE: ${file.name} (truncated via ${strategy.name} strategy) ===\n${result.content}\n=== END OF FILE ===\n`;
+                            appendToPrompt(truncatedBlock);
+
+                            truncationResults.push({
+                                filename: file.name,
+                                originalSize: textContent.length,
+                                truncatedSize: result.content.length,
+                                truncated: result.truncated,
+                                percentage: result.percentage,
+                                strategy: strategy.name
+                            });
+
+                            console.log(`✂️ Truncated ${file.name} using ${strategy.name} strategy (${result.percentage}% retained)`);
+                        } else {
+                            appendToPrompt(block);
+                            truncationResults.push({
+                                filename: file.name,
+                                originalSize: textContent.length,
+                                truncatedSize: textContent.length,
+                                truncated: false,
+                                percentage: 100,
+                                strategy: 'none'
+                            });
+                        }
+                    } catch (e) {
+                        console.error(`Error reading file ${file.name}:`, e);
+                    }
                 }
             }
         }
 
+        // P3-CONTEXT-BUDGET: Generate truncation report
+        const truncationReport = generateTruncationReport(truncationResults);
+        if (truncationReport.truncatedFiles.length > 0) {
+            console.log(`📊 Truncation Report: ${truncationReport.truncatedFiles.length}/${truncationReport.totalFiles} files truncated`);
+            console.log(`   Average retention: ${100 - truncationReport.totalTruncatedPercentage}%`);
+            if (truncationReport.recommendation) {
+                console.log(`   💡 ${truncationReport.recommendation}`);
+            }
+        }
+
+        if (AI_CONFIG.provider === 'github-copilot') {
+            const copilotTools = normalizeFunctionDeclarations(tools[0]?.functionDeclarations || []);
+            const copilotAttachments = (await Promise.all(
+                Array.from(new Set(fileIds)).map(id => prisma.workspaceFile.findUnique({ where: { id } }))
+            ))
+                .filter((file): file is NonNullable<typeof file> => Boolean(file))
+                .filter(file => file.type !== 'folder')
+                .map(file => ({
+                    type: 'file' as const,
+                    path: getWorkspaceFilePath(file),
+                    displayName: file.name
+                }));
+
+            const deniedToolReasons = new Map<string, 'tool-execution-disabled' | 'high-risk'>();
+            let toolUsed = '';
+            let toolArgs: Record<string, unknown> | undefined;
+            let lastToolResult: unknown;
+
+            const runCopilot = async (toolExecutionAllowed: boolean) => sendCopilotMessage({
+                model: resolveModelId(options?.model, getProviderDefaultModel('fast')),
+                prompt: typeof promptParts[0] === 'string' ? promptParts[0] : effectiveQuery,
+                systemInstruction,
+                attachments: copilotAttachments,
+                tools: copilotTools,
+                availableToolNames: copilotTools.map(tool => tool.name),
+                workingDirectory: process.cwd(),
+                allowToolExecution: toolExecutionAllowed,
+                allowHighRiskExecution,
+                isHighRiskTool: (toolName) => getToolRisk(toolName) === 'high',
+                executeTool: async (name, args) => executeAction(name, args),
+                onDeniedTool: (toolName, reason) => {
+                    if (!deniedToolReasons.has(toolName)) {
+                        deniedToolReasons.set(toolName, reason);
+                    }
+                },
+                onEvent: (event) => {
+                    if (event.type === 'tool.execution_complete') {
+                        toolUsed = typeof event.data.toolName === 'string' ? event.data.toolName : '';
+                        toolArgs = event.data.arguments && typeof event.data.arguments === 'object'
+                            ? event.data.arguments as Record<string, unknown>
+                            : undefined;
+                        lastToolResult = event.data.result;
+                    }
+                }
+            });
+
+            let assistantMessage = await runCopilot(allowToolExecution);
+            const deniedTools = Array.from(deniedToolReasons.keys());
+
+            if (!allowToolExecution && deniedTools.length > 0) {
+                if (isHtmlCreateOnly(deniedTools) || isSafeEditOnly(deniedTools) || isLowRiskTools(deniedTools)) {
+                    deniedToolReasons.clear();
+                    assistantMessage = await runCopilot(true);
+                }
+            }
+
+            const finalDeniedTools = Array.from(deniedToolReasons.keys());
+            if (finalDeniedTools.length > 0) {
+                const highRiskTools = finalDeniedTools.filter(tool => deniedToolReasons.get(tool) === 'high-risk');
+                return {
+                    success: true,
+                    text: `${buildPlanSummary(finalDeniedTools, effectiveQuery)}\n\nReply "yes" to approve running: ${finalDeniedTools.join(', ') || 'these tools'}.`,
+                    toolResult: {
+                        requiresApproval: true,
+                        proposedTools: finalDeniedTools,
+                        highRiskTools: highRiskTools.length > 0 ? highRiskTools : undefined
+                    }
+                };
+            }
+
+            return {
+                success: true,
+                text: assistantMessage?.data?.content || '',
+                toolUsed: toolUsed || undefined,
+                toolArgs,
+                toolResult: lastToolResult ? deepSerialize(lastToolResult) : undefined
+            };
+        }
+
+        if (!genAI) return { success: false, message: 'API Key missing' };
+        const model = genAI.getGenerativeModel({ model: selectedModel, systemInstruction, tools });
         const chat = model.startChat({
             history: history
         });
@@ -5300,38 +5952,10 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
         let specialToolName: string | null = null;
 
         if ((!calls || calls.length === 0) && !allowToolExecution && shouldResearch(query)) {
-            if (sessionId) {
-                await enqueueAgentJob({
-                    sessionId,
-                    type: 'chat_task',
-                    payload: {
-                        query,
-                        fileIds,
-                        history,
-                        currentFolder,
-                        currentFolderId,
-                        allowToolExecution: true,
-                        proposedTools: ['search_web']
-                    },
-                    approved: true
-                });
-            }
-
-            if (demoUser) {
-                await logAgentActivity({
-                    type: 'info',
-                    title: 'Approval Required',
-                    message: 'Proposed tools: search_web',
-                    toolUsed: 'enqueue_agent_job',
-                    userId: demoUser.id,
-                    sessionId: sessionId
-                });
-            }
-
             return {
                 success: true,
-                text: 'Running background research with search_web now.',
-                toolUsed: 'enqueue_agent_job'
+                text: 'I can run search_web to gather context. Reply "yes" to allow tool use, or provide more details.',
+                toolResult: { requiresApproval: true, proposedTools: ['search_web'] }
             };
         }
 
@@ -5349,108 +5973,40 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
 
         if ((!calls || calls.length === 0) && !allowToolExecution && !isSimpleConversation(query, fileIds.length > 0)) {
             const finalCandidate = currentResponse.text ? currentResponse.text() : '';
-            // If it's an action query but no tools called, FORCE an orchestration proposal
-            // unless the AI is already asking a clarifying question.
+            // If it's an action query but no tools called, ask for approval instead of queueing.
             const isQuestion = finalCandidate.trim().endsWith('?') || /\b(which|where|do you want|should i)\b/i.test(finalCandidate.toLowerCase());
 
             if (finalCandidate && (isApprovalRequest(finalCandidate) || !isQuestion)) {
-                if (sessionId) {
-                    await enqueueAgentJob({
-                        sessionId,
-                        type: 'chat_task',
-                        payload: {
-                            query,
-                            fileIds,
-                            history,
-                            currentFolder,
-                            currentFolderId,
-                            allowToolExecution: true
-                        },
-                        approved: true
-                    });
-                }
-
                 return {
                     success: true,
-                    text: `${buildPlanSummary([], query)}\n\nStarting in the background now.`,
-                    toolUsed: 'enqueue_agent_job'
+                    text: `${buildPlanSummary([], query)}\n\nReply "yes" to let me execute the plan now.`,
+                    toolResult: { requiresApproval: true }
                 };
             }
         }
 
-        if (calls && calls.length > 0 && !allowToolExecution) {
+        if (calls && calls.length > 0) {
             const proposedTools = calls.map(call => call.name);
+            const highRiskTools = proposedTools.filter(tool => getToolRisk(tool) === 'high');
 
-            if (isHtmlCreateOnly(proposedTools) || isSafeEditOnly(proposedTools)) {
-                allowToolExecution = true;
-            } else {
-
-                const recentApproval = await getRecentApproval();
-                // Less guardrails: Auto-approve low risk tools regardless of recent approval history
-                if (isLowRiskTools(proposedTools)) {
-                    if (sessionId) {
-                        await enqueueAgentJob({
-                            sessionId,
-                            type: 'chat_task',
-                            payload: {
-                                query,
-                                fileIds,
-                                history,
-                                currentFolder,
-                                currentFolderId,
-                                allowToolExecution: true,
-                                proposedTools
-                            },
-                            approved: true
-                        });
-                    }
-
-                    return {
-                        success: true,
-                        text: `Running a quick background action: ${proposedTools.join(', ')}.`,
-                        toolUsed: 'enqueue_agent_job'
-                    };
-                }
-
-                let jobId: string | undefined;
-
-                if (sessionId) {
-                    const jobRes = await enqueueAgentJob({
-                        sessionId,
-                        type: 'chat_task',
-                        payload: {
-                            query: effectiveQuery,
-                            fileIds,
-                            history,
-                            currentFolder,
-                            currentFolderId,
-                            allowToolExecution: true,
-                            proposedTools
-                        },
-                        approved: false // Require manual approval for high-risk tools
-                    });
-                    if (jobRes.success && jobRes.job) {
-                        jobId = jobRes.job.id;
-                    }
-                }
-
-                if (demoUser) {
-                    await logAgentActivity({
-                        type: 'info',
-                        title: 'Approval Required',
-                        message: `Proposed tools: ${proposedTools.join(', ') || 'none'}`,
-                        toolUsed: 'enqueue_agent_job',
-                        userId: demoUser.id,
-                        sessionId: sessionId
-                    });
-                }
-
+            if (highRiskTools.length > 0 && !allowHighRiskExecution) {
                 return {
                     success: true,
-                    text: `${buildPlanSummary(proposedTools, effectiveQuery)}\n\nPlease approve this action to proceed.`,
-                    toolUsed: 'enqueue_agent_job',
-                    toolResult: { requiresApproval: true, jobId }
+                    text: `${buildPlanSummary(proposedTools, effectiveQuery)}\n\nReply "yes" to approve running: ${highRiskTools.join(', ') || 'these tools'}.`,
+                    toolResult: { requiresApproval: true, proposedTools, highRiskTools }
                 };
+            }
+
+            if (!allowToolExecution) {
+                if (isHtmlCreateOnly(proposedTools) || isSafeEditOnly(proposedTools) || isLowRiskTools(proposedTools)) {
+                    allowToolExecution = true;
+                } else {
+                    return {
+                        success: true,
+                        text: `${buildPlanSummary(proposedTools, effectiveQuery)}\n\nReply "yes" to approve running: ${proposedTools.join(', ') || 'these tools'}.`,
+                        toolResult: { requiresApproval: true, proposedTools }
+                    };
+                }
             }
         }
 
@@ -5461,8 +6017,18 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
             const toolResults = [];
 
             for (const call of calls) {
+                const scoped = scopeToolArgsForActiveApp(call.name, call.args, activeAppRoot);
+                if (scoped.error) {
+                    const scopedError = { success: false, message: scoped.error };
+                    toolResults.push({ functionResponse: { name: call.name, response: scopedError } } as any);
+                    lastToolResult = scopedError;
+                    continue;
+                }
+
+                call.args = scoped.args;
                 let res;
-                console.log(`🎯 Executing skill: ${call.name}`);
+                logWithTrace(traceContext, `Tool execution started: ${call.name}`, { args: call.args });
+                console.log(`🎯 Executing skill: ${call.name} [Trace: ${traceId}]`);
 
                 // For editing tools, capture the content for client-side preview if needed
                 if (call.name === 'edit_file' || call.name === 'create_markdown_file') {
@@ -5475,7 +6041,8 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
                     fileIds: Array.from(resolvedFileIds),
                     query: effectiveQuery,
                     lastResponse: getLastAssistantText(),
-                    workspaceFiles: allFiles
+                    workspaceFiles: allFiles,
+                    traceId // Added P3-OBSERVABILITY traceId
                 };
 
                 // Execute skill with intelligent context
@@ -5491,7 +6058,7 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
                 // If skill unknown, try basic tool execution
                 if (!res.success && res.error && res.error.includes('Unknown skill')) {
                     console.log(`🔧 Skill not found, attempting tool execution: ${call.name}`);
-                    const toolRes = await executeWithRetry(call.name, call.args);
+                    const toolRes = await executeWithRetry(call.name, call.args, traceContext);
                     if (toolRes.success || toolRes.message !== `Action ${call.name} not found`) {
                         res = toolRes;
                     }
@@ -5503,7 +6070,15 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
                     }
                 }
 
-                console.log(`✅ Result for ${call.name}:`, res);
+                const resultSummary = {
+                    success: res.success,
+                    message: (typeof (res as any).message === 'string' && (res as any).message.length > 500)
+                        ? (res as any).message.substring(0, 500) + '...'
+                        : (res as any).message,
+                    error: res.error
+                };
+                logWithTrace(traceContext, `Tool execution finished: ${call.name}`, resultSummary);
+                console.log(`✅ Result for ${call.name} [Trace: ${traceId}]:`, resultSummary);
 
                 if (demoUser) {
                     await logAgentActivity({
@@ -5596,6 +6171,11 @@ IMPORTANT: The thinking block helps users understand your reasoning process.
         };
 
         if (toolArgs) responseObj.toolArgs = deepSerialize(toolArgs);
+
+        // P3-CONTEXT-BUDGET: Include truncation report if available
+        if (typeof truncationReport !== 'undefined' && truncationReport && truncationReport.truncatedFiles.length > 0) {
+            responseObj.truncationReport = truncationReport;
+        }
 
         return deepSerialize(responseObj);
     } catch (error) {
@@ -6098,5 +6678,110 @@ export async function applyBatch(args: { fileId: string, edits: { target: string
         };
     } catch (e: any) {
         return { success: false, message: `Batch editor error: ${e.message}` };
+    }
+}
+
+type UnifiedHunk = {
+    oldStart: number;
+    oldCount: number;
+    newStart: number;
+    newCount: number;
+    lines: string[];
+};
+
+const parseUnifiedDiff = (patch: string): UnifiedHunk[] => {
+    const lines = patch.split('\n');
+    const hunks: UnifiedHunk[] = [];
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i];
+        const match = /^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@/.exec(line);
+        if (!match) {
+            i += 1;
+            continue;
+        }
+
+        const oldStart = Number(match[1]);
+        const oldCount = Number(match[2] || '1');
+        const newStart = Number(match[3]);
+        const newCount = Number(match[4] || '1');
+
+        i += 1;
+        const hunkLines: string[] = [];
+        while (i < lines.length && !lines[i].startsWith('@@')) {
+            hunkLines.push(lines[i]);
+            i += 1;
+        }
+
+        hunks.push({ oldStart, oldCount, newStart, newCount, lines: hunkLines });
+    }
+
+    return hunks;
+};
+
+const applyUnifiedDiff = (content: string, patch: string): { content: string; error?: string } => {
+    const hunks = parseUnifiedDiff(patch);
+    if (!hunks.length) {
+        return { content, error: 'No hunks found in patch.' };
+    }
+
+    const originalLines = content.split('\n');
+    let offset = 0;
+
+    for (const hunk of hunks) {
+        const startIndex = Math.max(0, hunk.oldStart - 1 + offset);
+        let ptr = startIndex;
+        const replacement: string[] = [];
+
+        for (const line of hunk.lines) {
+            if (line.startsWith('\\')) {
+                continue; // Ignore "\ No newline" markers
+            }
+            const marker = line[0];
+            const text = line.slice(1);
+
+            if (marker === ' ') {
+                if (originalLines[ptr] !== text) {
+                    return { content, error: `Patch context mismatch at line ${ptr + 1}.` };
+                }
+                replacement.push(text);
+                ptr += 1;
+            } else if (marker === '-') {
+                if (originalLines[ptr] !== text) {
+                    return { content, error: `Patch removal mismatch at line ${ptr + 1}.` };
+                }
+                ptr += 1;
+            } else if (marker === '+') {
+                replacement.push(text);
+            }
+        }
+
+        originalLines.splice(startIndex, ptr - startIndex, ...replacement);
+        offset += replacement.length - (ptr - startIndex);
+    }
+
+    return { content: originalLines.join('\n') };
+};
+
+export async function applyPatch(args: { filePath: string, patch: string }) {
+    try {
+        if (!args?.filePath || !args?.patch) {
+            return { success: false, message: 'filePath and patch are required.' };
+        }
+
+        const isAbsolute = path.isAbsolute(args.filePath);
+        const resolvedPath = isAbsolute ? args.filePath : resolve(process.cwd(), args.filePath);
+        const originalContent = await readFileFS(resolvedPath, 'utf-8');
+        const result = applyUnifiedDiff(originalContent, args.patch);
+
+        if (result.error) {
+            return { success: false, message: result.error };
+        }
+
+        await writeFile(resolvedPath, result.content);
+        return { success: true, message: `Patch applied to ${resolvedPath}`, filePath: resolvedPath };
+    } catch (e: any) {
+        return { success: false, message: `Patch apply error: ${e.message}` };
     }
 }
