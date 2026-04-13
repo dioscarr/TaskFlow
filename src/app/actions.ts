@@ -28,7 +28,7 @@ function safeRevalidatePath(path: string, type?: 'layout' | 'page') {
     }
 }
 import { writeFile, readFile as readFileFS, rename, copyFile, mkdir } from 'fs/promises';
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getToolSchemas } from '@/lib/toolLibrary';
 import { getToolRisk } from '@/lib/toolLibrary';
 import { DEFAULT_SKILLS, SKILLS_LIBRARY } from '@/lib/skillsLibrary';
@@ -44,10 +44,10 @@ import AI_CONFIG, { getProviderDefaultModel } from '@/lib/aiConfig';
 import { resolveModelId } from '@/lib/modelCatalog';
 import { serializeValue, deepSerialize } from '@/lib/serialization';
 import { generateTraceId, logWithTrace, TraceContext } from '@/lib/tracing';
-import { wrapGeminiModel } from '@/lib/llm/providers/gemini';
 import { createConfiguredModel } from '@/lib/llm/factory';
 import { normalizeFunctionDeclarations } from '@/lib/llm/tool-schema-mapper';
 import { sendCopilotMessage } from '@/lib/llm/providers/copilot';
+import { generateAIText, generateAIContent } from '@/lib/aiModelFactory';
 
 // import { CognitiveAgent } from '@/lib/agents/CognitiveAgent';
 // import { DesignAgent } from '@/lib/agents/DesignAgent';
@@ -864,8 +864,9 @@ export async function simulateIncomingEmail(data: { from: string, subject: strin
         safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
-        console.error('Failed to simulate email:', error);
-        return { success: false };
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Failed to simulate email:', msg);
+        return { success: false, message: msg };
     }
 }
 
@@ -1146,8 +1147,9 @@ export async function uploadFile(formData: FormData) {
         safeRevalidatePath('/');
         return { success: true, file: newFile };
     } catch (error) {
-        console.error('Failed to upload file:', error);
-        return { success: false, error: 'Upload failed' };
+        const msg = error instanceof Error ? error.message : 'Upload failed';
+        console.error('Failed to upload file:', msg);
+        return { success: false, error: msg, message: msg };
     }
 }
 
@@ -1998,7 +2000,9 @@ export async function moveFile(id: string, parentId: string | null) {
         safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
-        return { success: false };
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('moveFile failed:', msg);
+        return { success: false, message: msg };
     }
 }
 
@@ -2011,7 +2015,9 @@ export async function toggleFileShare(id: string, shared: boolean) {
         safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
-        return { success: false };
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('toggleFileShare failed:', msg);
+        return { success: false, message: msg };
     }
 }
 
@@ -2026,7 +2032,9 @@ export async function reorderFiles(items: { id: string, order: number }[]) {
         safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
-        return { success: false };
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('reorderFiles failed:', msg);
+        return { success: false, message: msg };
     }
 }
 
@@ -2248,7 +2256,9 @@ export async function setActivePrompt(id: string) {
         safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
-        return { success: false };
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('setActivePrompt failed:', msg);
+        return { success: false, message: msg };
     }
 }
 
@@ -2258,7 +2268,9 @@ export async function deletePrompt(id: string) {
         safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
-        return { success: false };
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('deletePrompt failed:', msg);
+        return { success: false, message: msg };
     }
 }
 
@@ -2284,15 +2296,14 @@ export async function updatePrompt(id: string, data: {
         safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
-        return { success: false };
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('updatePrompt failed:', msg);
+        return { success: false, message: msg };
     }
 }
 
 export async function generateSystemPrompt(description: string) {
     try {
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-        const genAI = new GoogleGenerativeAI(apiKey!);
-        const model = genAI.getGenerativeModel({ model: AI_CONFIG.smartModel });
         const prompt = `You are a Prompt Engineer. Enhance the following Agent description into a professional system instruction: "${description}". 
         
         STRUCTURE:
@@ -2302,21 +2313,17 @@ export async function generateSystemPrompt(description: string) {
         4. GUARDRAILS: What it should NOT do.
         
         Keep it concise but EXTREMELY high-quality.`;
-        const result = await model.generateContent(prompt);
-        return { success: true, text: result.response.text().trim() };
+        const text = await generateAIText(prompt, { purpose: 'smart' });
+        return { success: true, text: text.trim() };
     } catch (error) {
-        return { success: false };
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('generateSystemPrompt failed:', msg);
+        return { success: false, message: msg };
     }
 }
 
 export async function generateMagicContent(params: { fileName: string; content: string; goal: string; chatContext?: { role: 'user' | 'ai'; content: string }[] }) {
     try {
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-        if (!apiKey) {
-            return { success: false, error: 'Missing API key' };
-        }
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: AI_CONFIG.fastModel });
         const recentContext = params.chatContext
             ?.filter(m => m.content && m.content.trim().length > 0)
             .slice(-5)
@@ -2332,9 +2339,8 @@ Goal: ${params.goal}
 ${params.content}
 `;
 
-        const result = await model.generateContent(prompt);
-        const rawText = result.response.text().trim();
-        const cleaned = rawText.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
+        const rawText = await generateAIText(prompt, { purpose: 'fast' });
+        const cleaned = rawText.trim().replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
         return { success: true, text: cleaned };
     } catch (error) {
         console.error('Failed to generate magic content:', error);
@@ -2344,12 +2350,6 @@ ${params.content}
 
 export async function generateMagicSuggestions(params: { fileName: string; description: string }) {
     try {
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-        if (!apiKey) {
-            return { success: false, error: 'Missing API key' };
-        }
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: AI_CONFIG.fastModel });
         const prompt = `You are a senior product designer and front-end copywriter.
 Generate exactly 5 concise, high-quality content update suggestions for the file below based on the description.
 Return ONLY a JSON array of 5 strings. No extra text.
@@ -2358,10 +2358,10 @@ File Name: ${params.fileName}
 Description: ${params.description}
 `;
 
-        const result = await model.generateContent(prompt);
-        const text = result.response.text().trim();
-        const jsonMatch = text.match(/\[[\s\S]*\]/);
-        const suggestions = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+        const text = await generateAIText(prompt, { purpose: 'fast' });
+        const trimmed = text.trim();
+        const jsonMatch = trimmed.match(/\[[\s\S]*\]/);
+        const suggestions = JSON.parse(jsonMatch ? jsonMatch[0] : trimmed);
         return { success: true, suggestions };
     } catch (error) {
         console.error('Failed to generate magic suggestions:', error);
@@ -2375,10 +2375,6 @@ export async function generateSuggestions(
     contextPayload?: string
 ) {
     try {
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-        const genAI = new GoogleGenerativeAI(apiKey!);
-        const model = genAI.getGenerativeModel({ model: AI_CONFIG.smartModel });
-
         // Parse context if provided
         let contextString = '';
         if (contextPayload) {
@@ -2416,8 +2412,7 @@ export async function generateSuggestions(
         Focus on: Premium aesthetics, Glassmorphism, Sophisticated functionality, and detailed technical steps.
         `;
 
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
+        const text = await generateAIText(prompt, { purpose: 'smart' });
 
         // Extract JSON
         const jsonMatch = text.match(/\[[\s\S]*\]/);
@@ -2541,8 +2536,9 @@ export async function createAlegraBill(data: any) {
         safeRevalidatePath('/');
         return { success: true, bill };
     } catch (error) {
-        console.error(error);
-        return { success: false };
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('createAlegraBill failed:', msg);
+        return { success: false, message: msg };
     }
 }
 
@@ -2552,7 +2548,9 @@ export async function deleteAlegraBill(id: string) {
         safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
-        return { success: false };
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('deleteAlegraBill failed:', msg);
+        return { success: false, message: msg };
     }
 }
 
@@ -2567,7 +2565,9 @@ export async function recordAlegraPayment(data: any) {
         safeRevalidatePath('/');
         return { success: true };
     } catch (error) {
-        return { success: false };
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('recordAlegraPayment failed:', msg);
+        return { success: false, message: msg };
     }
 }
 
@@ -3523,9 +3523,6 @@ export async function agentDelegate(data: { agentType: string, task: string }) {
     }
 
     if (agentKey === 'review' || agentKey === 'reviewer') {
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-        if (!apiKey) return { success: false, message: 'API Key missing for delegation' };
-
         if (demoUser) {
             await logAgentActivity({
                 type: 'delegation',
@@ -3537,11 +3534,8 @@ export async function agentDelegate(data: { agentType: string, task: string }) {
             });
         }
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: AI_CONFIG.smartModel });
         const prompt = `You are a strict Review Agent. Review the following plan or intended tool use.\n\nReturn:\n- Verdict: approve | revise | reject\n- Risks\n- Missing steps\n- Suggested changes\n\nCONTENT:\n${data.task}`;
-        const result = await model.generateContent(prompt);
-        const review = result.response.text();
+        const review = await generateAIText(prompt, { purpose: 'smart' });
 
         if (demoUser) {
             await logAgentActivity({
@@ -3574,51 +3568,6 @@ export async function extractReceiptInfo(data: { fileIds: string[] }) {
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
         if (!user) throw new Error('User not found');
 
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-        if (!apiKey) {
-            console.warn('⚠️ Gemini API Key missing, falling back to mock data');
-            return {
-                success: true,
-                extractedData: {
-                    provider: 'Simulated Vendor',
-                    rnc: '123456789',
-                    date: new Date().toISOString().split('T')[0],
-                    total: 0,
-                    items: []
-                }
-            };
-        }
-
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-            model: AI_CONFIG.visionModel,
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: SchemaType.OBJECT,
-                    properties: {
-                        provider: { type: SchemaType.STRING },
-                        rnc: { type: SchemaType.STRING },
-                        date: { type: SchemaType.STRING },
-                        total: { type: SchemaType.NUMBER },
-                        ncf: { type: SchemaType.STRING },
-                        itbis: { type: SchemaType.NUMBER },
-                        items: {
-                            type: SchemaType.ARRAY,
-                            items: {
-                                type: SchemaType.OBJECT,
-                                properties: {
-                                    description: { type: SchemaType.STRING },
-                                    quantity: { type: SchemaType.NUMBER },
-                                    price: { type: SchemaType.NUMBER }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
         if (!data.fileIds || data.fileIds.length === 0) {
             return { success: false, message: 'No file IDs provided' };
         }
@@ -3631,14 +3580,17 @@ export async function extractReceiptInfo(data: { fileIds: string[] }) {
         const imageBuffer = await readFileFS(filePath);
         const base64Image = imageBuffer.toString('base64');
 
-        const prompt = "Extract fiscal data from this receipt image. Focus on Dominican RNC and NCF if present.";
+        const prompt = `Extract fiscal data from this receipt image. Focus on Dominican RNC and NCF if present.
+Return ONLY valid JSON with this exact structure (no extra text):
+{"provider":"string","rnc":"string","date":"string","total":0,"ncf":"string","itbis":0,"items":[{"description":"string","quantity":0,"price":0}]}`;
 
-        const result = await model.generateContent([
+        const text = await generateAIContent([
             prompt,
             { inlineData: { data: base64Image, mimeType: 'image/jpeg' } }
-        ]);
+        ], { purpose: 'vision' });
 
-        const extractedData = JSON.parse(result.response.text());
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const extractedData = JSON.parse(jsonMatch ? jsonMatch[0] : text);
 
         return {
             success: true,
@@ -3718,15 +3670,8 @@ export async function summarizeFile(data: { fileId: string; detailLevel?: 'brief
         const filePath = join(process.cwd(), 'public', 'uploads', file.name);
         const content = await readFileFS(filePath, 'utf8');
 
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-        if (!apiKey) return { success: true, summary: `[Summary for ${file.name} - Gemini API Key missing]` };
-
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: AI_CONFIG.fastModel });
-
         const prompt = `Please provide a ${data.detailLevel || 'brief'} summary of the following file content:\n\n${content}`;
-        const result = await model.generateContent(prompt);
-        const summary = result.response.text();
+        const summary = await generateAIText(prompt, { purpose: 'fast' });
 
         return { success: true, summary, fileName: file.name };
     } catch (error) {
@@ -3816,10 +3761,6 @@ export async function synthesizeDocuments(data: { fileIds: string[], outputFilen
             }
         }
 
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-        const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
-        const model = genAI.getGenerativeModel({ model: AI_CONFIG.smartModel });
-
         const prompt = `Synthesize the following documents into a single, cohesive master report. 
 Use a professional structure with an Executive Summary, Key Findings, and Consolidated Details.
 Save the output as a Markdown report.
@@ -3827,8 +3768,7 @@ Save the output as a Markdown report.
 DOCUMENTS CONTENT:
 ${mergedContent}`;
 
-        const result = await model.generateContent(prompt);
-        const reportContent = result.response.text();
+        const reportContent = await generateAIText(prompt, { purpose: 'smart' });
 
         await createMarkdownFile({ filename: data.outputFilename, content: reportContent });
 
@@ -3881,8 +3821,9 @@ export async function getAgentActivitiesForSession(sessionId: string, limit: num
         });
         return { success: true, activities: activities.reverse() }; // Chronological
     } catch (error) {
-        console.error('Failed to fetch session activity:', error);
-        return { success: false, activities: [] };
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Failed to fetch session activity:', msg);
+        return { success: false, activities: [], message: msg };
     }
 }
 
@@ -3982,10 +3923,6 @@ export async function processAgentJob(jobId: string) {
             where: { id: jobId },
             data: { status: 'running', startedAt: new Date() }
         });
-        // Initialize Gemini
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
-        const genAI = new GoogleGenerativeAI(apiKey);
-
 
         // Initialize Skills and Tools for background agents
         const payload = job.payload as any;
@@ -4172,17 +4109,11 @@ If you attempt to edit files outside "apps/${activeRepoApp}/", your operation wi
 Always prefix file paths with "apps/${activeRepoApp}/" and use cwd: "apps/${activeRepoApp}" for terminal commands.`;
         }
 
-        const workerModel = AI_CONFIG.provider === 'github-copilot'
-            ? createConfiguredModel({
+        const workerModel = createConfiguredModel({
                 purpose: 'fast',
                 systemInstruction,
                 tools: normalizeFunctionDeclarations(allDecls)
-            })
-            : wrapGeminiModel(genAI.getGenerativeModel({
-                model: AI_CONFIG.fastModel,
-                systemInstruction,
-                tools
-            }));
+            });
 
         const logger = async (msg: string, type: 'info' | 'thinking' | 'error' = 'info') => {
             const logEntry = `[${new Date().toISOString()}] [Job ${jobId}] [${type.toUpperCase()}] ${msg}\n`;
@@ -4393,7 +4324,9 @@ export async function getChatSessionAgentStatus(sessionId: string) {
             latestActivity: isActivityRecent ? latestActivity : null
         };
     } catch (error) {
-        return { success: false, busy: false, runningCount: 0, queuedCount: 0 };
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('getChatSessionAgentStatus failed:', msg);
+        return { success: false, busy: false, runningCount: 0, queuedCount: 0, message: msg };
     }
 }
 
@@ -4412,18 +4345,12 @@ export async function extractTextFromImage(data: { fileId: string }) {
         const imageBuffer = await readFileFS(filePath);
         const base64Image = imageBuffer.toString('base64');
 
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-        if (!apiKey) return { success: false, message: 'Gemini API Key missing' };
-
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: AI_CONFIG.visionModel });
-
-        const result = await model.generateContent([
+        const text = await generateAIContent([
             "Extract all text from this image as accurately as possible.",
-            { inlineData: { data: base64Image, mimeType: 'image/jpeg' } } // Fallback to jpeg
-        ]);
+            { inlineData: { data: base64Image, mimeType: 'image/jpeg' } }
+        ], { purpose: 'vision' });
 
-        return { success: true, text: result.response.text() };
+        return { success: true, text };
     } catch (error) {
         console.error('OCR failed:', error);
         return { success: false, message: 'OCR failed' };
@@ -4666,9 +4593,9 @@ export async function chatWithAI(
         const isToolAgent = agentMode === 'tool-agent';
         const sessionId = options?.sessionId;
         const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-        if (!apiKey) return { success: false, message: 'API Key missing' };
+        if (!apiKey && AI_CONFIG.provider !== 'github-copilot') return { success: false, message: 'API Key missing' };
 
-        const genAI = new GoogleGenerativeAI(apiKey);
+        const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
         const [taskCount, fileCount, folders, allFiles, activePromptSet, demoUser, processesRes] = await Promise.all([
             prisma.task.count(),
@@ -6314,38 +6241,6 @@ export async function syncWorkspaceFiles() {
 
 export async function suggestStrategies(data: { objective: string }) {
     try {
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-        if (!apiKey) return { success: false, message: 'API Key missing' };
-
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-            model: AI_CONFIG.smartModel,
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: SchemaType.OBJECT,
-                    properties: {
-                        strategies: {
-                            type: SchemaType.ARRAY,
-                            items: {
-                                type: SchemaType.OBJECT,
-                                properties: {
-                                    id: { type: SchemaType.STRING },
-                                    name: { type: SchemaType.STRING },
-                                    description: { type: SchemaType.STRING },
-                                    pros: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                                    cons: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                                    riskLevel: { type: SchemaType.STRING },
-                                    estimatedDuration: { type: SchemaType.STRING },
-                                    keyTools: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
         const prompt = `
         You are a Strategic Planning AI.
         OBJECTIVE: ${data.objective}
@@ -6356,10 +6251,14 @@ export async function suggestStrategies(data: { objective: string }) {
         3. **Creative / Innovation**: An alternative approach that uses unique tools or lateral thinking.
 
         Ensure tools mentioned actually exist in our library (search_web, create_file, etc.).
+
+        Return ONLY valid JSON with this exact structure (no extra text):
+        {"strategies":[{"id":"string","name":"string","description":"string","pros":["string"],"cons":["string"],"riskLevel":"string","estimatedDuration":"string","keyTools":["string"]}]}
         `;
 
-        const result = await model.generateContent(prompt);
-        const suggestion = JSON.parse(result.response.text());
+        const text = await generateAIText(prompt, { purpose: 'smart' });
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const suggestion = JSON.parse(jsonMatch ? jsonMatch[0] : text);
 
         return {
             success: true,
