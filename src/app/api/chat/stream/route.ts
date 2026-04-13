@@ -431,7 +431,7 @@ export async function POST(request: Request) {
                                 if (event.type === 'assistant.reasoning_delta') {
                                     const text = typeof event.data.deltaContent === 'string' ? event.data.deltaContent : '';
                                     if (text) {
-                                        enqueue({ type: 'debug', message: text });
+                                        enqueue({ type: 'thinking', text });
                                     }
                                     return;
                                 }

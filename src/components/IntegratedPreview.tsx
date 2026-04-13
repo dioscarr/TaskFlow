@@ -78,11 +78,8 @@ export default function IntegratedPreview({
                 if (result?.success && result.url) {
                     console.log('Ngrok URL detected:', result.url);
                     setPublicUrl(result.url);
-                } else {
-                    if (result?.logs) {
-                        console.log('Ngrok detection failed logs:', result.logs);
-                    }
                 }
+                // Silently ignore detection failures — ngrok is optional
             } catch (e) {
                 console.warn('Failed to fetch ngrok url via server action', e);
             }

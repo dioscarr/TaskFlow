@@ -146,7 +146,9 @@ export const MessageBubble = ({ msg, attachedFiles, showThinking, setInput, setA
                 <div className="flex flex-wrap gap-2 mb-2 justify-end">
                     {msg.files.map((f) => {
                         const isImage = /^(image|png|jpg|jpeg|gif|webp|heic|heif)$/i.test(f.type || '');
-                        const imgSrc = isImage && f.storagePath ? `/${f.storagePath}` : null;
+                        const imgSrc = isImage && f.storagePath
+                            ? `/${f.storagePath.replace(/^public\//, '')}`
+                            : null;
                         return (
                             <div key={f.id} className={cn(
                                 "rounded-lg border border-[color:var(--border)] overflow-hidden",

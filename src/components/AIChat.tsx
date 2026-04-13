@@ -1474,9 +1474,12 @@ export default function AIChat({
                                 toast.info(payload.message || 'Connection interrupted. Retrying...');
                             }
 
-                            // P3-TOOL-ROUTING/OBSERVABILITY: Debug logs from server
-                            if (payload.type === 'debug') {
-                                console.log('🐞 Server Debug:', payload.message);
+                            // P3-TOOL-ROUTING/OBSERVABILITY: Debug logs from server (suppressed in production)
+                            if (payload.type === 'debug' && process.env.NODE_ENV === 'development') {
+                                // Only log trace IDs and important debug, not per-token noise
+                                if (payload.message?.startsWith?.('Trace ID:') || payload.message?.startsWith?.('Context Budget:')) {
+                                    console.log('🐞 Server Debug:', payload.message);
+                                }
                             }
 
                             if (payload.type === 'context' && payload.appliedContext) {

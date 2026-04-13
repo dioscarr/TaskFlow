@@ -7,10 +7,6 @@
  * - Inconsistent line endings
  */
 export function normalizeMarkdown(text: string): string {
-    console.log('🔍 Original markdown:', text);
-    console.log('🔍 Has table pipes:', text.includes('|'));
-    console.log('🔍 Has separator:', text.includes('---') || text.includes('|--'));
-
     let normalized = text;
 
     // 1. Remove code blocks that wrap markdown tables
@@ -38,9 +34,6 @@ export function normalizeMarkdown(text: string): string {
         }
         return match;
     });
-
-    console.log('✅ Normalized markdown:', normalized);
-    console.log('✅ Table structure preserved:', normalized.includes('|') && normalized.includes('---'));
 
     return normalized;
 }
