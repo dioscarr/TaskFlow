@@ -58,6 +58,24 @@ function formatCopilotHistory(history: Array<{ role?: string; parts?: Array<{ te
     return entries.length > 0 ? `Conversation history:\n${entries.join('\n\n')}\n\n` : '';
 }
 
+function hydrateToolArgsWithContext(toolName: string, args: unknown, fileIds: string[] = []) {
+    const normalizedArgs = args && typeof args === 'object'
+        ? { ...(args as Record<string, unknown>) }
+        : {} as Record<string, unknown>;
+
+    if (SKILLS_LIBRARY[toolName]) {
+        const currentFileIds = Array.isArray(normalizedArgs.fileIds)
+            ? normalizedArgs.fileIds.filter((id): id is string => typeof id === 'string')
+            : [];
+
+        if (currentFileIds.length === 0 && fileIds.length > 0) {
+            normalizedArgs.fileIds = fileIds;
+        }
+    }
+
+    return normalizedArgs;
+}
+
 async function buildCopilotAttachments(fileIds: string[] = []) {
     if (!fileIds.length) {
         return [];
@@ -187,6 +205,12 @@ export async function POST(request: Request) {
             const completedTools = new Set<string>();
             let retryCount = 0;
 
+            // Shared tool tracking — accessible from both Copilot/Gemini paths AND the catch block
+            let streamLastToolUsed = '';
+            let streamLastToolResult: unknown = null;
+            let streamLastToolArgs: Record<string, unknown> | null = null;
+            let streamAppliedContext: Record<string, unknown> | undefined;
+
             const executeStream = async (): Promise<void> => {
                 try {
                     const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
@@ -280,6 +304,7 @@ export async function POST(request: Request) {
                         },
                         workflows: appliedWorkflows
                     };
+                    streamAppliedContext = appliedContext as unknown as Record<string, unknown>;
 
                     enqueue({ type: 'context', appliedContext });
 
@@ -298,6 +323,7 @@ export async function POST(request: Request) {
                         const deniedTools: string[] = [];
                         const deniedHighRiskTools: string[] = [];
                         const toolStartTimes = new Map<string, number>();
+                        let toolInvocationCounter = 0;
                         let lastToolResult: unknown = null;
                         let lastToolUsed = '';
                         let lastToolArgs: Record<string, unknown> | null = null;
@@ -313,7 +339,46 @@ export async function POST(request: Request) {
                             allowToolExecution,
                             allowHighRiskExecution,
                             isHighRiskTool: (toolName) => getToolRisk(toolName) === 'high',
-                            executeTool: async (toolName, args) => executeWithRetry(toolName, args, traceContext),
+                            executeTool: async (toolName, args) => {
+                                const hydratedArgs = hydrateToolArgsWithContext(toolName, args, fileIds || []);
+                                const toolRunId = `${toolName}:${++toolInvocationCounter}`;
+                                const startTime = Date.now();
+                                toolStartTimes.set(toolRunId, startTime);
+
+                                enqueue({
+                                    type: 'tool_status',
+                                    tool: toolName,
+                                    phase: 'start',
+                                    timestamp: startTime
+                                });
+
+                                const result = await executeWithRetry(toolName, hydratedArgs, traceContext);
+                                const endTime = Date.now();
+                                const elapsedMs = endTime - startTime;
+
+                                enqueue({
+                                    type: 'tool_status',
+                                    tool: toolName,
+                                    phase: 'finish',
+                                    timestamp: endTime,
+                                    elapsedMs
+                                });
+
+                                if (sessionId) {
+                                    const isSuccess = result && typeof result === 'object' && 'success' in result
+                                        ? (result as { success?: boolean }).success !== false
+                                        : true;
+                                    sessionMetricStore.recordToolUsage(sessionId, toolName, isSuccess, elapsedMs);
+                                }
+
+                                lastToolUsed = toolName;
+                                lastToolResult = result;
+                                lastToolArgs = hydratedArgs;
+                                streamLastToolUsed = toolName;
+                                streamLastToolResult = result;
+                                streamLastToolArgs = hydratedArgs;
+                                return result;
+                            },
                             onDeniedTool: (toolName, reason) => {
                                 deniedTools.push(toolName);
                                 if (reason === 'high-risk') {
@@ -338,44 +403,7 @@ export async function POST(request: Request) {
                                     return;
                                 }
 
-                                if (event.type === 'tool.execution_start') {
-                                    const toolCallId = typeof event.data.toolCallId === 'string' ? event.data.toolCallId : `${Date.now()}`;
-                                    const toolName = typeof event.data.toolName === 'string' ? event.data.toolName : 'unknown_tool';
-                                    toolStartTimes.set(toolCallId, Date.now());
-                                    enqueue({
-                                        type: 'tool_status',
-                                        tool: toolName,
-                                        phase: 'start',
-                                        timestamp: toolStartTimes.get(toolCallId)
-                                    });
-                                    return;
-                                }
-
-                                if (event.type === 'tool.execution_complete') {
-                                    const toolCallId = typeof event.data.toolCallId === 'string' ? event.data.toolCallId : '';
-                                    const toolName = typeof event.data.toolName === 'string' ? event.data.toolName : 'unknown_tool';
-                                    const endTime = Date.now();
-                                    const startTime = toolStartTimes.get(toolCallId) || endTime;
-                                    const elapsedMs = endTime - startTime;
-
-                                    enqueue({
-                                        type: 'tool_status',
-                                        tool: toolName,
-                                        phase: 'finish',
-                                        timestamp: endTime,
-                                        elapsedMs
-                                    });
-
-                                    if (sessionId) {
-                                        const isSuccess = event.data.success !== false;
-                                        sessionMetricStore.recordToolUsage(sessionId, toolName, isSuccess, elapsedMs);
-                                    }
-
-                                    lastToolUsed = toolName;
-                                    lastToolResult = event.data.result;
-                                    lastToolArgs = (event.data.arguments && typeof event.data.arguments === 'object')
-                                        ? event.data.arguments as Record<string, unknown>
-                                        : null;
+                                if (event.type === 'tool.execution_start' || event.type === 'tool.execution_complete') {
                                     return;
                                 }
                             }
@@ -652,7 +680,8 @@ export async function POST(request: Request) {
 
                             console.log(`🔧 [Stream] Executing tool: ${call.name} [Trace: ${traceId}]`, call.args);
 
-                            const res = await executeWithRetry(call.name, call.args, traceContext);
+                            const hydratedArgs = hydrateToolArgsWithContext(call.name, call.args, fileIds || []);
+                            const res = await executeWithRetry(call.name, hydratedArgs, traceContext);
 
                             // Emit tool finish event with elapsed time
                             const toolEndTime = Date.now();
@@ -674,6 +703,9 @@ export async function POST(request: Request) {
                             lastToolUsed = call.name;
                             lastToolArgs = call.args;
                             lastToolResult = res;
+                            streamLastToolUsed = call.name;
+                            streamLastToolResult = res;
+                            streamLastToolArgs = call.args as Record<string, unknown>;
 
                             // Mark tool as completed to prevent duplicate execution
                             completedTools.add(toolKey);
@@ -709,6 +741,23 @@ export async function POST(request: Request) {
                     controller.close();
                 } catch (error) {
                     console.error('💥 Stream Route Error:', error);
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+
+                    if (errorMessage.includes('session.idle') && (partialContent || streamLastToolUsed || streamLastToolResult)) {
+                        console.warn('⚠️ Recovering from session.idle timeout with partial stream content.');
+                        enqueue({
+                            type: 'done',
+                            toolUsed: streamLastToolUsed || undefined,
+                            toolResult: deepSerialize(streamLastToolResult) || undefined,
+                            toolArgs: deepSerialize(streamLastToolArgs) || undefined,
+                            appliedContext: streamAppliedContext
+                        });
+                        if (sessionId) {
+                            sessionMetricStore.recordError(sessionId, `Recovered from ${errorMessage}`);
+                        }
+                        controller.close();
+                        return;
+                    }
 
                     // Check if error is transient and we haven't exceeded retry limit
                     if (isTransientError(error) && retryCount < RETRY_CONFIG.maxRetries) {
@@ -737,13 +786,13 @@ export async function POST(request: Request) {
                     // Non-transient error or max retries exceeded
                     enqueue({
                         type: 'error',
-                        message: error instanceof Error ? error.message : 'Streaming failed',
+                        message: errorMessage,
                         partialContent: partialContent || undefined
                     });
 
                     // P3-OBSERVABILITY: Record Stream Error
                     if (sessionId) {
-                        sessionMetricStore.recordError(sessionId, error instanceof Error ? error.message : String(error));
+                        sessionMetricStore.recordError(sessionId, errorMessage);
                     }
                     controller.close();
                 }

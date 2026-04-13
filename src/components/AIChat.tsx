@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Bot, Command, Copy, CornerDownLeft, Eye, File, FileText, Image, Layout, Layers, Loader2, MessageSquare, MoreHorizontal, Paperclip, Play, Plus, RefreshCw, Send, Settings, Sparkles, Terminal, Trash2, X, CheckCircle2, ChevronDown, List, FolderOpen, Folder, FileJson, Square, BrainCircuit, Image as ImageIcon, ExternalLink, Check, ChevronRight, Edit2, Pin, PinOff, Search, Receipt, DollarSign, Save, AlignLeft, Lightbulb, Compass, Activity, Zap, ArrowDown, AlertTriangle, Globe, Monitor, GitBranch, Split } from 'lucide-react';
-import { chatWithAI, chatWithAIStream, getPrompts, createPrompt, updatePrompt, setActivePrompt, deletePrompt, generateSystemPrompt, getIntentRules, getWorkspaceFiles, getChatSessionAgentStatus, cancelAllAgentJobs } from '@/app/actions';
+import { chatWithAI, chatWithAIStream, getPrompts, createPrompt, updatePrompt, setActivePrompt, deletePrompt, generateSystemPrompt, getIntentRules, getWorkspaceFiles, getChatSessionAgentStatus, cancelAllAgentJobs, uploadFile } from '@/app/actions';
 import { createChatSession, getChatSessions, getChatSession, addChatMessage, updateChatSessionTitle, deleteChatSession, deleteAllChatSessions } from '@/app/chatActions';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -78,7 +78,10 @@ type AgentStatusResponse = {
 type ChatResponse = {
     success?: boolean;
     message?: string;
+    error?: string;
+    reason?: string;
     text?: string;
+    content?: string;
     toolUsed?: string;
     toolResult?: unknown;
     thinking?: string;
@@ -133,9 +136,28 @@ const normalizeChatResponse = (value: unknown): ChatResponse & { success: boolea
         return { success: false, message: 'AI returned an empty response.' };
     }
     const record = value as ChatResponse;
-    const success = typeof record.success === 'boolean' ? record.success : false;
-    const message = record.message ?? (success ? undefined : 'AI returned an empty response.');
-    return { ...record, success, message };
+    const text = typeof record.text === 'string'
+        ? record.text
+        : typeof record.content === 'string'
+            ? record.content
+            : undefined;
+    const hasVisibleOutput = Boolean(
+        (typeof text === 'string' && text.trim().length > 0)
+        || (typeof record.thinking === 'string' && record.thinking.trim().length > 0)
+        || typeof record.toolUsed === 'string'
+        || typeof record.toolResult !== 'undefined'
+    );
+    const success = typeof record.success === 'boolean' ? record.success : hasVisibleOutput;
+    const message = typeof record.message === 'string' && record.message.trim().length > 0
+        ? record.message
+        : typeof record.error === 'string' && record.error.trim().length > 0
+            ? record.error
+            : typeof record.reason === 'string' && record.reason.trim().length > 0
+                ? record.reason
+                : success
+                    ? undefined
+                    : 'AI returned an empty response.';
+    return { ...record, text, success, message };
 };
 
 const aiChatStateCache = {
@@ -268,8 +290,10 @@ export default function AIChat({
     const [elapsedTime, setElapsedTime] = useState(0);
     const [messages, setMessages] = useState<ChatMessage[]>(() => (aiChatStateCache.messages.length ? [...aiChatStateCache.messages] : []));
     const streamSpeedRef = useRef(14);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [attachedFiles, setAttachedFiles] = useState<SelectedFile[]>(() => aiChatStateCache.attachedFiles || []);
     const [isDragging, setIsDragging] = useState(false);
+    const [isUploadingFiles, setIsUploadingFiles] = useState(false);
     const [prompts, setPrompts] = useState<AIPromptSet[]>([]);
     const [intentRules, setIntentRules] = useState<IntentRule[]>([]);
     const [chatSessions, setChatSessions] = useState<ChatSessionSummary[]>([]);
@@ -1187,6 +1211,7 @@ export default function AIChat({
         }
         if (!text.trim() && attachedFiles.length === 0) return;
 
+        const requestText = text;
         setIsLoading(true);
 
         const userMsg = { id: genMsgId(), role: 'user' as const, content: text, files: [...attachedFiles] };
@@ -1572,13 +1597,36 @@ export default function AIChat({
                         content: 'I apologize, but I encountered an issue generating a response. Please try again.'
                     }]);
                 } else {
-                    const text = response.text as string;
-                    const { cleanText, thinking } = extractThinkingFromText(text);
-                    // Avoid re-showing thinking tags as a code block when there is no user-facing text
-                    const safeContent = cleanText || (thinking ? '' : text);
-                    const contentToStream = safeContent;
+                    const responseText = response.text as string;
                     const toolArgsRecord = toRecord(response.toolArgs);
                     const toolResultRecord = toRecord(response.toolResult);
+                    const requiresApproval = toolResultRecord.requiresApproval === true;
+                    const pendingTools = Array.isArray(toolResultRecord.proposedTools)
+                        ? toolResultRecord.proposedTools.filter((tool): tool is string => typeof tool === 'string')
+                        : [];
+                    const pendingHighRiskTools = Array.isArray(toolResultRecord.highRiskTools)
+                        ? toolResultRecord.highRiskTools.filter((tool): tool is string => typeof tool === 'string')
+                        : [];
+
+                    if (requiresApproval) {
+                        setPendingApprovalRequest({
+                            replayText: requestText,
+                            proposedTools: pendingTools,
+                            highRiskTools: pendingHighRiskTools
+                        });
+                        setProposedTools(pendingTools);
+                        setHighRiskTools(pendingHighRiskTools);
+                    } else {
+                        setPendingApprovalRequest(null);
+                        setProposedTools([]);
+                        setHighRiskTools([]);
+                        setIsApprovalModalOpen(false);
+                    }
+
+                    const { cleanText, thinking } = extractThinkingFromText(responseText);
+                    // Avoid re-showing thinking tags as a code block when there is no user-facing text
+                    const safeContent = cleanText || (thinking ? '' : responseText);
+                    const contentToStream = safeContent;
 
                     if (usedStream && streamedMessageId) {
                         updateStreamingMeta(streamedMessageId, {
@@ -1755,8 +1803,8 @@ export default function AIChat({
                     }
                 }
             } else {
-                const errorMessage = response.message || response.text || 'AI failed to respond';
-                console.error('❌ AI Error:', { success: response.success, message: response.message, text: response.text, fullResponse: response });
+                const errorMessage = response.message || response.error || response.reason || response.text || 'AI failed to respond';
+                console.error('❌ AI Error:', { success: response.success, message: response.message, error: response.error, reason: response.reason, text: response.text, keys: Object.keys(response || {}), fullResponse: response });
                 toast.error(errorMessage);
                 setMessages(prev => [...prev, { id: genMsgId(), role: 'ai', content: `Error: ${errorMessage}` }]);
             }
@@ -1791,7 +1839,22 @@ export default function AIChat({
             setAllowHighRiskExecution(true);
         }
         setAllowHighRiskOnce(true);
-        await sendMessage('approve');
+        const pendingRecord = toRecord(pendingApprovalRequest);
+        const replayText = typeof pendingRecord.replayText === 'string' ? pendingRecord.replayText : '';
+        const fallbackMessage = [...messages]
+            .slice()
+            .reverse()
+            .find((message) => message.role === 'user' && (message.content.trim().length > 0 || (message.files?.length ?? 0) > 0))
+            ?.content || '';
+
+        const textToReplay = replayText.trim().length > 0 ? replayText : fallbackMessage;
+        if (!textToReplay.trim() && attachedFiles.length === 0) {
+            toast.error('No pending approval action in this chat.');
+            return;
+        }
+
+        toast.info('Approval granted. Replaying the last request with tool execution enabled.');
+        await sendMessage(textToReplay);
     };
 
     const handleSavePrompt = async (data: {
@@ -1884,14 +1947,189 @@ export default function AIChat({
         setAttachedFiles(prev => prev.filter(f => f.id !== id));
     };
 
+    const upsertAttachedFile = useCallback((file: SelectedFile, options?: { silent?: boolean }) => {
+        let added = false;
+        setAttachedFiles(prev => {
+            if (prev.find(existing => existing.id === file.id)) return prev;
+            added = true;
+            return [...prev, file];
+        });
+
+        if (added && !options?.silent) {
+            toast.success(`Attached ${file.name}`, {
+                description: 'Added to chat context for analysis and tool use.'
+            });
+        }
+
+        return added;
+    }, []);
+
+    const mergeWorkspaceFile = useCallback((file: SelectedFile) => {
+        setWorkspaceFiles(prev => {
+            if (prev.find(existing => existing.id === file.id)) return prev;
+            return [...prev, file];
+        });
+    }, []);
+
+    const handleNativeFilesAdded = useCallback(async (incomingFiles: FileList | File[]) => {
+        const files = Array.from(incomingFiles).filter((file): file is File => file instanceof File);
+        if (files.length === 0) return;
+
+        setIsUploadingFiles(true);
+        const loadingToast = toast.loading(
+            files.length === 1 ? `Uploading ${files[0].name}...` : `Uploading ${files.length} files...`
+        );
+
+        const uploaded: SelectedFile[] = [];
+        const failedFiles: string[] = [];
+
+        try {
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                if (currentFolderContext.id) {
+                    formData.append('parentId', currentFolderContext.id);
+                }
+
+                const result = await uploadFile(formData);
+                if (result.success && result.file) {
+                    uploaded.push({
+                        id: result.file.id,
+                        name: result.file.name,
+                        type: result.file.type,
+                        parentId: result.file.parentId ?? null,
+                        storagePath: result.file.storagePath ?? undefined
+                    });
+                } else {
+                    failedFiles.push(file.name);
+                }
+            }
+
+            uploaded.forEach(file => {
+                mergeWorkspaceFile(file);
+                upsertAttachedFile(file, { silent: true });
+            });
+
+            if (uploaded.length > 0) {
+                if (!isOpen) setIsOpen(true);
+                toast.success(
+                    uploaded.length === 1 ? `Attached ${uploaded[0].name}` : `Attached ${uploaded.length} files to chat context`,
+                    {
+                        id: loadingToast,
+                        description: 'Ready for chat, summarization, and vision analysis.'
+                    }
+                );
+            } else {
+                toast.error('Failed to upload files', { id: loadingToast });
+            }
+
+            if (failedFiles.length > 0) {
+                toast.error(`Some files failed to upload: ${failedFiles.join(', ')}`);
+            }
+        } catch (error) {
+            toast.error('Failed to upload files', { id: loadingToast });
+        } finally {
+            setIsUploadingFiles(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    }, [currentFolderContext.id, isOpen, mergeWorkspaceFile, upsertAttachedFile]);
+
+    const handleComposerDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(false);
+
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            await handleNativeFilesAdded(e.dataTransfer.files);
+            return;
+        }
+
+        const fileId = e.dataTransfer.getData('fileId');
+        if (!fileId) return;
+
+        const file = workspaceFiles.find(item => item.id === fileId);
+        if (file) {
+            upsertAttachedFile(file);
+        }
+    }, [handleNativeFilesAdded, upsertAttachedFile, workspaceFiles]);
+
+    const renderAttachedContextTray = (variant: 'pinned' | 'floating' = 'pinned') => {
+        const isFloating = variant === 'floating';
+        const secondaryText = isFloating ? 'text-white/50' : 'theme-text-tertiary';
+        const chipClass = isFloating
+            ? 'border-white/10 bg-white/5 text-white/80 hover:border-white/20'
+            : 'theme-border-medium theme-overlay-subtle theme-text-secondary hover:theme-text-primary';
+        const buttonClass = isFloating
+            ? 'border-white/10 bg-white/5 text-white/80 hover:bg-white/10'
+            : 'border-[color:var(--border)] bg-foreground/[0.03] theme-text-secondary hover:theme-text-primary hover:border-sky-500/30';
+
+        return (
+            <div className="mb-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                    <div className={cn('text-[10px] uppercase tracking-[0.2em] font-bold', secondaryText)}>
+                        Chat Context
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingFiles}
+                        className={cn(
+                            'inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-[11px] font-semibold transition-colors',
+                            buttonClass,
+                            isUploadingFiles && 'cursor-wait opacity-70'
+                        )}
+                        title="Upload files into chat context"
+                    >
+                        {isUploadingFiles ? <Loader2 size={13} className="animate-spin" /> : <Paperclip size={13} />}
+                        {isUploadingFiles ? 'Uploading...' : 'Attach files'}
+                    </button>
+                </div>
+                <div className={cn('text-[11px]', secondaryText)}>
+                    Drop from your desktop or the file manager. Images and PDFs stay in context for vision and receipt analysis.
+                </div>
+                {attachedFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {attachedFiles.map(file => {
+                            const FileIcon = file.type === 'pdf'
+                                ? FileText
+                                : ['png', 'jpg', 'jpeg', 'webp', 'heic', 'heif', 'gif', 'image'].includes(file.type)
+                                    ? ImageIcon
+                                    : File;
+
+                            return (
+                                <div
+                                    key={file.id}
+                                    className={cn(
+                                        'inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-[11px] transition-colors',
+                                        chipClass
+                                    )}
+                                >
+                                    <FileIcon size={13} className="text-sky-400" />
+                                    <span className="max-w-[180px] truncate font-medium">{file.name}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeFile(file.id)}
+                                        className="rounded-full p-0.5 text-inherit opacity-70 transition-opacity hover:opacity-100"
+                                        title={`Remove ${file.name} from chat context`}
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     // Listen for custom event to add files to chat
     useEffect(() => {
         const handleAddFile = (event: Event) => {
             const file = (event as CustomEvent<WorkspaceFile>).detail;
-            setAttachedFiles(prev => {
-                if (prev.find(f => f.id === file.id)) return prev;
-                return [...prev, { id: file.id, name: file.name, type: file.type, parentId: file.parentId ?? null }];
-            });
+            upsertAttachedFile({ id: file.id, name: file.name, type: file.type, parentId: file.parentId ?? null }, { silent: true });
             if (!isOpen) setIsOpen(true);
             toast.success(`Added ${file.name} to AI context`, {
                 icon: <Paperclip size={14} className="text-sky-400" />
@@ -1900,10 +2138,7 @@ export default function AIChat({
 
         const handlePreview = (event: Event) => {
             const file = (event as CustomEvent<WorkspaceFile>).detail;
-            setAttachedFiles(prev => {
-                if (prev.find(f => f.id === file.id)) return prev;
-                return [...prev, { id: file.id, name: file.name, type: file.type, parentId: file.parentId ?? null }];
-            });
+            upsertAttachedFile({ id: file.id, name: file.name, type: file.type, parentId: file.parentId ?? null }, { silent: true });
         };
 
         const handleFolderChange = (event: Event) => {
@@ -1920,7 +2155,7 @@ export default function AIChat({
             window.removeEventListener('preview-opened', handlePreview);
             window.removeEventListener('workspace-folder-changed', handleFolderChange);
         };
-    }, [isOpen]);
+    }, [isOpen, upsertAttachedFile]);
 
     const togglePin = () => {
         const next = !isPinned;
@@ -2330,21 +2565,7 @@ export default function AIChat({
                                         setIsDragging(true);
                                     }}
                                     onDragLeave={() => setIsDragging(false)}
-                                    onDrop={async (e) => {
-                                        e.preventDefault();
-                                        setIsDragging(false);
-                                        const fileId = e.dataTransfer.getData('fileId');
-                                        if (fileId) {
-                                            const file = workspaceFiles.find(f => f.id === fileId);
-                                            if (file) {
-                                                setAttachedFiles(prev => {
-                                                    if (prev.find(f => f.id === file.id)) return prev;
-                                                    return [...prev, file];
-                                                });
-                                                toast.success(`Attached ${file.name}`);
-                                            }
-                                        }
-                                    }}
+                                    onDrop={handleComposerDrop}
                                 >
                                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
                                         <motion.div
@@ -2614,6 +2835,7 @@ export default function AIChat({
                                                 <form onSubmit={handleSend} className="relative group/input">
                                                     <div className="absolute -inset-0.5 bg-gradient-to-r from-sky-500/20 via-emerald-500/20 to-amber-400/20 rounded-[1.25rem] opacity-0 group-focus-within/input:opacity-100 blur-xl transition-opacity duration-500" />
                                                     <div className="relative">
+                                                        {renderAttachedContextTray('pinned')}
                                                         <div className="flex flex-col sm:flex-row-reverse items-start sm:items-center gap-3 w-full min-w-0">
                                                             <div className="w-full sm:w-64 max-w-xs min-w-0 flex flex-col gap-1 sm:h-full sm:justify-center">
                                                                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
@@ -2942,21 +3164,7 @@ export default function AIChat({
                                                     setIsDragging(true);
                                                 }}
                                                 onDragLeave={() => setIsDragging(false)}
-                                                onDrop={async (e) => {
-                                                    e.preventDefault();
-                                                    setIsDragging(false);
-                                                    const fileId = e.dataTransfer.getData('fileId');
-                                                    if (fileId) {
-                                                        const file = workspaceFiles.find(f => f.id === fileId);
-                                                        if (file) {
-                                                            setAttachedFiles(prev => {
-                                                                if (prev.find(f => f.id === file.id)) return prev;
-                                                                return [...prev, file];
-                                                            });
-                                                            toast.success(`Attached ${file.name}`);
-                                                        }
-                                                    }
-                                                }}
+                                                onDrop={handleComposerDrop}
                                             >
                                                 <div className="absolute inset-0 pointer-events-none overflow-hidden">
                                                     <motion.div
@@ -3211,6 +3419,7 @@ export default function AIChat({
                                                                 <div className="absolute -inset-0.5 bg-gradient-to-r from-sky-500/20 via-emerald-500/20 to-amber-400/20 rounded-[1.25rem] opacity-0 group-focus-within/input:opacity-100 blur-xl transition-opacity duration-500" />
 
                                                                 <div className="relative">
+                                                                    {renderAttachedContextTray('floating')}
                                                                     <div className="flex flex-col sm:flex-row items-start gap-3 w-full min-w-0">
                                                                         <div className="w-full sm:w-64 max-w-xs min-w-0 flex flex-col gap-1">
                                                                             <div className="flex items-center gap-2">
@@ -3487,6 +3696,19 @@ export default function AIChat({
                 </div>
             )
             }
+
+            <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,.pdf,.txt,.md,.json,.csv,.log,.doc,.docx,.xls,.xlsx"
+                className="hidden"
+                onChange={async (event) => {
+                    if (event.target.files?.length) {
+                        await handleNativeFilesAdded(event.target.files);
+                    }
+                }}
+            />
 
             {/* Global Modals - Rendered outside of layout containers to avoid clipping */}
             {isSettingsModalOpen && (
@@ -3787,3 +4009,4 @@ export default function AIChat({
         </>
     );
 }
+

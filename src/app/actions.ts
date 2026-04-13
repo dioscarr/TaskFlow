@@ -31,7 +31,7 @@ import { writeFile, readFile as readFileFS, rename, copyFile, mkdir } from 'fs/p
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { getToolSchemas } from '@/lib/toolLibrary';
 import { getToolRisk } from '@/lib/toolLibrary';
-import { DEFAULT_SKILLS } from '@/lib/skillsLibrary';
+import { DEFAULT_SKILLS, SKILLS_LIBRARY } from '@/lib/skillsLibrary';
 import { getSkillSchemas } from '@/lib/skillsLibrary';
 import { executeSkill } from '@/lib/skillsExecution';
 import { DEFAULT_INTENT_RULES, DEFAULT_WORKFLOWS, WorkflowStep } from '@/lib/intentLibrary';
@@ -116,6 +116,17 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
             args.fileIds = await resolveAttachmentFileIds(user.id, args.fileIds);
         }
     }
+
+    if (SKILLS_LIBRARY[actionId]) {
+        const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+        return await executeSkill(actionId, args, {
+            userId: user?.id || 'demo',
+            fileIds: Array.isArray(args?.fileIds) ? args.fileIds : [],
+            query: typeof args?.query === 'string' ? args.query : '',
+            workspaceFiles: []
+        });
+    }
+
     // Temporary bypass: skip Alegra export until pipeline is ready
     if (actionId === 'extract_alegra_bill') {
         return { success: true, skipped: true, silent: true, message: 'Alegra export temporarily disabled' };

@@ -9,9 +9,12 @@ export interface ToolDefinition {
     description: string;
     category: 'fiscal' | 'workspace' | 'verification' | 'task';
     icon: string;
+    risk?: ToolRisk; // Risk level for approval gating (computed via getToolRisk if not set)
     schema: any; // Gemini function declaration
     handler: (args: any) => Promise<any>; // Server action to execute
 }
+
+export type ToolRisk = 'low' | 'medium' | 'high';
 
 /**
  * Available tools in the library
@@ -57,6 +60,25 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
             }
         }
     },
+    apply_patch: {
+        id: 'apply_patch',
+        name: 'Apply Patch',
+        description: 'Apply a unified diff patch to a file. Prefer this for precise, line-level edits.',
+        category: 'workspace',
+        icon: 'Edit',
+        schema: {
+            name: 'apply_patch',
+            description: 'Apply a unified diff patch to a single file',
+            parameters: {
+                type: 'object',
+                properties: {
+                    filePath: { type: 'string', description: 'Absolute or workspace-relative file path' },
+                    patch: { type: 'string', description: 'Unified diff patch content to apply' }
+                },
+                required: ['filePath', 'patch']
+            }
+        }
+    },
     replace_in_file: {
         id: 'replace_in_file',
         name: 'Smart Replace',
@@ -98,6 +120,46 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
             }
         }
     },
+    repo_context_pack: {
+        id: 'repo_context_pack',
+        name: 'Repo Context Pack',
+        description: 'Fetch a compact repo sitemap plus package dependencies and scripts for fast context.',
+        category: 'workspace',
+        icon: 'FolderTree',
+        schema: {
+            name: 'repo_context_pack',
+            description: 'Return a tree (depth-limited) of the repo along with package.json deps and scripts.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    depth: { type: 'number', description: 'Depth for tree traversal', default: 3 },
+                    maxEntries: { type: 'number', description: 'Max total entries to include', default: 200 },
+                    root: { type: 'string', description: 'Relative directory to root the tree from (overrides appName).', default: '.' },
+                    appName: { type: 'string', description: 'If set, scope to apps/<appName> when present.' }
+                }
+            }
+        }
+    },
+    find_symbol_references: {
+        id: 'find_symbol_references',
+        name: 'Find Symbol References',
+        description: 'Find files and lines that reference given symbols before editing.',
+        category: 'workspace',
+        icon: 'SearchCode',
+        schema: {
+            name: 'find_symbol_references',
+            description: 'Search the repo for symbol references (text-based).',
+            parameters: {
+                type: 'object',
+                properties: {
+                    symbols: { type: 'array', items: { type: 'string' }, description: 'Symbols/identifiers to search for' },
+                    dir: { type: 'string', description: 'Directory to search (default: src)', default: 'src' },
+                    maxResults: { type: 'number', description: 'Max total matches to return', default: 80 }
+                },
+                required: ['symbols']
+            }
+        }
+    },
     apply_batch: {
         id: 'apply_batch',
         name: 'Batch Edit File',
@@ -129,21 +191,21 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
             }
         }
     },
-    run_terminal_command: {
-        id: 'run_terminal_command',
-        name: 'Run Terminal Command',
-        description: 'Execute a command in the terminal. Use this for running tests, builds, or git commands.',
+    run_in_terminal: {
+        id: 'run_in_terminal',
+        name: 'Run in Terminal',
+        description: 'Execute build/test/git/diagnostic commands in a terminal. Use manage_app_lifecycle for dev servers.',
         category: 'task',
         icon: 'Terminal',
         schema: {
-            name: 'run_terminal_command',
-            description: 'Run a shell command',
+            name: 'run_in_terminal',
+            description: 'Run a shell command with an optional working directory',
             parameters: {
                 type: 'object',
                 properties: {
-                    command: { type: 'string', description: 'The command to run' },
-                    cwd: { type: 'string', description: 'Working directory' },
-                    background: { type: 'boolean', description: 'Run in background (fire and forget)', default: false }
+                    command: { type: 'string', description: 'The command to run (no dev servers here)' },
+                    cwd: { type: 'string', description: 'Working directory (e.g., apps/<app>)' },
+                    background: { type: 'boolean', description: 'Run in background', default: false }
                 },
                 required: ['command']
             }
@@ -282,6 +344,44 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
                     folderName: { type: 'string', description: 'Optional folder name to create/use' }
                 },
                 required: ['filename', 'content']
+            }
+        }
+    },
+    delete_file: {
+        id: 'delete_file',
+        name: 'Delete File or Folder',
+        description: 'Delete a file or folder in the workspace. Folders are deleted recursively.',
+        category: 'workspace',
+        icon: 'Trash',
+        schema: {
+            name: 'delete_file',
+            description: 'Delete a file or folder by ID or name. Folders delete recursively.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileId: { type: 'string', description: 'ID or exact name of the file/folder to delete' },
+                    confirm: { type: 'boolean', description: 'Set true to confirm deletion. REQUIRED for safety.', default: false }
+                },
+                required: ['fileId']
+            }
+        }
+    },
+    rename_file: {
+        id: 'rename_file',
+        name: 'Rename File or Folder',
+        description: 'Rename a workspace file or folder.',
+        category: 'workspace',
+        icon: 'Edit',
+        schema: {
+            name: 'rename_file',
+            description: 'Rename a file or folder by ID or exact name.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    fileId: { type: 'string', description: 'ID or exact name of the file/folder to rename' },
+                    name: { type: 'string', description: 'New name including extension if applicable' }
+                },
+                required: ['fileId', 'name']
             }
         }
     },
@@ -452,13 +552,13 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
     },
     edit_file: {
         id: 'edit_file',
-        name: 'Edit File',
-        description: 'Edit the content of an existing file in the workspace.',
+        name: 'Edit File [DEPRECATED]',
+        description: 'DEPRECATED: Do not use this tool for small edits. Use replace_in_file or apply_batch instead. Edit the content of an existing file by completely overwriting it.',
         category: 'workspace',
         icon: 'Edit',
         schema: {
             name: 'edit_file',
-            description: 'Edit the content of an existing file by overwriting it.',
+            description: 'DEPRECATED: Overwrites the target file. Use replace_in_file instead.',
             parameters: {
                 type: 'object',
                 properties: {
@@ -485,26 +585,6 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
                     task: { type: 'string', description: 'The specific task to delegate' }
                 },
                 required: ['agentType', 'task']
-            }
-        }
-    },
-    enqueue_agent_job: {
-        id: 'enqueue_agent_job',
-        name: 'Enqueue Background Agent Job',
-        description: 'ONLY use for COMPLEX, LONG-RUNNING tasks that require multiple file operations or code generation. DO NOT use for simple questions, greetings, or information requests. The user MUST approve the job before it runs.',
-        category: 'task',
-        icon: 'Bot',
-        schema: {
-            name: 'enqueue_agent_job',
-            description: 'ONLY for complex multi-file operations. DO NOT use for simple responses, questions, or greetings. Always respond directly first.',
-            parameters: {
-                type: 'object',
-                properties: {
-                    sessionId: { type: 'string', description: 'Chat session ID' },
-                    type: { type: 'string', description: 'Job type (e.g., "chat_task")' },
-                    payload: { type: 'object', description: 'Job payload for the background agent' }
-                },
-                required: ['type', 'payload']
             }
         }
     },
@@ -1072,8 +1152,133 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
                 required: ['appName']
             }
         }
+    },
+    wait: {
+        id: 'wait',
+        name: 'Wait',
+        description: 'Wait for a specified duration before the next action. Essential for allowing background processes to initialize.',
+        category: 'task',
+        icon: 'Clock',
+        schema: {
+            name: 'wait',
+            description: 'Pause execution for a specific duration',
+            parameters: {
+                type: 'object',
+                properties: {
+                    ms: { type: 'number', description: 'Milliseconds to wait', default: 1000 }
+                },
+                required: ['ms']
+            }
+        }
+    },
+    observe_status: {
+        id: 'observe_status',
+        name: 'Observe System Status',
+        description: 'Check the status of a port, file, or URL. MANDATORY for verifying that an app started correctly.',
+        category: 'verification',
+        icon: 'Eye',
+        schema: {
+            name: 'observe_status',
+            description: 'Observe if a resource is available or in a specific state',
+            parameters: {
+                type: 'object',
+                properties: {
+                    type: { type: 'string', enum: ['port', 'file', 'url', 'process'], description: 'Type of resource to check' },
+                    target: { type: 'string', description: 'The port number, filename, or URL' },
+                    timeout: { type: 'number', description: 'Optional timeout in ms to wait for success', default: 5000 }
+                },
+                required: ['type', 'target']
+            }
+        }
     }
 };
+
+/**
+ * Tool risk classification for approval gating
+ * HIGH: Destructive or system-altering operations (delete, execute, lifecycle management)
+ * MEDIUM: Modifying operations (create, edit, move, organize)
+ * LOW: Read-only or safe operations (view, list, search, analyze)
+ */
+export const TOOL_RISK: Record<string, ToolRisk> = {
+    // HIGH RISK - Destructive or system-altering
+    delete_file: 'high',
+    delete_root_markdown_files: 'high',
+    execute_command: 'high',
+    execute_command_in_app: 'high',
+    run_in_terminal: 'high',
+    manage_app_lifecycle: 'high',
+    run_app_command: 'high',
+
+    // MEDIUM RISK - Modifying operations
+    wait: 'low',
+    observe_status: 'low',
+    apply_patch: 'medium',
+    replace_in_file: 'medium',
+    edit_file: 'medium',
+    create_file: 'medium',
+    create_html_file: 'medium',
+    apply_batch: 'medium',
+    rename_file: 'medium',
+    move_attachments_to_folder: 'medium',
+    create_folder: 'medium',
+    copy_attachments_to_folder: 'medium',
+    organize_files: 'medium',
+    batch_rename: 'medium',
+    add_file_tags: 'medium',
+    set_file_tags: 'medium',
+    extract_alegra_bill: 'medium',
+    record_alegra_payment: 'medium',
+    create_task: 'medium',
+    highlight_file: 'medium',
+    remove_highlights: 'medium',
+    manage_data_table: 'medium',
+    set_auto_organize_rule: 'medium',
+    configure_magic_folder: 'medium',
+    create_workflow: 'medium',
+    create_agent: 'medium',
+    configure_agent: 'medium',
+    create_project_blueprint: 'medium',
+    synthesize_documents: 'medium',
+    merge_files: 'medium',
+
+    // LOW RISK - Read-only or safe operations
+    view_file: 'low',
+    list_dir: 'low',
+    search_codebase: 'low',
+    repo_context_pack: 'low',
+    find_symbol_references: 'low',
+    search_web: 'low',
+    verify_dgii_rnc: 'low',
+    read_file: 'low',
+    search_files: 'low',
+    agent_delegate: 'low',
+    ask_questions: 'low',
+    extract_receipt_info: 'low',
+    generate_markdown_report: 'low',
+    get_file_metadata: 'low',
+    get_folder_contents: 'low',
+    find_duplicates: 'low',
+    find_duplicate_files: 'low',
+    get_workspace_item: 'low',
+    focus_workspace_item: 'low',
+    get_recent_files: 'low',
+    analyze_codebase: 'low',
+    suggest_strategies: 'low',
+    run_agent_symphony: 'low',
+    get_agent_activity: 'low',
+    get_workspace_stats: 'low',
+    export_workspace: 'low',
+    get_app_logs: 'low',
+    summarize_file: 'low',
+    extract_text_from_image: 'low',
+    generate_blueprint: 'low',
+    get_blueprint: 'low',
+    export_blueprint: 'low',
+    sync_workspace_files: 'low',
+    execute_scaffold_vite: 'medium', // Creates files, so medium risk
+};
+
+export const getToolRisk = (toolId: string): ToolRisk => TOOL_RISK[toolId] ?? 'low';
 
 /**
  * Get tool schema for Gemini API
@@ -1116,8 +1321,17 @@ export function getToolsByCategory() {
 export const DEFAULT_TOOLS = [
     'search_web',
     'verify_dgii_rnc',
+    'list_dir',
+    'view_file',
+    'apply_patch',
+    'search_codebase',
+    'repo_context_pack',
+    'find_symbol_references',
     'create_file',
     'edit_file',
+    'replace_in_file',
+    'delete_file',
+    'rename_file',
     'manage_data_table',
     'read_file',
     'search_files',
@@ -1130,7 +1344,6 @@ export const DEFAULT_TOOLS = [
     'create_task',
     'ask_questions',
     'agent_delegate',
-    'enqueue_agent_job',
     'create_workflow',
     'batch_rename',
     'remove_highlights',
@@ -1152,5 +1365,8 @@ export const DEFAULT_TOOLS = [
     'execute_command_in_app',
     'get_app_logs',
     'manage_app_lifecycle',
-    'apply_batch'
+    'run_in_terminal',
+    'apply_batch',
+    'wait',
+    'observe_status'
 ];

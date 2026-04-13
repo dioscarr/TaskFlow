@@ -170,14 +170,18 @@ export function getSkillsByCategory() {
  * Default skill set for new agents
  */
 export const DEFAULT_SKILLS = [
-    'view_file',
     'list_dir',
+    'read_file',
+    'view_file',
+    'ask_questions',
+    'apply_patch',
+    'apply_batch',
     'replace_in_file',
-    'search_codebase',
-    'run_terminal_command',
-    'receipt_intelligence',
-    'workspace_organization',
-    'edit_file',
     'create_file',
-    'search_web'
+    'manage_app_lifecycle',
+    'run_in_terminal',
+    'search_web',
+    'search_codebase',
+    'receipt_intelligence',
+    'workspace_organization'
 ];

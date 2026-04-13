@@ -35,11 +35,60 @@ export class FeedbackLoopEngine {
 
         // If the result itself contains a clear error, we need to iterate
         if (result?.success === false) {
+            const errorMsg = (result.message || 'Unknown error').toLowerCase();
+
+            // Self-healing recommendations
+            if (errorMsg.includes('module not found') || errorMsg.includes('cannot find module')) {
+                return {
+                    success: false,
+                    reachedGoal: false,
+                    reasoning: `Deployment failed due to missing dependencies: ${result.message}.`,
+                    nextStep: 'Try running "npm install" or "npm install <missing-module>" to resolve dependencies.',
+                    suggestedTools: ['execute_command']
+                };
+            }
+
+            if (errorMsg.includes('port') && errorMsg.includes('already in use')) {
+                return {
+                    success: false,
+                    reachedGoal: false,
+                    reasoning: `Port conflict detected: ${result.message}.`,
+                    nextStep: 'Check for processes running on the target port and stop them, or use a different port.',
+                    suggestedTools: ['observe_status', 'execute_command']
+                };
+            }
+
             return {
                 success: false,
                 reachedGoal: false,
                 reasoning: `The tool execution failed: ${result.message || 'Unknown error'}. I need to try a different approach or fix the parameters.`,
                 nextStep: 'Retry the previous step with corrected parameters.'
+            };
+        }
+
+        // Heuristics for critical actions that require verification
+        const toolUsed = result?.toolUsed || '';
+        if (toolUsed === 'execute_command' || toolUsed === 'execute_command_in_app') {
+            const cmd = (result?.toolArgs?.command || '').toLowerCase();
+            if (cmd.includes('npm run dev') || cmd.includes('npm start') || cmd.includes('docker run')) {
+                return {
+                    success: false, // Mark as incomplete so we verify
+                    reachedGoal: false,
+                    reasoning: 'An application was started. I need to verify it is actually responsive and listening on the expected port.',
+                    nextStep: 'Wait for 3 seconds and then check the port status.',
+                    suggestedTools: ['wait', 'observe_status']
+                };
+            }
+        }
+
+        // Final verification check for create_html_file or create_file
+        if (toolUsed === 'create_html_file' || toolUsed === 'create_file') {
+            return {
+                success: true,
+                reachedGoal: false, // One more step to verify existence
+                reasoning: 'The file was reported as created. I should verify it exists on disk for robustness.',
+                nextStep: 'Observe if the file exists on the file system.',
+                suggestedTools: ['observe_status']
             };
         }
 
@@ -56,14 +105,6 @@ export class FeedbackLoopEngine {
                 };
             }
         }
-
-        // Logic to determine if we should continue based on the type of task
-        // For now, let's implement a simple heuristic:
-        // If it was a file creation task, verify if the file exists and has content.
-
-        // This is where we would call the LLM to analyze the output vs the goal.
-        // For the MVP, we assume a single pass is successful unless an error occurred,
-        // but we lay the ground for iterative refinement.
 
         return {
             success: true,
