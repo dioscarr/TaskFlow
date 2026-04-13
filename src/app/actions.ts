@@ -47,7 +47,7 @@ import { generateTraceId, logWithTrace, TraceContext } from '@/lib/tracing';
 import { createConfiguredModel } from '@/lib/llm/factory';
 import { normalizeFunctionDeclarations } from '@/lib/llm/tool-schema-mapper';
 import { sendCopilotMessage } from '@/lib/llm/providers/copilot';
-import { generateAIText, generateAIContent } from '@/lib/aiModelFactory';
+import { generateAIText, generateAIContent, SchemaType } from '@/lib/aiModelFactory';
 
 // import { CognitiveAgent } from '@/lib/agents/CognitiveAgent';
 // import { DesignAgent } from '@/lib/agents/DesignAgent';
@@ -2426,52 +2426,121 @@ export async function generateSuggestions(
 }
 
 /**
- * DGII RNC Verification Mechanism
- * In a real-world scenario, this would call a paid DGII API or a trusted third-party provider.
- * For this demo, we use a sophisticated simulated lookup that recognizes key DR merchants.
+ * DGII RNC Verification via MegaPlus free API with local cache fallback.
+ * Validates checksum (Luhn-10 for 9-digit RNC, mod-11 for 11-digit cédula)
+ * then queries the live API with a 3-second timeout.
  */
 export async function verifyRNC(rnc: string) {
     try {
-        // Clean RNC
         const cleanRNC = rnc.replace(/[^0-9]/g, '');
 
-        // Simulation of a DGII Database (Common DR Merchants)
-        const knownMerchants: Record<string, { name: string, status: string, type: string }> = {
-            '101010621': { name: 'SUPERMERCADOS NACIONAL (CENTRO CUESTA NACIONAL)', status: 'ACTIVO', type: 'REGIMEN GENERAL' },
-            '130005372': { name: 'BRAVO S.A.', status: 'ACTIVO', type: 'REGIMEN GENERAL' },
-            '101602465': { name: 'CARNICERIA Y EMBUTIDOS BRAVO (CENTRAL)', status: 'ACTIVO', type: 'REGIMEN GENERAL' },
-            '132868226': { name: 'SUPERMERCADO OLE (TIENDAS DEL AHORRO)', status: 'ACTIVO', type: 'REGIMEN GENERAL' },
-            '130741214': { name: 'SIRENA (GRUPO RAMOS)', status: 'ACTIVO', type: 'REGIMEN GENERAL' },
-            '101168175': { name: 'PANELES DOMINICANOS (PISA)', status: 'ACTIVO', type: 'REGIMEN GENERAL' },
-            '101001574': { name: 'INDUBAN (CAFE SANTO DOMINGO)', status: 'ACTIVO', type: 'REGIMEN GENERAL' },
-            '101161324': { name: 'BANCO POPULAR DOMINICANO', status: 'ACTIVO', type: 'REGIMEN GENERAL' }
+        // Checksum validation
+        const isValidChecksum = (digits: string): boolean => {
+            if (digits.length === 9) {
+                // Luhn-10 for 9-digit RNC
+                const weights = [7, 9, 8, 6, 5, 4, 3, 2];
+                let sum = 0;
+                for (let i = 0; i < 8; i++) {
+                    sum += parseInt(digits[i]) * weights[i];
+                }
+                const remainder = sum % 11;
+                const check = remainder === 0 ? 2 : remainder === 1 ? 1 : 11 - remainder;
+                return check === parseInt(digits[8]);
+            }
+            if (digits.length === 11) {
+                // Mod-11 for 11-digit cédula
+                const weights = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2];
+                let sum = 0;
+                for (let i = 0; i < 10; i++) {
+                    let product = parseInt(digits[i]) * weights[i];
+                    if (product >= 10) product = Math.floor(product / 10) + (product % 10);
+                    sum += product;
+                }
+                const check = (10 - (sum % 10)) % 10;
+                return check === parseInt(digits[10]);
+            }
+            return false;
         };
 
-        const result = knownMerchants[cleanRNC];
-
-        if (result) {
-            return {
-                success: true,
-                verified: true,
-                ...result,
-                consultationUrl: 'https://dgii.gov.do/app/WebApps/ConsultasWeb2/ConsultasWeb/consultas/rnc.aspx'
-            };
+        if (cleanRNC.length !== 9 && cleanRNC.length !== 11) {
+            return { success: false, message: 'RNC must be 9 or 11 digits' };
         }
 
-        // Dummy fallback for other RNCs to show the mechanism works
-        if (cleanRNC.length === 9 || cleanRNC.length === 11) {
+        const checksumValid = isValidChecksum(cleanRNC);
+
+        // Fallback cache of known merchants
+        const knownMerchants: Record<string, { name: string; status: string; type: string; commercialName?: string; economicActivity?: string }> = {
+            '101010621': { name: 'CENTRO CUESTA NACIONAL, SAS', commercialName: 'SUPERMERCADOS NACIONAL', status: 'ACTIVO', type: 'REGIMEN GENERAL', economicActivity: 'COMERCIO AL POR MENOR' },
+            '130005372': { name: 'BRAVO S.A.', commercialName: 'BRAVO', status: 'ACTIVO', type: 'REGIMEN GENERAL', economicActivity: 'COMERCIO AL POR MENOR' },
+            '101602465': { name: 'CARNICERIA Y EMBUTIDOS BRAVO (CENTRAL)', status: 'ACTIVO', type: 'REGIMEN GENERAL', economicActivity: 'COMERCIO AL POR MENOR' },
+            '132868226': { name: 'TIENDAS DEL AHORRO SRL', commercialName: 'SUPERMERCADO OLE', status: 'ACTIVO', type: 'REGIMEN GENERAL', economicActivity: 'COMERCIO AL POR MENOR' },
+            '130741214': { name: 'GRUPO RAMOS S.A.', commercialName: 'SIRENA / APREZIO', status: 'ACTIVO', type: 'REGIMEN GENERAL', economicActivity: 'COMERCIO AL POR MENOR' },
+            '101168175': { name: 'PANELES DOMINICANOS (PISA)', status: 'ACTIVO', type: 'REGIMEN GENERAL', economicActivity: 'MANUFACTURA' },
+            '101001574': { name: 'INDUBAN S.A.', commercialName: 'CAFE SANTO DOMINGO', status: 'ACTIVO', type: 'REGIMEN GENERAL', economicActivity: 'MANUFACTURA' },
+            '101161324': { name: 'BANCO POPULAR DOMINICANO S.A.', commercialName: 'BANCO POPULAR', status: 'ACTIVO', type: 'REGIMEN GENERAL', economicActivity: 'INTERMEDIACION FINANCIERA' },
+        };
+
+        // Try live API with 3-second timeout
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 3000);
+
+            const response = await fetch(
+                `https://rnc.megaplus.com.do/api/consulta?rnc=${cleanRNC}`,
+                { signal: controller.signal }
+            );
+            clearTimeout(timeout);
+
+            if (response.ok) {
+                const apiData = await response.json();
+                if (apiData && (apiData.nombre || apiData.name)) {
+                    return {
+                        success: true,
+                        verified: true,
+                        name: apiData.nombre || apiData.name || '',
+                        commercialName: apiData.nombre_comercial || apiData.commercialName || '',
+                        status: apiData.estado || apiData.status || 'ACTIVO',
+                        type: apiData.regimen_pagos || apiData.type || 'REGIMEN GENERAL',
+                        economicActivity: apiData.actividad_economica || apiData.economicActivity || '',
+                        checksumValid,
+                        source: 'megaplus_api',
+                        consultationUrl: 'https://dgii.gov.do/app/WebApps/ConsultasWeb2/ConsultasWeb/consultas/rnc.aspx',
+                    };
+                }
+            }
+        } catch {
+            // API unavailable — fall through to cache
+        }
+
+        // Fallback to local cache
+        const cached = knownMerchants[cleanRNC];
+        if (cached) {
             return {
                 success: true,
                 verified: true,
-                name: `TITULAR RNC ${cleanRNC}`,
-                status: 'ACTIVO',
-                type: 'REGIMEN GENERAL',
+                ...cached,
+                checksumValid,
+                source: 'local_cache',
                 consultationUrl: 'https://dgii.gov.do/app/WebApps/ConsultasWeb2/ConsultasWeb/consultas/rnc.aspx',
-                message: 'Manual verification recommended at official source.'
             };
         }
 
-        return { success: false, message: 'RNC not found in DGII registry' };
+        // Unknown RNC but valid length — return with checksum info
+        if (checksumValid) {
+            return {
+                success: true,
+                verified: false,
+                name: `TITULAR RNC ${cleanRNC}`,
+                status: 'DESCONOCIDO',
+                type: 'PENDIENTE VERIFICACION',
+                checksumValid,
+                source: 'checksum_only',
+                consultationUrl: 'https://dgii.gov.do/app/WebApps/ConsultasWeb2/ConsultasWeb/consultas/rnc.aspx',
+                message: 'RNC checksum valid but not found in API or cache. Manual verification recommended.',
+            };
+        }
+
+        return { success: false, message: 'RNC not found and checksum invalid', checksumValid };
     } catch (error) {
         return { success: false, message: 'Verification service unavailable' };
     }
@@ -3569,37 +3638,133 @@ export async function extractReceiptInfo(data: { fileIds: string[] }) {
         if (!user) throw new Error('User not found');
 
         if (!data.fileIds || data.fileIds.length === 0) {
-            return { success: false, message: 'No file IDs provided' };
+            return { success: false, message: 'No file IDs provided', extractions: [] };
         }
 
-        const firstFileId = data.fileIds[0];
-        const file = await prisma.workspaceFile.findUnique({ where: { id: firstFileId } });
-        if (!file) return { success: false, message: 'File not found' };
+        const detectMimeType = (fileName: string): string => {
+            const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+            const mimeMap: Record<string, string> = {
+                jpg: 'image/jpeg', jpeg: 'image/jpeg',
+                png: 'image/png', webp: 'image/webp',
+                pdf: 'application/pdf',
+            };
+            return mimeMap[ext] || 'image/jpeg';
+        };
 
-        const filePath = getWorkspaceFilePath(file);
-        const imageBuffer = await readFileFS(filePath);
-        const base64Image = imageBuffer.toString('base64');
+        const prompt = `You are an expert Dominican Republic fiscal document analyst.
+Analyze this receipt/invoice image and extract ALL data with high precision.
 
-        const prompt = `Extract fiscal data from this receipt image. Focus on Dominican RNC and NCF if present.
-Return ONLY valid JSON with this exact structure (no extra text):
-{"provider":"string","rnc":"string","date":"string","total":0,"ncf":"string","itbis":0,"items":[{"description":"string","quantity":0,"price":0}]}`;
+DOCUMENT TYPE IDENTIFICATION:
+- B01 = Factura de Crédito Fiscal
+- B02 = Factura de Consumo
+- B03 = Nota de Débito
+- B04 = Nota de Crédito
+- B11 = Comprobante de Compras (Proveedor Informal)
+- B13 = Gastos Menores
+- B14 = Régimen Especial de Tributación
+- B15 = Comprobante Gubernamental
+- B16 = Exportaciones
+- B17 = Compras Extraordinarias
+- E31/E32/E33/E34 = Electronic (e-CF) equivalents
+Identify by the NCF prefix.
 
-        const text = await generateAIContent([
-            prompt,
-            { inlineData: { data: base64Image, mimeType: 'image/jpeg' } }
-        ], { purpose: 'vision' });
+RNC EXTRACTION:
+- Format: XXX-XXXXXX-X (with dashes) or 9 consecutive digits, or 11 digits for cédulas
+- Usually labeled "RNC:" or "R.N.C." on the document
 
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        const extractedData = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+NCF EXTRACTION:
+- Valid prefixes: B01, B02, B03, B04, B11, B13, B14, B15, B16, B17, E31, E32, E33, E34, E41, E43, E44, E45, E46, E47
+- Format: prefix + sequential number (11 chars for B-series, 13 chars for E-series)
+
+ITBIS (Tax):
+- Standard rate is 18%
+- Some items may be exempt (basic goods)
+- Extract both total ITBIS and note which items had ITBIS applied
+
+ADDITIONAL FIELDS:
+- Payment method (Efectivo/Cash, Tarjeta/Card, Transferencia, etc.)
+- Currency (DOP or USD)
+- All line items with description, quantity, unit price, and line total
+
+Handle both Spanish and English text. If a field is not visible, use empty string for text or 0 for numbers.
+Assign a confidence score (0.0 to 1.0) for the overall extraction quality.`;
+
+        const responseSchema = {
+            type: SchemaType.OBJECT,
+            properties: {
+                documentType: { type: SchemaType.STRING, description: 'Type of fiscal document (e.g. Factura de Consumo B02)' },
+                provider: { type: SchemaType.STRING, description: 'Merchant/business name' },
+                rnc: { type: SchemaType.STRING, description: 'RNC number' },
+                ncf: { type: SchemaType.STRING, description: 'NCF (Número de Comprobante Fiscal)' },
+                date: { type: SchemaType.STRING, description: 'Transaction date' },
+                currency: { type: SchemaType.STRING, description: 'Currency code (DOP or USD)' },
+                subtotal: { type: SchemaType.NUMBER, description: 'Subtotal before tax' },
+                itbisAmount: { type: SchemaType.NUMBER, description: 'ITBIS tax amount' },
+                total: { type: SchemaType.NUMBER, description: 'Total amount' },
+                paymentMethod: { type: SchemaType.STRING, description: 'Payment method' },
+                items: {
+                    type: SchemaType.ARRAY,
+                    items: {
+                        type: SchemaType.OBJECT,
+                        properties: {
+                            description: { type: SchemaType.STRING },
+                            quantity: { type: SchemaType.NUMBER },
+                            unitPrice: { type: SchemaType.NUMBER },
+                            total: { type: SchemaType.NUMBER },
+                            itbisApplied: { type: SchemaType.BOOLEAN },
+                        },
+                        required: ['description', 'quantity', 'unitPrice', 'total', 'itbisApplied'],
+                    },
+                },
+                confidence: { type: SchemaType.NUMBER, description: 'Overall extraction confidence 0.0-1.0' },
+            },
+            required: ['documentType', 'provider', 'rnc', 'ncf', 'date', 'currency', 'subtotal', 'itbisAmount', 'total', 'paymentMethod', 'items', 'confidence'],
+        };
+
+        const extractions: Array<{ fileId: string; fileName: string; data: any }> = [];
+
+        for (const fileId of data.fileIds) {
+            try {
+                const file = await prisma.workspaceFile.findUnique({ where: { id: fileId } });
+                if (!file) {
+                    extractions.push({ fileId, fileName: 'unknown', data: null });
+                    continue;
+                }
+
+                const filePath = getWorkspaceFilePath(file);
+                const imageBuffer = await readFileFS(filePath);
+                const base64Image = imageBuffer.toString('base64');
+                const mimeType = detectMimeType(file.name);
+
+                const text = await generateAIContent([
+                    prompt,
+                    { inlineData: { data: base64Image, mimeType } }
+                ], {
+                    purpose: 'vision',
+                    generationConfig: {
+                        responseMimeType: 'application/json',
+                        responseSchema,
+                        temperature: 0.1,
+                    },
+                });
+
+                const extractedData = JSON.parse(text);
+                extractions.push({ fileId, fileName: file.name, data: extractedData });
+            } catch (fileError) {
+                console.error(`👁️ Vision extraction failed for file ${fileId}:`, fileError);
+                extractions.push({ fileId, fileName: 'unknown', data: null });
+            }
+        }
 
         return {
             success: true,
-            extractedData,
-            fileId: firstFileId
+            extractions,
+            extractedData: extractions[0]?.data,   // backward compat
+            fileId: extractions[0]?.fileId,         // backward compat
         };
     } catch (error) {
         console.error('👁️ Vision extraction failed:', error);
-        return { success: false, message: 'Failed to extract data from image' };
+        return { success: false, message: 'Failed to extract data from image', extractions: [] };
     }
 }
 
