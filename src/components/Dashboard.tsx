@@ -5,12 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '@/components/Layout';
 import InboxTable from '@/components/InboxTable';
 import FileManager from '@/components/FileManager';
-import { Mail, Folder, Activity, Layout as LayoutIcon, X, ExternalLink, Columns, Monitor, Server, RefreshCw, Terminal, Loader2, Zap } from 'lucide-react';
+import { Mail, Folder, Activity, Layout as LayoutIcon, X, ExternalLink, Columns, Monitor, Server, RefreshCw, Terminal, Loader2, Zap, Bot, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Task, WorkspaceFile } from '@prisma/client';
 import CreateTaskModal from './CreateTaskModal';
 import DevTools from './DevTools';
 import AgentActivityFeed from './AgentActivityFeed';
+import WorkflowDesigner from './WorkflowDesigner';
+import AgentBuilder from './AgentBuilder';
 import { useSearchParams } from 'next/navigation';
 import AIChat from './AIChat';
 import ProcessManager from './ProcessManager';
@@ -40,7 +42,7 @@ type ProcessInfo = {
 
 export default function Dashboard({ tasks, files }: DashboardProps) {
     const [viewMode, setViewMode] = useState<'zen' | 'split' | 'classic' | 'vibe'>('zen');
-    const [activeTab, setActiveTab] = useState<'inbox' | 'files' | 'intelligence' | 'processes'>('inbox');
+    const [activeTab, setActiveTab] = useState<'inbox' | 'files' | 'intelligence' | 'processes' | 'workflows' | 'agents'>('inbox');
     const [previewContent, setPreviewContent] = useState<PreviewTarget | null>(null);
     const [vibeFile, setVibeFile] = useState<WorkspaceFile | null>(null);
     const [vibeContent, setVibeContent] = useState('');
@@ -52,6 +54,7 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
     const [showVibeEditor, setShowVibeEditor] = useState(true);
     const searchParams = useSearchParams();
     const focusId = searchParams?.get('focus');
+    const [customWorkflows, setCustomWorkflows] = useState<any[]>([]);
 
     // Notify others about preview
     useEffect(() => {
@@ -573,6 +576,12 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                             <button onClick={() => setActiveTab('intelligence')} className={cn("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all", activeTab === 'intelligence' ? "theme-overlay-medium theme-text-primary shadow-sm" : "theme-text-tertiary hover:theme-text-secondary")}>
                                 <Activity size={16} /> Intelligence
                             </button>
+                            <button onClick={() => setActiveTab('workflows')} className={cn("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all", activeTab === 'workflows' ? "theme-overlay-medium theme-text-primary shadow-sm" : "theme-text-tertiary hover:theme-text-secondary")}>
+                                <GitBranch size={16} /> Workflows
+                            </button>
+                            <button onClick={() => setActiveTab('agents')} className={cn("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all", activeTab === 'agents' ? "theme-overlay-medium theme-text-primary shadow-sm" : "theme-text-tertiary hover:theme-text-secondary")}>
+                                <Bot size={16} /> Agents
+                            </button>
                         </div>
 
                         <div className="flex-1">
@@ -580,6 +589,10 @@ export default function Dashboard({ tasks, files }: DashboardProps) {
                             {activeTab === 'files' && <FileManager files={files} />}
                             {activeTab === 'processes' && <ProcessManager />}
                             {activeTab === 'intelligence' && <div className="h-[600px]"><AgentActivityFeed /></div>}
+                            {activeTab === 'workflows' && <div className="h-[700px]"><WorkflowDesigner workflows={customWorkflows} onChange={setCustomWorkflows} /></div>}
+                            {activeTab === 'agents' && (
+                                <div className="h-[700px]"><AgentBuilder embedded /></div>
+                            )}
                         </div>
                     </div>
                     {/* Floating Chat for Classic Mode */}

@@ -277,56 +277,155 @@ function AITab({ profile, setProfile, onSave, saving }: {
     onSave: () => void;
     saving: boolean;
 }) {
+    const [activeProvider, setActiveProvider] = useState(profile?.defaultModel?.startsWith('gemini') ? 'gemini' : 'copilot');
+
     if (!profile) return null;
 
-    return (
-        <div className="space-y-6">
-            <h2 className="text-xl font-semibold mb-4 text-foreground">AI Settings</h2>
+    const PROVIDERS = [
+        { id: 'copilot', name: 'GitHub Copilot', icon: '🤖', desc: 'Primary AI runtime via Copilot SDK', badge: 'Active' },
+        { id: 'gemini', name: 'Google Gemini', icon: '💎', desc: 'Fallback provider for vision & structured output', badge: 'Fallback' },
+    ];
 
+    const MODEL_CATALOG: Record<string, { id: string; name: string; speed: string; quality: string }[]> = {
+        copilot: [
+            { id: 'gpt-5.4', name: 'GPT-5.4', speed: '⚡ Fast', quality: '🔥 Excellent' },
+            { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini', speed: '⚡⚡ Very Fast', quality: '✅ Good' },
+            { id: 'claude-sonnet-4', name: 'Claude Sonnet 4', speed: '⚡ Fast', quality: '🔥 Excellent' },
+            { id: 'claude-opus-4.5', name: 'Claude Opus 4.5', speed: '🐢 Slow', quality: '💎 Premium' },
+        ],
+        gemini: [
+            { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', speed: '⚡⚡ Very Fast', quality: '✅ Good' },
+            { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', speed: '⚡ Fast', quality: '🔥 Excellent' },
+        ],
+    };
+
+    const currentModels = MODEL_CATALOG[activeProvider] || [];
+
+    return (
+        <div className="space-y-8">
             <div>
-                <label className="block text-sm theme-text-secondary mb-2">Default Model</label>
-                <select
-                    value={profile.defaultModel || 'gemini-2.0-flash'}
-                    onChange={e => setProfile({ ...profile, defaultModel: e.target.value })}
-                    className="w-full theme-overlay-subtle theme-border-medium border rounded-xl px-4 py-3 text-foreground"
-                >
-                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                    <option value="claude-3-sonnet">Claude 3 Sonnet</option>
-                </select>
+                <h2 className="text-xl font-semibold mb-1 text-foreground">AI Configuration</h2>
+                <p className="text-sm theme-text-tertiary">Configure providers, models, and behavior for your AI runtime.</p>
             </div>
 
-            <div>
-                <label className="block text-sm theme-text-secondary mb-2">AI Personality</label>
-                <div className="flex gap-3">
-                    {['professional', 'casual', 'technical'].map(p => (
+            {/* Provider Selection */}
+            <div className="space-y-3">
+                <label className="block text-sm font-medium theme-text-secondary">AI Provider</label>
+                <div className="grid grid-cols-2 gap-3">
+                    {PROVIDERS.map(p => (
                         <button
-                            key={p}
-                            onClick={() => setProfile({ ...profile, aiPersonality: p })}
-                            className={`px-4 py-2 rounded-lg capitalize ${profile.aiPersonality === p ? 'bg-sky-500 text-white' : 'theme-overlay-subtle theme-text-secondary'
-                                }`}
+                            key={p.id}
+                            onClick={() => setActiveProvider(p.id)}
+                            className={`relative p-4 rounded-xl border text-left transition-all ${activeProvider === p.id
+                                ? 'border-sky-500/50 bg-sky-500/5 ring-1 ring-sky-500/30'
+                                : 'theme-border-medium theme-overlay-subtle hover:theme-overlay-medium'}`}
                         >
-                            {p}
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className="text-2xl">{p.icon}</span>
+                                <span className="font-semibold text-foreground">{p.name}</span>
+                            </div>
+                            <p className="text-xs theme-text-tertiary">{p.desc}</p>
+                            {p.badge && (
+                                <span className={`absolute top-3 right-3 text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${p.id === 'copilot' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                    {p.badge}
+                                </span>
+                            )}
                         </button>
                     ))}
                 </div>
             </div>
 
-            <div>
-                <label className="block text-sm theme-text-secondary mb-2">Temperature: {profile.temperature || 0.7}</label>
-                <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={profile.temperature || 0.7}
-                    onChange={e => setProfile({ ...profile, temperature: parseFloat(e.target.value) })}
-                    className="w-full accent-sky-500"
-                />
+            {/* Model Selection */}
+            <div className="space-y-3">
+                <label className="block text-sm font-medium theme-text-secondary">Default Model</label>
+                <div className="space-y-2">
+                    {currentModels.map(m => (
+                        <button
+                            key={m.id}
+                            onClick={() => setProfile({ ...profile, defaultModel: m.id })}
+                            className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${profile.defaultModel === m.id
+                                ? 'border-sky-500/50 bg-sky-500/5'
+                                : 'theme-border-medium theme-overlay-subtle hover:theme-overlay-medium'}`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className={`w-3 h-3 rounded-full ${profile.defaultModel === m.id ? 'bg-sky-500' : 'theme-overlay-medium border theme-border-medium'}`} />
+                                <span className="font-medium text-foreground">{m.name}</span>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs theme-text-tertiary">
+                                <span>{m.speed}</span>
+                                <span>{m.quality}</span>
+                            </div>
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            <button onClick={onSave} disabled={saving} className="px-6 py-3 bg-gradient-to-r from-sky-500 to-emerald-500 rounded-xl font-medium">
+            {/* Personality & Temperature */}
+            <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                    <label className="block text-sm font-medium theme-text-secondary">AI Personality</label>
+                    <div className="flex gap-2">
+                        {[
+                            { id: 'professional', icon: '👔' },
+                            { id: 'casual', icon: '😊' },
+                            { id: 'technical', icon: '🔬' },
+                        ].map(p => (
+                            <button
+                                key={p.id}
+                                onClick={() => setProfile({ ...profile, aiPersonality: p.id })}
+                                className={`flex-1 flex flex-col items-center gap-1.5 p-3 rounded-xl border capitalize transition-all ${profile.aiPersonality === p.id
+                                    ? 'border-sky-500/50 bg-sky-500/5 text-foreground'
+                                    : 'theme-border-medium theme-overlay-subtle theme-text-tertiary hover:theme-overlay-medium'}`}
+                            >
+                                <span className="text-xl">{p.icon}</span>
+                                <span className="text-xs font-medium">{p.id}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <label className="block text-sm font-medium theme-text-secondary">
+                        Temperature: <span className="text-sky-400">{profile.temperature || 0.7}</span>
+                    </label>
+                    <div className="pt-2">
+                        <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.1"
+                            value={profile.temperature || 0.7}
+                            onChange={e => setProfile({ ...profile, temperature: parseFloat(e.target.value) })}
+                            className="w-full accent-sky-500"
+                        />
+                        <div className="flex justify-between text-[10px] theme-text-quaternary mt-1">
+                            <span>Precise</span>
+                            <span>Creative</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Runtime Info */}
+            <div className="p-4 rounded-xl theme-overlay-subtle border theme-border-medium space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider theme-text-tertiary">Runtime Architecture</h4>
+                <div className="grid grid-cols-3 gap-3 text-xs">
+                    <div className="p-2 rounded-lg theme-overlay-medium">
+                        <span className="theme-text-quaternary">Primary</span>
+                        <p className="font-medium text-foreground">Copilot SDK</p>
+                    </div>
+                    <div className="p-2 rounded-lg theme-overlay-medium">
+                        <span className="theme-text-quaternary">Vision</span>
+                        <p className="font-medium text-foreground">Gemini Flash</p>
+                    </div>
+                    <div className="p-2 rounded-lg theme-overlay-medium">
+                        <span className="theme-text-quaternary">Tools</span>
+                        <p className="font-medium text-foreground">44 registered</p>
+                    </div>
+                </div>
+            </div>
+
+            <button onClick={onSave} disabled={saving} className="px-6 py-3 bg-gradient-to-r from-sky-500 to-emerald-500 rounded-xl font-medium transition-all hover:opacity-90 disabled:opacity-50">
                 {saving ? 'Saving...' : 'Save Changes'}
             </button>
         </div>

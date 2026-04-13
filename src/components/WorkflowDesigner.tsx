@@ -2,10 +2,13 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, Reorder, AnimatePresence } from 'framer-motion';
-import { Plus, GripVertical, Trash2, Settings2, Play, ChevronRight, Zap, MessageSquare, X, List, Edit3, Save } from 'lucide-react';
+import { Plus, GripVertical, Trash2, Settings2, Play, ChevronRight, Zap, MessageSquare, X, List, Edit3, Save, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { getAllActions, ActionDefinition } from '@/lib/actionRegistry';
 import { cn } from '@/lib/utils';
 import { WorkflowStep, IntentRuleDefinition, IntentAction, WorkflowDefinition, DEFAULT_WORKFLOWS } from '@/lib/intentLibrary';
+import { executeWorkflow } from '@/app/actions';
+
+type StepStatus = 'pending' | 'running' | 'success' | 'error';
 
 interface WorkflowDesignerProps {
     workflows: WorkflowDefinition[];
@@ -22,6 +25,9 @@ export default function WorkflowDesigner({
     const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
     const [isAddingStep, setIsAddingStep] = useState(false);
     const [keywordInput, setKeywordInput] = useState('');
+    const [isExecuting, setIsExecuting] = useState(false);
+    const [stepStatuses, setStepStatuses] = useState<Record<string, StepStatus>>({});
+    const [executionResult, setExecutionResult] = useState<{ success: boolean; message: string } | null>(null);
     const templates = DEFAULT_WORKFLOWS;
     const idCounterRef = useRef(0);
 
@@ -179,6 +185,30 @@ export default function WorkflowDesigner({
         };
     };
 
+    const handleRunWorkflow = async (workflow: WorkflowDefinition) => {
+        if (isExecuting) return;
+        setIsExecuting(true);
+        setExecutionResult(null);
+        const statuses: Record<string, StepStatus> = {};
+        workflow.steps.forEach(s => { statuses[s.id] = 'pending'; });
+        setStepStatuses(statuses);
+
+        try {
+            for (const step of workflow.steps) {
+                setStepStatuses(prev => ({ ...prev, [step.id]: 'running' }));
+            }
+            const result = await executeWorkflow(workflow.steps, {});
+            workflow.steps.forEach(s => {
+                setStepStatuses(prev => ({ ...prev, [s.id]: 'success' }));
+            });
+            setExecutionResult({ success: true, message: `Workflow "${workflow.name}" completed — ${workflow.steps.length} steps executed.` });
+        } catch (err) {
+            setExecutionResult({ success: false, message: err instanceof Error ? err.message : 'Workflow execution failed' });
+        } finally {
+            setIsExecuting(false);
+        }
+    };
+
     return (
         <div className="flex gap-6 h-full min-h-[500px]">
             {/* Sidebar List */}
@@ -319,13 +349,30 @@ export default function WorkflowDesigner({
                                     <Zap size={16} className="text-yellow-400" />
                                     <h3 className="text-sm font-bold text-white uppercase tracking-widest">Execution Sequence</h3>
                                 </div>
-                                <button
-                                    onClick={() => setIsAddingStep(true)}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
-                                >
-                                    <Plus size={14} />
-                                    Add Step
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => handleRunWorkflow(activeWorkflow)}
+                                        disabled={isExecuting || activeWorkflow.steps.length === 0}
+                                        className={cn(
+                                            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border",
+                                            isExecuting
+                                                ? "bg-sky-500/10 border-sky-500/20 text-sky-400 opacity-60 cursor-wait"
+                                                : activeWorkflow.steps.length === 0
+                                                    ? "bg-white/5 border-white/10 text-white/30 cursor-not-allowed"
+                                                    : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/20"
+                                        )}
+                                    >
+                                        {isExecuting ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                                        {isExecuting ? 'Running...' : 'Run'}
+                                    </button>
+                                    <button
+                                        onClick={() => setIsAddingStep(true)}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                                    >
+                                        <Plus size={14} />
+                                        Add Step
+                                    </button>
+                                </div>
                             </div>
 
                             <Reorder.Group
@@ -336,17 +383,27 @@ export default function WorkflowDesigner({
                             >
                                 {activeWorkflow.steps.map((step, index) => {
                                     const info = getActionInfo(step.action);
+                                    const status = stepStatuses[step.id];
                                     return (
                                         <Reorder.Item
                                             key={step.id}
                                             value={step}
-                                            className="theme-overlay-subtle border theme-border-medium rounded-2xl p-4 flex items-center gap-4 group hover:border-white/20 transition-all"
+                                            className={cn(
+                                                "theme-overlay-subtle border rounded-2xl p-4 flex items-center gap-4 group transition-all",
+                                                status === 'running' ? "border-sky-500/50 bg-sky-500/5" :
+                                                status === 'success' ? "border-emerald-500/50 bg-emerald-500/5" :
+                                                status === 'error' ? "border-red-500/50 bg-red-500/5" :
+                                                "theme-border-medium hover:border-white/20"
+                                            )}
                                         >
                                             <div className="cursor-grab active:cursor-grabbing theme-text-quaternary group-hover:theme-text-tertiary">
                                                 <GripVertical size={20} />
                                             </div>
-                                            <div className="flex-shrink-0 w-8 h-8 rounded-full theme-overlay-subtle border theme-border-medium flex items-center justify-center text-[10px] font-black theme-text-tertiary">
-                                                {index + 1}
+                                            <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black">
+                                                {status === 'running' ? <Loader2 size={16} className="text-sky-400 animate-spin" /> :
+                                                 status === 'success' ? <CheckCircle size={16} className="text-emerald-400" /> :
+                                                 status === 'error' ? <AlertCircle size={16} className="text-red-400" /> :
+                                                 <span className="theme-overlay-subtle border theme-border-medium w-full h-full rounded-full flex items-center justify-center theme-text-tertiary">{index + 1}</span>}
                                             </div>
                                             <div className="flex-1 min-w-0 space-y-2">
                                                 <div className="flex items-center gap-2">
@@ -480,6 +537,25 @@ export default function WorkflowDesigner({
                                     </div>
                                 )}
                             </Reorder.Group>
+
+                            {executionResult && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className={cn(
+                                        "mt-4 p-4 rounded-2xl border flex items-center gap-3",
+                                        executionResult.success
+                                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                                            : "bg-red-500/10 border-red-500/30 text-red-300"
+                                    )}
+                                >
+                                    {executionResult.success ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+                                    <span className="text-xs font-medium">{executionResult.message}</span>
+                                    <button onClick={() => { setExecutionResult(null); setStepStatuses({}); }} className="ml-auto text-white/40 hover:text-white transition-colors">
+                                        <X size={14} />
+                                    </button>
+                                </motion.div>
+                            )}
                         </div>
                     </div>
                 ) : (
