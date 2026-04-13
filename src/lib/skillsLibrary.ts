@@ -9,6 +9,7 @@ export interface SkillDefinition {
     description: string;
     category: 'receipt_processing' | 'file_management' | 'fiscal_operations' | 'workspace_organization';
     icon: string;
+    scopeFilter?: 'repo' | 'workspace' | 'both'; // Which chat scope this skill belongs to (default: 'both')
     schema: any; // Gemini function declaration
     handler: (args: any, context?: any) => Promise<any>; // Intelligent skill execution
     capabilities: string[]; // What this skill can do

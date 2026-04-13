@@ -10,6 +10,7 @@ export interface ToolDefinition {
     category: 'fiscal' | 'workspace' | 'verification' | 'task';
     icon: string;
     risk?: ToolRisk; // Risk level for approval gating (computed via getToolRisk if not set)
+    scopeFilter?: 'repo' | 'workspace' | 'both'; // Which chat scope this tool belongs to (default: 'both')
     schema: any; // Gemini function declaration
     handler: (args: any) => Promise<any>; // Server action to execute
 }
@@ -25,6 +26,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'View File',
         description: 'Read a specific section of a file (by line range). Preferred for large files. Use this instead of read_file when you only need a snippet.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'FileText',
         schema: {
             name: 'view_file',
@@ -46,6 +48,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'List Directory',
         description: 'List contents of a directory. Essential for exploration.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Folder',
         schema: {
             name: 'list_dir',
@@ -65,6 +68,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Apply Patch',
         description: 'Apply a unified diff patch to a file. Prefer this for precise, line-level edits.',
         category: 'workspace',
+        scopeFilter: 'repo',
         icon: 'Edit',
         schema: {
             name: 'apply_patch',
@@ -84,6 +88,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Smart Replace',
         description: 'Replace a specific chunk of text in a file. SAFER than overwriting. Use this for code edits.',
         category: 'workspace',
+        scopeFilter: 'repo',
         icon: 'Edit3',
         schema: {
             name: 'replace_in_file',
@@ -105,6 +110,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Search Codebase',
         description: 'Search for text patterns across the codebase (like grep).',
         category: 'workspace',
+        scopeFilter: 'repo',
         icon: 'Search',
         schema: {
             name: 'search_codebase',
@@ -125,6 +131,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Repo Context Pack',
         description: 'Fetch a compact repo sitemap plus package dependencies and scripts for fast context.',
         category: 'workspace',
+        scopeFilter: 'repo',
         icon: 'FolderTree',
         schema: {
             name: 'repo_context_pack',
@@ -145,6 +152,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Find Symbol References',
         description: 'Find files and lines that reference given symbols before editing.',
         category: 'workspace',
+        scopeFilter: 'repo',
         icon: 'SearchCode',
         schema: {
             name: 'find_symbol_references',
@@ -165,6 +173,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Batch Edit File',
         description: 'Apply multiple, non-contiguous edits to a single file. Highly efficient for complex tasks.',
         category: 'workspace',
+        scopeFilter: 'repo',
         icon: 'Layers',
         schema: {
             name: 'apply_batch',
@@ -196,6 +205,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Run in Terminal',
         description: 'Execute build/test/git/diagnostic commands in a terminal. Use manage_app_lifecycle for dev servers.',
         category: 'task',
+        scopeFilter: 'repo',
         icon: 'Terminal',
         schema: {
             name: 'run_in_terminal',
@@ -235,6 +245,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Manage App Lifecycle',
         description: 'Start, stop, or restart web applications. Handles port conflicts automatically and returns the live preview URL.',
         category: 'task',
+        scopeFilter: 'repo',
         icon: 'Play',
         schema: {
             name: 'manage_app_lifecycle',
@@ -331,6 +342,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Create File',
         description: 'Create a new file (Markdown, JSON, TXT, etc). Use this for any non-HTML file creation. CRITICAL: You MUST call this to save files.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Save',
         schema: {
             name: 'create_file',
@@ -352,6 +364,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Delete File or Folder',
         description: 'Delete a file or folder in the workspace. Folders are deleted recursively.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Trash',
         schema: {
             name: 'delete_file',
@@ -371,6 +384,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Rename File or Folder',
         description: 'Rename a workspace file or folder.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Edit',
         schema: {
             name: 'rename_file',
@@ -411,6 +425,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Highlight File',
         description: 'Highlights a workspace file with custom colors and styling.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Highlighter',
         schema: {
             name: 'highlight_file',
@@ -433,6 +448,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Move Attachments to Folder',
         description: 'Moves files/attachments into a specific folder.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'FolderInput',
         schema: {
             name: 'move_attachments_to_folder',
@@ -452,6 +468,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Create Folder',
         description: 'Creates a new folder. RETURNS THE FOLDER ID. IMPORTANT: If you are building an app, you MUST use the returned folderId to immediately create the files inside it in the SAME response loop.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'FolderPlus',
         schema: {
             name: 'create_folder',
@@ -496,6 +513,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Generate Markdown Report',
         description: 'Converts structured data (like receipt info) into a beautifully formatted markdown table and report.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Layout',
         schema: {
             name: 'generate_markdown_report',
@@ -516,6 +534,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Smart Organize Files',
         description: 'Automatically organizes files into a folder (e.g., by vendor or project). Reuses existing folders whenever possible to avoid clutter.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Workflow',
         schema: {
             name: 'organize_files',
@@ -536,6 +555,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Copy Attachments to Folder',
         description: 'Copies files/attachments into a specific folder (preserves originals).',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Copy',
         schema: {
             name: 'copy_attachments_to_folder',
@@ -555,6 +575,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Edit File [DEPRECATED]',
         description: 'DEPRECATED: Do not use this tool for small edits. Use replace_in_file or apply_batch instead. Edit the content of an existing file by completely overwriting it.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Edit',
         schema: {
             name: 'edit_file',
@@ -611,6 +632,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Read File',
         description: 'Read the contents of one or more files in your workspace (ID-first, name fallback).',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'FileText',
         schema: {
             name: 'read_file',
@@ -629,6 +651,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Delete Root Markdown Files',
         description: 'Delete all .md files from the workspace root (does not touch subfolders).',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Trash',
         schema: {
             name: 'delete_root_markdown_files',
@@ -647,6 +670,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Search Files',
         description: 'Search for files in your workspace by ID, name, or content.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Search',
         schema: {
             name: 'search_files',
@@ -666,6 +690,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Execute Command',
         description: 'Execute code or shell commands on the machine.',
         category: 'task',
+        scopeFilter: 'repo',
         icon: 'Terminal',
         schema: {
             name: 'execute_command',
@@ -758,6 +783,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Manage Data Table',
         description: 'Create, append to, or edit structured markdown tables within workspace files. Ideal for trackers, ledgers, and logs.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Table',
         schema: {
             name: 'manage_data_table',
@@ -781,6 +807,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Remove Highlights',
         description: 'Removes highlighting from specific files or ALL files in the workspace.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Eraser',
         schema: {
             name: 'remove_highlights',
@@ -798,6 +825,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Batch Rename',
         description: 'Rename multiple files at once using patterns, prefixes, suffixes, or find/replace.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Type',
         schema: {
             name: 'batch_rename',
@@ -820,6 +848,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Summarize File',
         description: 'Generate a concise summary of a file\'s content using AI.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'AlignLeft',
         schema: {
             name: 'summarize_file',
@@ -839,6 +868,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'OCR / Extract Text',
         description: 'Extract text from images or scanned documents using Vision AI.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'ScanText',
         schema: {
             name: 'extract_text_from_image',
@@ -857,6 +887,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Find Duplicates',
         description: 'Identify files with identical content or very similar names to help clean the workspace.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'CopyCheck',
         schema: {
             name: 'find_duplicate_files',
@@ -874,6 +905,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Focus / Highlight Item',
         description: 'Auto-scrolled and highlights a file or folder in the UI so the user can see it immediately. Use this after creating, moving, or renaming something important.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Focus',
         schema: {
             name: 'focus_workspace_item',
@@ -892,6 +924,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Configure Magic Folder',
         description: 'Designate a folder with a "Magic Rule" for automatic processing (e.g., auto-organize, auto-OCR).',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Sparkles',
         schema: {
             name: 'configure_magic_folder',
@@ -911,6 +944,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Create HTML Page',
         description: 'Create a fully functional HTML web page. The agent will render this immediately for the user.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Layout',
         schema: {
             name: 'create_html_file',
@@ -932,6 +966,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Set File Tags',
         description: 'Attach semantic tags to a file for better filtering and discovery.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Tag',
         schema: {
             name: 'set_file_tags',
@@ -951,6 +986,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Synthesize documents',
         description: 'Analyze and combine multiple documents into a single, cohesive master report.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Combine',
         schema: {
             name: 'synthesize_documents',
@@ -970,6 +1006,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Get Activity Feed',
         description: 'Retrieve the recent activity feed of the AI agent\'s background actions.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'Activity',
         schema: {
             name: 'get_agent_activity',
@@ -1006,6 +1043,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Sync Workspace Files',
         description: 'Synchronize the file system with the database. Call this after creating files manually or if files seem missing.',
         category: 'workspace',
+        scopeFilter: 'workspace',
         icon: 'RefreshCw',
         schema: {
             name: 'sync_workspace_files',
@@ -1040,6 +1078,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Generate Application Blueprint',
         description: 'Scan the codebase and generate a comprehensive application blueprint that can be used for context, documentation, and recreation. This blueprint includes architecture, dependencies, features, APIs, components, and HTML projects.',
         category: 'workspace',
+        scopeFilter: 'repo',
         icon: 'FileCode',
         schema: {
             name: 'generate_blueprint',
@@ -1062,6 +1101,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Get Application Blueprint',
         description: 'Retrieve the current application blueprint to provide context about the application architecture, features, and structure.',
         category: 'workspace',
+        scopeFilter: 'repo',
         icon: 'FileJson',
         schema: {
             name: 'get_blueprint',
@@ -1084,6 +1124,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Export Blueprint for Recreation',
         description: 'Export the full blueprint with recreation scripts and instructions that can be used to recreate the application from scratch.',
         category: 'workspace',
+        scopeFilter: 'repo',
         icon: 'Download',
         schema: {
             name: 'export_blueprint',
@@ -1099,6 +1140,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Scaffold Vite App',
         description: 'Scaffold a new Vite + React + TypeScript application with best practices, including Docker config, Design System, and SEO setup.',
         category: 'task',
+        scopeFilter: 'repo',
         icon: 'Code',
         schema: {
             name: 'execute_scaffold_vite',
@@ -1119,6 +1161,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Run Command in Active App',
         description: 'Run a terminal command in the context of the active application. Automatically handles Docker containers or local folder context.',
         category: 'task',
+        scopeFilter: 'repo',
         icon: 'Terminal',
         schema: {
             name: 'execute_command_in_app',
@@ -1139,6 +1182,7 @@ export const TOOL_LIBRARY: Record<string, Omit<ToolDefinition, 'handler'>> = {
         name: 'Get Application Logs',
         description: 'Retrieve the logs of a running application. Works for both Docker containers and local processes.',
         category: 'workspace',
+        scopeFilter: 'repo',
         icon: 'FileText',
         schema: {
             name: 'get_app_logs',

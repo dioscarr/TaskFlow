@@ -265,7 +265,18 @@ export async function POST(request: Request) {
                     const allDecls = [...skillDecls, ...toolDecls].filter((declaration, index, array) =>
                         array.findIndex((candidate) => candidate.name === declaration.name) === index
                     );
-                    const enabledFunctionNames = allDecls.map((declaration) => declaration.name);
+
+                    // Scope-based tool filtering: enforce chatScope by removing tools not matching the scope
+                    const agentEnabledToolIds = new Set(enabledToolIds || []);
+                    const scopeFilteredDecls = allDecls.filter(decl => {
+                        // Agent-selected tools always override scope filtering
+                        if (agentEnabledToolIds.has(decl.name)) return true;
+                        const tool = TOOL_LIBRARY[decl.name] || SKILLS_LIBRARY[decl.name];
+                        if (!tool?.scopeFilter || tool.scopeFilter === 'both') return true;
+                        return tool.scopeFilter === chatScope;
+                    });
+
+                    const enabledFunctionNames = scopeFilteredDecls.map((declaration) => declaration.name);
                     const agentPrompt = typeof activePromptPrompt === 'string' && activePromptPrompt.trim()
                         ? activePromptPrompt.trim()
                         : SOFTWARE_ARCHITECT_PROMPT;
@@ -333,7 +344,7 @@ export async function POST(request: Request) {
                             prompt: copilotPrompt,
                             systemInstruction,
                             attachments,
-                            tools: normalizeFunctionDeclarations(allDecls),
+                            tools: normalizeFunctionDeclarations(scopeFilteredDecls),
                             availableToolNames: enabledFunctionNames,
                             workingDirectory: process.cwd(),
                             allowToolExecution,
@@ -435,7 +446,7 @@ export async function POST(request: Request) {
                         return;
                     }
 
-                    const tools = [{ functionDeclarations: allDecls }];
+                    const tools = [{ functionDeclarations: scopeFilteredDecls }];
 
                     // P3-CONTEXT-BUDGET: History Truncation
                     // Ensure we don't exceed the model's context window with massive history
