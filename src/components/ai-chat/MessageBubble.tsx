@@ -116,10 +116,7 @@ export const MessageBubble = ({ msg, attachedFiles, showThinking, setInput, setA
     const proposedTools = Array.isArray(toolResultRecord.proposedTools)
         ? toolResultRecord.proposedTools.filter((tool): tool is string => typeof tool === 'string')
         : [];
-    const riskByTool = proposedTools.map((tool) => ({
-        tool,
-        risk: getToolRisk(tool)
-    }));
+    const riskByTool = [...new Map(proposedTools.map((tool) => [tool, { tool, risk: getToolRisk(tool) }])).values()];
     const extracted = extractThinkingBlocks(msg.content);
     const thinkingContent = msg.thinking || extracted.thinking;
     const displayContent = thinkingContent ? extracted.cleaned : msg.content;
@@ -146,8 +143,11 @@ export const MessageBubble = ({ msg, attachedFiles, showThinking, setInput, setA
                 <div className="flex flex-wrap gap-2 mb-2 justify-end">
                     {msg.files.map((f) => {
                         const isImage = /^(image|png|jpg|jpeg|gif|webp|heic|heif)$/i.test(f.type || '');
-                        const imgSrc = isImage && f.storagePath
-                            ? `/${f.storagePath.replace(/^public\//, '')}`
+                        // storagePath may be a virtual path like "_root_/file.jpg" or an actual
+                        // storage path like "userId/file.jpg". Only build an img src for real paths.
+                        const hasRealStorage = f.storagePath && !f.storagePath.startsWith('_root_');
+                        const imgSrc = isImage && hasRealStorage
+                            ? `/uploads/${f.storagePath!.replace(/^public\//, '').replace(/^uploads\//, '')}`
                             : null;
                         return (
                             <div key={f.id} className={cn(

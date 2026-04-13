@@ -96,6 +96,64 @@ async function buildCopilotAttachments(fileIds: string[] = []) {
         }));
 }
 
+// Pre-process image files with Gemini Vision when Copilot can't handle them inline
+async function extractImageContextWithVision(fileIds: string[]): Promise<string> {
+    if (!fileIds.length) return '';
+    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+    if (!apiKey) return '';
+
+    const files = await Promise.all(
+        fileIds.map(id => prisma.workspaceFile.findUnique({ where: { id } }))
+    );
+    const imageExts = new Set(['png', 'jpg', 'jpeg', 'webp', 'heic', 'heif']);
+    const imageFiles = files.filter((f): f is NonNullable<typeof f> => {
+        if (!f) return false;
+        const ext = f.name.split('.').pop()?.toLowerCase() || '';
+        return imageExts.has(ext) || imageExts.has(f.type || '');
+    });
+
+    if (!imageFiles.length) return '';
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const descriptions: string[] = [];
+
+    for (const file of imageFiles) {
+        try {
+            const filePath = file.storagePath
+                ? join(process.cwd(), file.storagePath)
+                : join(process.cwd(), 'data', 'workspace', file.name);
+            const buffer = await readFileFS(filePath);
+            if (buffer.length === 0) continue;
+
+            const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+            const mimeMap: Record<string, string> = {
+                png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+                webp: 'image/webp', heic: 'image/heic', heif: 'image/heif',
+            };
+
+            const result = await model.generateContent([
+                {
+                    inlineData: {
+                        data: buffer.toString('base64'),
+                        mimeType: mimeMap[ext] || 'image/jpeg'
+                    }
+                },
+                'Extract ALL text visible in this image. Include every number, word, date, code, and identifier you can read. Format as structured text preserving the layout. If this is a receipt or invoice, extract: business name, RNC, NCF, date, items with prices, subtotal, ITBIS/tax, total, payment method.'
+            ]);
+
+            const text = result.response.text();
+            if (text) {
+                descriptions.push(`=== VISION EXTRACTION: ${file.name} ===\n${text}\n=== END VISION ===`);
+            }
+        } catch (err) {
+            console.error(`Vision extraction failed for ${file.name}:`, err);
+        }
+    }
+
+    return descriptions.join('\n\n');
+}
+
 type AppliedContext = {
     agent?: { id?: string; name?: string; description?: string };
     scope: { mode: 'workspace' | 'repo'; label: string };
@@ -347,8 +405,13 @@ export async function POST(request: Request) {
 
                     if (AI_CONFIG.provider === 'github-copilot') {
                         const attachments = await buildCopilotAttachments(fileIds || []);
+
+                        // Pre-process images with Gemini Vision since Copilot can't handle inline images
+                        const visionContext = await extractImageContextWithVision(fileIds || []);
+
                         const copilotPrompt = [
                             activeAppName ? `Active app: ${activeAppName}${activeAppPath ? ` at ${activeAppPath}` : ''}` : '',
+                            visionContext ? `The user attached image file(s). Here is the extracted text from vision analysis:\n\n${visionContext}` : '',
                             formatCopilotHistory(history),
                             query
                         ].filter(Boolean).join('\n\n');

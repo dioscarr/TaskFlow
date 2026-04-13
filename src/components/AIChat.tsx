@@ -1286,10 +1286,6 @@ export default function AIChat({
                 ? `${systemContext.join('\\n')}\\n\\n${userMsg.content}`
                 : userMsg.content;
 
-            console.log('📤 Sending to AI:', userMsg.content);
-            console.log('🧠 System Context:', systemContext.length > 0 ? systemContext : 'None');
-            console.log('📎 Files in context:', expandedFileIds.length, 'files');
-            console.log('📂 Current Folder:', currentFolderContext.name, currentFolderContext.id);
             let usedStream = false;
             let streamedMessageId: string | null = null;
             let streamedThinking: string | undefined;
@@ -1491,14 +1487,9 @@ export default function AIChat({
                     currentFolderContext.id || undefined,
                     { sessionId: sessionId || undefined, allowToolExecution: allowToolsForRequest, allowHighRiskExecution: allowHighRiskExecutionForRequest, verbosity: verbosity, model: selectedModel, enabledToolIds }
                 );
-                console.log('📥 Fallback chatWithAI response:', JSON.stringify(res, null, 2));
             }
             const response = normalizeChatResponse(res);
             res = response;
-
-            console.log('📥 AI Response:', JSON.stringify(response, null, 2));
-            console.log('📥 AI Response Text:', response.text);
-            console.log('📥 AI Response Success:', response.success);
 
             if (response.success) {
                 // P3-CONTEXT-BUDGET: Handle truncation report
@@ -1597,7 +1588,6 @@ export default function AIChat({
                         };
 
                         if (autoOpenPreview) {
-                            console.log('🖼️ Auto-opening preview for HTML file');
                             window.dispatchEvent(new CustomEvent('open-preview-tab', { detail: createdFile }));
                         } else {
                             toast.success(`Created ${createdFile.name}. Click to open preview.`, {
@@ -1624,7 +1614,6 @@ export default function AIChat({
                         // Don't auto-open if it's already a WorkspaceFile tool use (handled above)
                         if (response.toolUsed !== 'create_html_file') {
                             if (autoOpenPreview) {
-                                console.log('🌐 Auto-opening live preview for URL:', url);
                                 window.dispatchEvent(new CustomEvent('open-preview-tab', { detail: url }));
                             } else {
                                 toast.success(`Server running at ${url}`, {
@@ -1669,7 +1658,6 @@ export default function AIChat({
                     // Explicit Preview URL from Tool Result (e.g., manage_app_lifecycle)
                     const explicitPreviewUrl = typeof toolResultRecord.previewUrl === 'string' ? toolResultRecord.previewUrl : undefined;
                     if (explicitPreviewUrl) {
-                        console.log('🔗 Auto-opening explicit preview URL:', explicitPreviewUrl);
                         window.dispatchEvent(new CustomEvent('open-preview-tab', { detail: explicitPreviewUrl }));
                     }
 
