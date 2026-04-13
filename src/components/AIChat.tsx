@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useRef, useEffect, useMemo, useCallback } from 'react';
+import { useChatState, aiChatStateCache, ChatMessage, PromptDraft } from '@/hooks/useChatState';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Bot, Command, Copy, CornerDownLeft, Eye, File, FileText, Image, Layout, Layers, Loader2, MessageSquare, MoreHorizontal, Paperclip, Play, Plus, RefreshCw, Send, Settings, Sparkles, Terminal, Trash2, X, CheckCircle2, ChevronDown, List, FolderOpen, Folder, FileJson, Square, BrainCircuit, Image as ImageIcon, ExternalLink, Check, ChevronRight, Edit2, Pin, PinOff, Search, Receipt, DollarSign, Save, AlignLeft, Lightbulb, Compass, Activity, Zap, ArrowDown, AlertTriangle, Globe, Monitor, GitBranch, Split } from 'lucide-react';
 import { chatWithAI, chatWithAIStream, getPrompts, createPrompt, updatePrompt, setActivePrompt, deletePrompt, generateSystemPrompt, getIntentRules, getWorkspaceFiles, getChatSessionAgentStatus, cancelAllAgentJobs, uploadFile } from '@/app/actions';
@@ -41,22 +42,7 @@ type ToolMeta = {
     };
 };
 
-type ChatMessage = {
-    id?: string;
-    role: 'user' | 'ai' | 'model';
-    content: string;
-    files?: SelectedFile[];
-    fileIds?: string[];
-    toolUsed?: string;
-    toolResult?: unknown;
-    thinking?: string;
-    toolArgs?: unknown;
-    appliedContext?: {
-        agent?: { id?: string; name?: string; description?: string };
-        scope?: { mode?: string; label?: string };
-        workflows?: Array<{ name?: string; stepCount?: number }>;
-    };
-};
+// ChatMessage type moved to useChatState hook
 
 type ChatSessionSummary = {
     id: string;
@@ -104,14 +90,7 @@ type TranscriptMessage = {
     thinking?: string;
 };
 
-type PromptDraft = {
-    name: string;
-    description: string;
-    prompt: string;
-    tools: string[];
-    workflows: WorkflowDefinition[];
-    triggerKeywords: string[];
-};
+// PromptDraft type moved to useChatState hook
 
 type Suggestion = {
     title: string;
@@ -160,22 +139,7 @@ const normalizeChatResponse = (value: unknown): ChatResponse & { success: boolea
     return { ...record, text, success, message };
 };
 
-const aiChatStateCache = {
-    messages: [] as ChatMessage[],
-    attachedFiles: [] as SelectedFile[],
-    activeSessionId: null as string | null,
-    activeSessionTitle: 'New Chat',
-    currentFolderContext: { id: null as string | null, name: 'Root' },
-    activePreviewContext: null as { id: string, name: string, parentId: string | null } | null,
-    activeAppContext: null as { name: string; path: string } | null,
-    selectedModel: DEFAULT_CHAT_MODEL,
-    activeScope: 'workspace' as 'workspace' | 'repo',
-    scopeBySession: {} as Record<string, 'workspace' | 'repo'>,
-    allowToolExecution: true,
-    allowToolExecutionBySession: {} as Record<string, boolean>,
-    allowHighRiskExecution: false,
-    allowHighRiskExecutionBySession: {} as Record<string, boolean>
-};
+// aiChatStateCache moved to useChatState hook
 
 const extractThinkingFromText = (text: string) => {
     if (!text) return { cleanText: text, thinking: undefined as string | undefined };
@@ -276,95 +240,50 @@ export default function AIChat({
     headerRight?: React.ReactNode
 }) {
     const contentWidthClass = embedded ? "max-w-3xl mx-auto w-full min-w-0" : "max-w-4xl mx-auto w-full min-w-0";
-    const [isOpen, setIsOpen] = useState(embedded);
-    const [view, setView] = useState<'chat' | 'prompts' | 'sessions'>('chat');
-    const [input, setInput] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [isBackgroundBusy, setIsBackgroundBusy] = useState(false);
-    const [backgroundJobLabel, setBackgroundJobLabel] = useState<string | null>(null);
-    const [backgroundJobMessage, setBackgroundJobMessage] = useState<string | null>(null);
-    const [streamingStatus, setStreamingStatus] = useState<'idle' | 'connecting' | 'streaming' | 'processing'>('idle');
-    const [streamProgress, setStreamProgress] = useState(0);
-    const [aiActivity, setAiActivity] = useState<string>('');
-    const [jobStartTime, setJobStartTime] = useState<number | null>(null);
-    const [elapsedTime, setElapsedTime] = useState(0);
-    const [messages, setMessages] = useState<ChatMessage[]>(() => (aiChatStateCache.messages.length ? [...aiChatStateCache.messages] : []));
+    const {
+        state, dispatch,
+        setIsOpen, setView, setIsPinned, setShowScrollButton, setIsUserScrolling,
+        setShouldAutoScroll, setIsDragging,
+        setInput, setMessages, setIsLoading, setStreamingStatus, setStreamProgress,
+        setAiActivity, setSelectedModel, setChatScope, setHistoryIndex, setPromptHistory,
+        prependPromptHistory, setActiveTool, setVerbosity, setManualStop,
+        setActiveSessionId, setActiveSessionTitle, setChatSessions, setRenamingSessionId,
+        setRenamingSessionTitle, setIsDeleteModalOpen, setPendingDeleteSessionId,
+        setIsDeletingSession, setIsClearAllModalOpen, setIsClearingAll,
+        setAttachedFiles, setWorkspaceFiles, setCurrentFolderContext,
+        setActivePreviewContext, setActiveAppContext, setIsUploadingFiles,
+        setIsBackgroundBusy, setBackgroundJobLabel, setBackgroundJobMessage,
+        setJobStartTime, setElapsedTime, setIsSwitchingAgent, setToolStatusEvents,
+        appendToolStatusEvent, setTruncationReport,
+        setIsEditorOpen, setIsSettingsModalOpen, setIsEditPreviewOpen,
+        setEditPreviewData, setIsSuggestionsOpen, setIsCommandMenuOpen,
+        setIsApprovalModalOpen, setIsMetricsPanelOpen, toggleIsMetricsPanelOpen,
+        setPrompts, setIntentRules, setIsCreatingPrompt, setEditingPromptId,
+        setIsGenerating, setNewPrompt,
+        setIsCopyingCurrentChat, setIsCopyingAllChats,
+        setActiveCommandIndex,
+        setShowThinkingTrace, toggleShowThinkingTrace, setAllowToolExecution,
+        toggleAllowToolExecution, setAllowHighRiskExecution, setAllowHighRiskOnce,
+        setAutoOpenPreview,
+        setCelebration, setDismissedQuestionId, setProposedTools, setHighRiskTools,
+        setPendingApprovalRequest,
+    } = useChatState(embedded);
+
+    // Destructure frequently-used state for readability
+    const { messages, input, isLoading } = state.chat;
+    const { attachedFiles, workspaceFiles, currentFolderContext, activePreviewContext, activeAppContext, isUploadingFiles } = state.files;
+    const { activeSessionId, activeSessionTitle, chatSessions, renamingSessionId, renamingSessionTitle, isDeleteModalOpen, pendingDeleteSessionId, isDeletingSession, isClearAllModalOpen, isClearingAll } = state.session;
+    const { isBackgroundBusy, backgroundJobLabel, backgroundJobMessage, elapsedTime, jobStartTime, isSwitchingAgent, toolStatusEvents, truncationReport } = state.streaming;
+    const { isOpen, view, isPinned, isDragging, showScrollButton, shouldAutoScroll, isUserScrolling } = state.ui;
+    const { chatScope, selectedModel, activeTool, historyIndex, promptHistory, verbosity, streamingStatus, streamProgress, manualStop, aiActivity } = state.chat;
+    const { prompts, intentRules, editingPromptId, newPrompt, isCreatingPrompt, isGenerating } = state.prompts;
+    const { isEditorOpen, isSettingsModalOpen, isEditPreviewOpen, editPreviewData, isSuggestionsOpen, isCommandMenuOpen, isApprovalModalOpen, isMetricsPanelOpen } = state.modals;
+    const { isCopyingCurrentChat, isCopyingAllChats } = state.copy;
+    const { activeCommandIndex } = state.commands;
+    const { showThinkingTrace, allowToolExecution, allowHighRiskExecution, allowHighRiskOnce, autoOpenPreview } = state.settings;
+    const { celebration, dismissedQuestionId, proposedTools, highRiskTools, pendingApprovalRequest } = state.misc;
     const streamSpeedRef = useRef(14);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [attachedFiles, setAttachedFiles] = useState<SelectedFile[]>(() => aiChatStateCache.attachedFiles || []);
-    const [isDragging, setIsDragging] = useState(false);
-    const [isUploadingFiles, setIsUploadingFiles] = useState(false);
-    const [prompts, setPrompts] = useState<AIPromptSet[]>([]);
-    const [intentRules, setIntentRules] = useState<IntentRule[]>([]);
-    const [chatSessions, setChatSessions] = useState<ChatSessionSummary[]>([]);
-    const [activeSessionId, setActiveSessionId] = useState<string | null>(aiChatStateCache.activeSessionId);
-    const [activeSessionTitle, setActiveSessionTitle] = useState(aiChatStateCache.activeSessionTitle || 'New Chat');
-    const [workspaceFiles, setWorkspaceFiles] = useState<SelectedFile[]>([]);
-    const [isCreatingPrompt, setIsCreatingPrompt] = useState(false);
-    const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [newPrompt, setNewPrompt] = useState<PromptDraft>({
-        name: '',
-        description: '',
-        prompt: '',
-        tools: [] as string[],
-        workflows: [],
-        triggerKeywords: [] as string[]
-    });
-    const [isEditorOpen, setIsEditorOpen] = useState(false);
-    const [isPinned, setIsPinned] = useState(false);
-    const [activeTool, setActiveTool] = useState<string | null>(null);
-    const [isCopyingCurrentChat, setIsCopyingCurrentChat] = useState(false);
-    const [isCopyingAllChats, setIsCopyingAllChats] = useState(false);
-    const [historyIndex, setHistoryIndex] = useState(-1);
-    const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
-    const [renamingSessionTitle, setRenamingSessionTitle] = useState('');
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null);
-    const [isDeletingSession, setIsDeletingSession] = useState(false);
-    const [isEditPreviewOpen, setIsEditPreviewOpen] = useState(false);
-    const [editPreviewData, setEditPreviewData] = useState({ fileName: '', content: '' });
-    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-    const [isSwitchingAgent, setIsSwitchingAgent] = useState(false);
-    const [currentFolderContext, setCurrentFolderContext] = useState<{ id: string | null, name: string }>(aiChatStateCache.currentFolderContext);
-    const [promptHistory, setPromptHistory] = useState<string[]>([]);
-    const [activePreviewContext, setActivePreviewContext] = useState<{ id: string, name: string, parentId: string | null } | null>(aiChatStateCache.activePreviewContext);
-    const [activeAppContext, setActiveAppContext] = useState<{ name: string; path: string } | null>(aiChatStateCache.activeAppContext);
-    const [selectedModel, setSelectedModel] = useState<string>(aiChatStateCache.selectedModel || DEFAULT_CHAT_MODEL);
-    const [chatScope, setChatScope] = useState<'workspace' | 'repo'>(aiChatStateCache.activeScope || 'workspace');
-    const [showScrollButton, setShowScrollButton] = useState(false);
-    const [isUserScrolling, setIsUserScrolling] = useState(false);
-    const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-    const [celebration, setCelebration] = useState<{ emoji: string; timestamp: number } | null>(null);
-    const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
-    const [manualStop, setManualStop] = useState(false);
-    const [verbosity, setVerbosity] = useState<'concise' | 'normal' | 'verbose'>('concise');
-    const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
-    const [activeCommandIndex, setActiveCommandIndex] = useState(0);
-    const [dismissedQuestionId, setDismissedQuestionId] = useState<string | null>(null);
-    const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
-    const [isClearingAll, setIsClearingAll] = useState(false);
-    const [showThinkingTrace, setShowThinkingTrace] = useState(false);
-    const [allowToolExecution, setAllowToolExecution] = useState<boolean>(
-        aiChatStateCache.allowToolExecution ?? true
-    );
-    const [allowHighRiskExecution, setAllowHighRiskExecution] = useState<boolean>(
-        aiChatStateCache.allowHighRiskExecution ?? false
-    );
-    const [allowHighRiskOnce, setAllowHighRiskOnce] = useState(false);
-    const [autoOpenPreview, setAutoOpenPreview] = useState(true);
-    const [toolStatusEvents, setToolStatusEvents] = useState<ToolStatusEvent[]>([]);
-
-    // Tool Approval Modal State (P1-APPROVAL-UX)
-    const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
-    const [proposedTools, setProposedTools] = useState<string[]>([]);
-    const [highRiskTools, setHighRiskTools] = useState<string[]>([]);
-    const [pendingApprovalRequest, setPendingApprovalRequest] = useState<unknown | null>(null);
-
-    const [isMetricsPanelOpen, setIsMetricsPanelOpen] = useState(false);
-
-    // Context Budget State (P3-CONTEXT-BUDGET)
-    const [truncationReport, setTruncationReport] = useState<TruncationReportType | null>(null);
 
     // Sync Props to State
     useEffect(() => {
@@ -1217,7 +1136,7 @@ export default function AIChat({
         const userMsg = { id: genMsgId(), role: 'user' as const, content: text, files: [...attachedFiles] };
         setMessages(prev => [...prev, userMsg]);
         setToolStatusEvents([]);
-        setPromptHistory(prev => [text, ...prev]);
+        prependPromptHistory(text);
         setInput('');
         setHistoryIndex(-1);
         setActiveTool(null);
@@ -1460,12 +1379,12 @@ export default function AIChat({
 
                             // Handle tool status events
                             if (payload.type === 'tool_status') {
-                                setToolStatusEvents(prev => [...prev, {
+                                appendToolStatusEvent({
                                     tool: payload.tool,
                                     phase: payload.phase,
                                     timestamp: payload.timestamp,
                                     elapsedMs: payload.elapsedMs
-                                }]);
+                                });
                             }
 
                             // Handle retry status
@@ -2535,7 +2454,7 @@ export default function AIChat({
                                     <Settings size={18} />
                                 </button>
                                 <button
-                                    onClick={() => setIsMetricsPanelOpen(prev => !prev)}
+                                    onClick={() => toggleIsMetricsPanelOpen()}
                                     className={cn(
                                         "p-2 rounded-lg transition-colors relative",
                                         isMetricsPanelOpen ? "bg-purple-500/10 text-purple-400" : "hover:theme-overlay-subtle theme-text-tertiary hover:theme-text-primary"
@@ -3123,7 +3042,7 @@ export default function AIChat({
                                             <Settings size={20} />
                                         </button>
                                         <button
-                                            onClick={() => setIsMetricsPanelOpen(prev => !prev)}
+                                            onClick={() => toggleIsMetricsPanelOpen()}
                                             className={cn(
                                                 "p-2.5 rounded-full transition-all border theme-overlay-subtle theme-border-subtle",
                                                 isMetricsPanelOpen ? "bg-purple-500/10 text-purple-400 border-purple-500/20" : "theme-text-tertiary hover:theme-text-primary"
@@ -3837,7 +3756,7 @@ export default function AIChat({
                                 <div className="space-y-2">
                                     <div className="text-[10px] uppercase tracking-[0.2em] theme-text-tertiary font-bold">Thinking Trace</div>
                                     <button
-                                        onClick={() => setShowThinkingTrace(prev => !prev)}
+                                        onClick={() => toggleShowThinkingTrace()}
                                         className={cn(
                                             "relative w-full px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-300 border flex items-center justify-between overflow-hidden group/thinking",
                                             showThinkingTrace
@@ -3894,7 +3813,7 @@ export default function AIChat({
                             <div className="space-y-2">
                                 <div className="text-[10px] uppercase tracking-[0.2em] theme-text-tertiary font-bold">Tool Execution</div>
                                 <button
-                                    onClick={() => setAllowToolExecution(prev => !prev)}
+                                    onClick={() => toggleAllowToolExecution()}
                                     className={cn(
                                         "relative w-full px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-300 border flex items-center justify-between overflow-hidden group/tools",
                                         allowToolExecution
