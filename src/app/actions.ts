@@ -384,31 +384,6 @@ export async function executeWithRetry(actionId: string, args: any, context?: Tr
 /**
  * Auto-initialize core workflows
  */
-export async function initializeWorkflows() {
-    const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
-    if (user) {
-        const existing = await prisma.intentRule.findFirst({ where: { name: 'Supermercado Nacional Workflow', userId: user.id } });
-        if (!existing) {
-            await prisma.intentRule.create({
-                data: {
-                    name: "Supermercado Nacional Workflow",
-                    action: "workflow",
-                    keywords: ["nacional", "super nacional", "mercado nacional"],
-                    enabled: true,
-                    userId: user.id,
-                    steps: [
-                        { action: "ask_questions", params: { questions: ["What should be the name of the folder for this report?", "What should be the name of the specific report file?"] } },
-                        { action: "search_files", params: { query: "Supermercado Nacional", searchContent: true } },
-                        { action: "extract_receipt_info", params: {} },
-                        { action: "generate_markdown_report", params: { title: "The Supermercado Nacional-{time}", includeBusinessInfo: true } },
-                        { action: "create_folder", params: { onExistingFolder: "reuse" } },
-                        { action: "create_markdown_file", params: {} }
-                    ] as any
-                }
-            });
-        }
-    }
-}
 
 /**
  * Load workflows defined as markdown files in .agent/workflows
@@ -1958,19 +1933,6 @@ CMD ["npm", "run", "${startScript}"]
     } catch (error: any) {
         console.error('Failed to install app:', error);
         return { success: false, error: error?.message || 'Failed to install app' };
-    }
-}
-
-export async function getAppDeployment(appId: string) {
-    try {
-        const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
-        if (!user) throw new Error('User not found');
-        const deployment = await prisma.appDeployment.findFirst({
-            where: { appId, userId: user.id }
-        });
-        return { success: true, deployment };
-    } catch (error) {
-        return { success: false, error: 'Failed to load deployment' };
     }
 }
 

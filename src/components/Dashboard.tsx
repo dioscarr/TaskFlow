@@ -19,7 +19,7 @@ import ProcessManager from './ProcessManager';
 import StandaloneEditor from './StandaloneEditor';
 import IntegratedPreview from './IntegratedPreview';
 import InteractiveTerminal from './InteractiveTerminal';
-import { Sparkles, Save as SaveIcon, Code2 } from 'lucide-react';
+import { Sparkles, Code2 } from 'lucide-react';
 import { getFileContent, saveFileContent, getRepoAppFileContent, saveRepoAppFileContent } from '@/app/actions';
 import { toast } from 'sonner';
 import VibeFileExplorer, { RepoEntry } from '@/components/VibeFileExplorer';
