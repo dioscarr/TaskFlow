@@ -2,6 +2,8 @@ version: '3.8'
 
 services:
   agent-worker:
+    profiles:
+      - agents
     build:
       context: .
       dockerfile: Dockerfile.agent

@@ -35,6 +35,7 @@ interface PromptEditorModalProps {
 }
 
 export default function PromptEditorModal({ isOpen, onClose, onSave, initialData, customIntents }: PromptEditorModalProps) {
+    const autonomyBlock = `\n\nAUTONOMY:\n- Act without asking for permission on routine edits.\n- Always explore before editing: list dirs, read files, search.\n- Use apply_patch for targeted edits. Avoid large rewrites.\n\nAPP CONTEXT:\n- If an active app exists, only work inside apps/<activeApp>.\n- Find theme entrypoints (index.css, App.css, tailwind.config, globals, theme tokens).\n- Update the site holistically: layout, colors, typography, spacing.\n\nTOOLS:\n- Use list_dir/read_file/search_codebase to locate files.\n- Use apply_patch/edit_file to implement changes.\n- Run build/lint if present.\n\nOUTPUT:\n- Show what changed and why, keep it brief.`;
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [prompt, setPrompt] = useState('');
@@ -80,6 +81,8 @@ export default function PromptEditorModal({ isOpen, onClose, onSave, initialData
             const stored = window.localStorage.getItem(selectedOnlyStorageKey);
             if (stored === 'true' || stored === 'false') {
                 setShowSelectedOnly(stored === 'true');
+            } else {
+                setShowSelectedOnly(true);
             }
         } catch (error) {
             console.warn('Failed to load selected-only preference', error);
@@ -98,7 +101,9 @@ export default function PromptEditorModal({ isOpen, onClose, onSave, initialData
         if (initialData) {
             setName(initialData.name || '');
             setDescription(initialData.description || '');
-            setPrompt(initialData.prompt || '');
+            const basePrompt = initialData.prompt || '';
+            const nextPrompt = basePrompt.includes('AUTONOMY:') ? basePrompt : `${basePrompt}${autonomyBlock}`;
+            setPrompt(nextPrompt);
             setSelectedTools(initialData.tools || DEFAULT_SKILLS);
 
             // Handle migration from steps array to named workflows array if needed
@@ -219,7 +224,7 @@ export default function PromptEditorModal({ isOpen, onClose, onSave, initialData
                                 ].map((tab) => (
                                     <button
                                         key={tab.id}
-                                        onClick={() => setView(tab.id as any)}
+                                        onClick={() => setView(tab.id as 'edit' | 'split' | 'preview' | 'workflow')}
                                         className={cn(
                                             "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
                                             view === tab.id ? "theme-overlay-medium text-white shadow-lg" : "theme-text-tertiary hover:text-white"

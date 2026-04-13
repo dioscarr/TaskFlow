@@ -24,6 +24,7 @@ export interface SkillContext {
     query: string;
     lastResponse?: string;
     workspaceFiles?: any[];
+    traceId?: string; // P3-OBSERVABILITY
 }
 
 /**

@@ -72,9 +72,7 @@ export default function IntegratedPreview({
     useEffect(() => {
         const fetchUrl = async () => {
             try {
-                // @ts-ignore
                 const { getNgrokUrl } = await import('@/app/processActions');
-                // @ts-ignore - The function signature has changed but types might lag
                 const result = await getNgrokUrl(url);
 
                 if (result?.success && result.url) {
@@ -95,7 +93,7 @@ export default function IntegratedPreview({
             const timer = setInterval(fetchUrl, 8000); // Poll every 8s
             return () => clearInterval(timer);
         }
-    }, [isOpen, embedded]);
+    }, [isOpen, embedded, url]);
 
     const activeUrl = urlType === 'public' && publicUrl ? publicUrl : url;
 
@@ -196,12 +194,9 @@ export default function IntegratedPreview({
                                 <div className="ml-2 flex items-center gap-2">
                                     <button
                                         onClick={async () => {
-                                            // @ts-ignore
                                             const { getNgrokUrl } = await import('@/app/processActions');
-                                            // @ts-ignore
                                             const result = await getNgrokUrl(url);
                                             console.log('Manual Ngrok Check:', result);
-                                            // @ts-ignore
                                             import('sonner').then(({ toast }) => {
                                                 if (result.success) toast.success('Ngrok Tunnel Found: ' + result.url);
                                                 else toast.error('Ngrok not detected. Check console for details.');

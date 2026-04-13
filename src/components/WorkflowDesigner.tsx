@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, Reorder, AnimatePresence } from 'framer-motion';
 import { Plus, GripVertical, Trash2, Settings2, Play, ChevronRight, Zap, MessageSquare, X, List, Edit3, Save } from 'lucide-react';
 import { getAllActions, ActionDefinition } from '@/lib/actionRegistry';
@@ -23,8 +23,12 @@ export default function WorkflowDesigner({
     const [isAddingStep, setIsAddingStep] = useState(false);
     const [keywordInput, setKeywordInput] = useState('');
     const templates = DEFAULT_WORKFLOWS;
+    const idCounterRef = useRef(0);
 
-    const createId = () => Math.random().toString(36).substr(2, 9);
+    const createId = () => {
+        idCounterRef.current += 1;
+        return `wf-${idCounterRef.current}`;
+    };
 
     const addTemplateWorkflow = (template: WorkflowDefinition) => {
         const cloned: WorkflowDefinition = {
@@ -48,7 +52,10 @@ export default function WorkflowDesigner({
 
             workflow.steps.forEach(step => {
                 if (step.action === 'create_markdown_file' && step.params) {
-                    const { moveToFolder, copyToFolder, ...rest } = step.params as Record<string, any>;
+                    const params = step.params as Record<string, unknown>;
+                    const moveToFolder = Boolean(params.moveToFolder);
+                    const copyToFolder = Boolean(params.copyToFolder);
+                    const { moveToFolder: _moveToFolder, copyToFolder: _copyToFolder, ...rest } = params;
 
                     if (moveToFolder || copyToFolder) {
                         didChange = true;
@@ -56,13 +63,13 @@ export default function WorkflowDesigner({
 
                         if (moveToFolder) {
                             nextSteps.push({
-                                id: Math.random().toString(36).substr(2, 9),
+                                id: createId(),
                                 action: 'move_attachments_to_folder',
                                 params: { useLastMarkdownFolder: true }
                             });
                         } else if (copyToFolder) {
                             nextSteps.push({
-                                id: Math.random().toString(36).substr(2, 9),
+                                id: createId(),
                                 action: 'copy_attachments_to_folder',
                                 params: { useLastMarkdownFolder: true }
                             });
@@ -102,7 +109,7 @@ export default function WorkflowDesigner({
 
     const addWorkflow = () => {
         const newWorkflow: WorkflowDefinition = {
-            id: Math.random().toString(36).substr(2, 9),
+            id: createId(),
             name: `New Workflow ${workflows.length + 1}`,
             triggerKeywords: [],
             steps: []
@@ -144,7 +151,7 @@ export default function WorkflowDesigner({
     const addStep = (action: ActionDefinition) => {
         if (!activeWorkflow) return;
         const newStep: WorkflowStep = {
-            id: Math.random().toString(36).substr(2, 9),
+            id: createId(),
             action: action.id,
             params: {}
         };
@@ -157,7 +164,7 @@ export default function WorkflowDesigner({
         updateActiveWorkflow({ steps: activeWorkflow.steps.filter(s => s.id !== stepId) });
     };
 
-    const updateStepParams = (stepId: string, params: Record<string, any>) => {
+    const updateStepParams = (stepId: string, params: Record<string, unknown>) => {
         if (!activeWorkflow) return;
         updateActiveWorkflow({
             steps: activeWorkflow.steps.map(s => s.id === stepId ? { ...s, params: { ...s.params, ...params } } : s)

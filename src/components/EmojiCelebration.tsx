@@ -10,6 +10,9 @@ interface CelebrationProps {
 
 export default function EmojiCelebration({ emoji, onComplete }: CelebrationProps) {
     const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; rotation: number; scale: number }>>([]);
+    const [confetti, setConfetti] = useState<Array<{ id: number; x: number; y: number; rotation: number; scale: number; delay: number }>>([]);
+    const [hearts, setHearts] = useState<Array<{ id: number; x: number; y: number; rotation: number; scale: number; delay: number }>>([]);
+    const [sparkles, setSparkles] = useState<Array<{ id: number; x: number; y: number; delay: number }>>([]);
 
     // Generate particles on mount
     useEffect(() => {
@@ -22,6 +25,43 @@ export default function EmojiCelebration({ emoji, onComplete }: CelebrationProps
             scale: Math.random() * 0.5 + 0.5 // 0.5 to 1
         }));
         setParticles(newParticles);
+
+        setConfetti(
+            emoji === '🎉'
+                ? Array.from({ length: 30 }, (_, i) => ({
+                    id: i,
+                    x: Math.random() * 100 - 50,
+                    y: Math.random() * 100 - 50,
+                    scale: Math.random() * 0.5 + 0.5,
+                    rotation: Math.random() * 720,
+                    delay: Math.random() * 0.3
+                }))
+                : []
+        );
+
+        setHearts(
+            emoji === '❤️'
+                ? Array.from({ length: 20 }, (_, i) => ({
+                    id: i,
+                    x: Math.random() * 80 - 40,
+                    y: Math.random() * 60,
+                    scale: Math.random() * 0.8 + 0.4,
+                    rotation: Math.random() * 360,
+                    delay: Math.random() * 0.2
+                }))
+                : []
+        );
+
+        setSparkles(
+            emoji === '👍' || emoji === '🤔'
+                ? Array.from({ length: 25 }, (_, i) => ({
+                    id: i,
+                    x: Math.random() * 100 - 50,
+                    y: Math.random() * 100 - 50,
+                    delay: Math.random() * 0.3
+                }))
+                : []
+        );
 
         // Auto-complete after animation
         const timer = setTimeout(onComplete, 2000);
@@ -117,7 +157,7 @@ export default function EmojiCelebration({ emoji, onComplete }: CelebrationProps
                     transition={{
                         duration: 1.5,
                         ease: "easeOut",
-                        delay: Math.random() * 0.2
+                        delay: particle.scale * 0.2
                     }}
                     className="absolute text-4xl"
                 >
@@ -126,9 +166,9 @@ export default function EmojiCelebration({ emoji, onComplete }: CelebrationProps
             ))}
 
             {/* Confetti Particles (for 🎉) */}
-            {emoji === '🎉' && Array.from({ length: 30 }).map((_, i) => (
+            {emoji === '🎉' && confetti.map((particle) => (
                 <motion.div
-                    key={`confetti-${i}`}
+                    key={`confetti-${particle.id}`}
                     initial={{
                         x: '50vw',
                         y: '50vh',
@@ -136,28 +176,28 @@ export default function EmojiCelebration({ emoji, onComplete }: CelebrationProps
                         opacity: 1
                     }}
                     animate={{
-                        x: `calc(50vw + ${Math.random() * 100 - 50}vw)`,
-                        y: `calc(50vh + ${Math.random() * 100 - 50}vh)`,
-                        scale: Math.random() * 0.5 + 0.5,
+                        x: `calc(50vw + ${particle.x}vw)`,
+                        y: `calc(50vh + ${particle.y}vh)`,
+                        scale: particle.scale,
                         opacity: 0,
-                        rotate: Math.random() * 720
+                        rotate: particle.rotation
                     }}
                     transition={{
                         duration: 2,
                         ease: "easeOut",
-                        delay: Math.random() * 0.3
+                        delay: particle.delay
                     }}
                     className="absolute w-3 h-3 rounded-sm"
                     style={{
-                        background: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'][i % 5]
+                        background: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'][particle.id % 5]
                     }}
                 />
             ))}
 
             {/* Heart Particles (for ❤️) */}
-            {emoji === '❤️' && Array.from({ length: 20 }).map((_, i) => (
+            {emoji === '❤️' && hearts.map((particle) => (
                 <motion.div
-                    key={`heart-${i}`}
+                    key={`heart-${particle.id}`}
                     initial={{
                         x: '50vw',
                         y: '50vh',
@@ -165,16 +205,16 @@ export default function EmojiCelebration({ emoji, onComplete }: CelebrationProps
                         opacity: 1
                     }}
                     animate={{
-                        x: `calc(50vw + ${Math.random() * 80 - 40}vw)`,
-                        y: `calc(50vh - ${Math.random() * 60}vh)`, // Float upward
-                        scale: Math.random() * 0.8 + 0.4,
+                        x: `calc(50vw + ${particle.x}vw)`,
+                        y: `calc(50vh - ${particle.y}vh)`, // Float upward
+                        scale: particle.scale,
                         opacity: 0,
-                        rotate: Math.random() * 360
+                        rotate: particle.rotation
                     }}
                     transition={{
                         duration: 2.5,
                         ease: "easeOut",
-                        delay: Math.random() * 0.2
+                        delay: particle.delay
                     }}
                     className="absolute text-2xl"
                 >
@@ -183,9 +223,9 @@ export default function EmojiCelebration({ emoji, onComplete }: CelebrationProps
             ))}
 
             {/* Sparkles (for 👍 and 🤔) */}
-            {(emoji === '👍' || emoji === '🤔') && Array.from({ length: 25 }).map((_, i) => (
+            {(emoji === '👍' || emoji === '🤔') && sparkles.map((particle) => (
                 <motion.div
-                    key={`sparkle-${i}`}
+                    key={`sparkle-${particle.id}`}
                     initial={{
                         x: '50vw',
                         y: '50vh',
@@ -193,8 +233,8 @@ export default function EmojiCelebration({ emoji, onComplete }: CelebrationProps
                         opacity: 1
                     }}
                     animate={{
-                        x: `calc(50vw + ${Math.random() * 100 - 50}vw)`,
-                        y: `calc(50vh + ${Math.random() * 100 - 50}vh)`,
+                        x: `calc(50vw + ${particle.x}vw)`,
+                        y: `calc(50vh + ${particle.y}vh)`,
                         scale: [0, 1, 0],
                         opacity: [1, 1, 0],
                         rotate: [0, 180, 360]
@@ -202,7 +242,7 @@ export default function EmojiCelebration({ emoji, onComplete }: CelebrationProps
                     transition={{
                         duration: 1.5,
                         ease: "easeOut",
-                        delay: Math.random() * 0.3
+                        delay: particle.delay
                     }}
                     className="absolute text-xl"
                 >

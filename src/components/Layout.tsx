@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { TaskWithData } from '@/lib/types';
 import TaskDetail from './TaskDetail';
-import { useEffect } from 'react';
 import Link from 'next/link';
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
@@ -114,7 +113,7 @@ export default function Layout({ children, headerCenter }: { children: React.Rea
                     <div className="absolute top-[-18%] left-[-12%] w-[62%] h-[62%] bg-sky-500/12 rounded-full blur-[160px] opacity-40 animate-[neural-pulse_8s_infinite_ease-in-out] pointer-events-none" />
                     <div className="absolute bottom-[-16%] right-[-12%] w-[54%] h-[54%] bg-emerald-500/10 rounded-full blur-[150px] opacity-35 animate-[neural-pulse_12s_infinite_ease-in-out_delay-1000] pointer-events-none" />
                     <div className="absolute top-[32%] left-[34%] w-[28%] h-[28%] bg-amber-400/10 rounded-full blur-[120px] opacity-25 animate-pulse" />
-                    <div className="absolute inset-0 ambient-grid opacity-[0.06]" />
+                    <div className="absolute inset-0 ambient-grid opacity-[0.035]" />
                 </div>
 
                 {/* Focus Mode Overlay Backdrop */}
@@ -153,8 +152,10 @@ export default function Layout({ children, headerCenter }: { children: React.Rea
 
                             {/* Centered Content Injection */}
                             {headerCenter && (
-                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[9010]">
-                                    {headerCenter}
+                                <div className="absolute inset-0 flex items-center justify-center z-[9010] pointer-events-none">
+                                    <div className="pointer-events-auto max-w-[calc(100%-350px)] flex justify-center">
+                                        {headerCenter}
+                                    </div>
                                 </div>
                             )}
 
@@ -186,7 +187,7 @@ export default function Layout({ children, headerCenter }: { children: React.Rea
                         </header>
 
 
-                        <main className="flex-1 w-full h-full relative overflow-hidden min-w-0">
+                        <main className="flex-1 w-full relative overflow-hidden min-w-0">
 
                             {children}
                         </main>

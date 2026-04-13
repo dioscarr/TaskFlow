@@ -6,7 +6,7 @@ import Layout from './Layout';
 import {
     getProfile, updateProfile, getSettings, setSetting,
     getResources, createResource, updateResource, deleteResource,
-    addCredential, deleteCredential, RESOURCE_TEMPLATES,
+    addCredential, deleteCredential, getResourceTemplates,
     type UserProfileData, type CreateResourceData, type EnvVar
 } from '@/app/settingsActions';
 
@@ -76,8 +76,8 @@ export default function Settings() {
                 getProfile(),
                 getResources()
             ]);
-            setProfile(profileData as any);
-            setResources(resourcesData as any);
+            setProfile(profileData as unknown as UserProfileData);
+            setResources(resourcesData as unknown as Resource[]);
         } catch (err) {
             console.error('Failed to load settings:', err);
         } finally {
@@ -481,8 +481,35 @@ function ResourceModal({ onClose, onCreated }: { onClose: () => void; onCreated:
     const [selected, setSelected] = useState<string | null>(null);
     const [formData, setFormData] = useState<CreateResourceData>({ name: '', slug: '', type: 'api', provider: 'custom' });
     const [saving, setSaving] = useState(false);
+    const [templates, setTemplates] = useState<Array<[string, Record<string, unknown>]>>([]);
+    const [templatesLoading, setTemplatesLoading] = useState(true);
 
-    const templates = Object.entries(RESOURCE_TEMPLATES);
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadTemplates = async () => {
+            setTemplatesLoading(true);
+            try {
+                const data = await getResourceTemplates();
+                if (isMounted) {
+                    const entries = Object.entries((data || {}) as Record<string, Record<string, unknown>>);
+                    setTemplates(entries);
+                }
+            } catch (err) {
+                console.error('Failed to load resource templates:', err);
+            } finally {
+                if (isMounted) {
+                    setTemplatesLoading(false);
+                }
+            }
+        };
+
+        loadTemplates();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     const handleCreate = async () => {
         setSaving(true);
@@ -512,32 +539,36 @@ function ResourceModal({ onClose, onCreated }: { onClose: () => void; onCreated:
                 {step === 'template' ? (
                     <div className="space-y-4">
                         <p className="theme-text-secondary">Choose a template or start from scratch:</p>
-                        <div className="grid grid-cols-3 gap-3 max-h-80 overflow-auto">
-                            {templates.map(([key, tpl]) => (
-                                <button
-                                    key={key}
-                                    onClick={() => {
-                                        setSelected(key);
-                                        const template = tpl as Record<string, unknown>;
-                                        setFormData({
-                                            name: tpl.name,
-                                            slug: key.replace(/_/g, '-'),
-                                            type: tpl.type,
-                                            provider: tpl.provider,
-                                            icon: tpl.icon,
-                                            spec: template.spec as CreateResourceData['spec'],
-                                            limits: template.limits as CreateResourceData['limits'],
-                                            ediConfig: template.ediConfig as CreateResourceData['ediConfig'],
-                                        });
-                                    }}
-                                    className={`p-4 rounded-xl text-left border ${selected === key ? 'border-sky-400 bg-sky-400/10' : 'theme-border-medium theme-overlay-subtle'
-                                        }`}
-                                >
-                                    <div className="font-medium">{tpl.name}</div>
-                                    <div className="text-xs theme-text-secondary">{tpl.type}</div>
-                                </button>
-                            ))}
-                        </div>
+                        {templatesLoading ? (
+                            <div className="text-sm theme-text-secondary">Loading templates...</div>
+                        ) : (
+                            <div className="grid grid-cols-3 gap-3 max-h-80 overflow-auto">
+                                {templates.map(([key, tpl]) => (
+                                    <button
+                                        key={key}
+                                        onClick={() => {
+                                            setSelected(key);
+                                            const template = tpl as Record<string, unknown>;
+                                            setFormData({
+                                                name: tpl.name as string,
+                                                slug: key.replace(/_/g, '-'),
+                                                type: tpl.type as CreateResourceData['type'],
+                                                provider: tpl.provider as string,
+                                                icon: tpl.icon as string | undefined,
+                                                spec: template.spec as CreateResourceData['spec'],
+                                                limits: template.limits as CreateResourceData['limits'],
+                                                ediConfig: template.ediConfig as CreateResourceData['ediConfig'],
+                                            });
+                                        }}
+                                        className={`p-4 rounded-xl text-left border ${selected === key ? 'border-sky-400 bg-sky-400/10' : 'theme-border-medium theme-overlay-subtle'
+                                            }`}
+                                    >
+                                        <div className="font-medium">{tpl.name as string}</div>
+                                        <div className="text-xs theme-text-secondary">{tpl.type as string}</div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         <div className="flex justify-end gap-3 pt-4">
                             <button onClick={onClose} className="px-4 py-2 theme-text-secondary">Cancel</button>
                             <button
@@ -638,7 +669,7 @@ function ResourceDetailModal({ resource, onClose, onSave }: {
         if (!newEnvVar.key) return;
         setLocalResource({
             ...localResource,
-            envVars: [...(localResource.envVars || []), { ...newEnvVar, scope: 'local' }] as any
+            envVars: [...(localResource.envVars || []), { ...newEnvVar, scope: 'runtime' }]
         });
         setNewEnvVar({ key: '', value: '', isSecret: false });
         setShowNewEnvVarForm(false);
@@ -721,8 +752,8 @@ function ResourceDetailModal({ resource, onClose, onSave }: {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === tab.id
-                                    ? 'border-sky-400 theme-text-primary'
-                                    : 'border-transparent theme-text-secondary hover:theme-text-primary'
+                                ? 'border-sky-400 theme-text-primary'
+                                : 'border-transparent theme-text-secondary hover:theme-text-primary'
                                 }`}
                         >
                             <span>{tab.icon}</span>

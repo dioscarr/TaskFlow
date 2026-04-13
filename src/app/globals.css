@@ -317,6 +317,7 @@
 }
 
 body {
+  overflow-x: hidden;
   background-color: var(--background);
   background-image:
     radial-gradient(at 0% 0%, var(--bg-glow-1) 0px, transparent 45%),
@@ -334,11 +335,9 @@ body {
 }
 
 .ambient-grid {
-  background-image:
-    linear-gradient(to right, var(--foreground) 0.035 1px, transparent 1px),
-    linear-gradient(to bottom, var(--foreground) 0.035 1px, transparent 1px);
-  background-size: 60px 60px;
-  mask-image: radial-gradient(circle at 40% 30%, black 30%, transparent 70%);
+  background-image: radial-gradient(var(--foreground) 0.75px, transparent 0.75px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(120% 80% at 35% 25%, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.18) 55%, transparent 82%);
 }
 
 h1,
@@ -390,6 +389,13 @@ h2 {
 .markdown-content {
   line-height: 1.6;
   max-width: 100%;
+  width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.markdown-content * {
+  max-width: 100%;
 }
 
 /* Utility: robust word wrapping for long/unbroken text */
@@ -434,6 +440,22 @@ h2 {
   color: var(--foreground);
 }
 
+.markdown-content h1 {
+  font-size: 1.4rem;
+}
+
+.markdown-content h2 {
+  font-size: 1.2rem;
+}
+
+.markdown-content h3 {
+  font-size: 1.05rem;
+}
+
+.markdown-content h4 {
+  font-size: 0.95rem;
+}
+
 .markdown-content a {
   color: #60a5fa;
   text-decoration: underline;
@@ -453,7 +475,7 @@ h2 {
   border: 1px solid rgba(255, 255, 255, 0.05);
   margin: 1rem 0;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;

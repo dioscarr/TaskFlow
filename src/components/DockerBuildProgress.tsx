@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Confetti, { EmojiCelebration } from './Confetti';
 
@@ -97,17 +97,21 @@ export default function DockerBuildProgress({
     });
     const [logs, setLogs] = useState<string[]>([]);
     const [showLogs, setShowLogs] = useState(false);
-    const [startTime] = useState(Date.now());
+    const startTimeRef = useRef<number>(0);
     const [elapsedTime, setElapsedTime] = useState(0);
     const [showConfetti, setShowConfetti] = useState(false);
 
     useEffect(() => {
+        if (!startTimeRef.current) {
+            startTimeRef.current = Date.now();
+        }
         const timer = setInterval(() => {
+            const startTime = startTimeRef.current || Date.now();
             setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [startTime]);
+    }, []);
 
     useEffect(() => {
         const params = new URLSearchParams({
@@ -134,7 +138,7 @@ export default function DockerBuildProgress({
                     setShowConfetti(true); // Trigger confetti!
 
                     // Record success metrics
-                    const duration = Date.now() - startTime;
+                    const duration = Date.now() - (startTimeRef.current || Date.now());
                     fetch('/api/metrics/build', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -152,7 +156,7 @@ export default function DockerBuildProgress({
                     }, 2000);
                 } else if (data.stage === 'failed' || (data.stage === 'error' && !data.raw)) {
                     // Record failure metrics
-                    const duration = Date.now() - startTime;
+                    const duration = Date.now() - (startTimeRef.current || Date.now());
                     fetch('/api/metrics/build', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },

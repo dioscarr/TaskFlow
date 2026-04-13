@@ -28,7 +28,7 @@ interface SuggestionsLibraryModalProps {
     isOpen: boolean;
     onClose: () => void;
     onApply: (suggestion: Suggestion) => void;
-    workflowContext?: any; // JSON context from the original request/plan
+    workflowContext?: unknown; // JSON context from the original request/plan
     workflowType?: string; // Type of workflow (e.g., 'content-generation', 'task-planning', 'code-editing')
 }
 

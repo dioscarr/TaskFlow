@@ -5,6 +5,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, FileText, Check, Loader2, Edit3, Terminal } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface FileEditPreviewModalProps {
     isOpen: boolean;
@@ -139,13 +141,28 @@ export default function FileEditPreviewModal({
                                 ref={scrollRef}
                                 className="flex-1 p-8 overflow-y-auto custom-scrollbar font-mono text-sm leading-relaxed"
                             >
-                                <div className="max-w-none text-sky-50/70 whitespace-pre-wrap">
-                                    {displayedContent}
+                                <div className="max-w-none text-sky-50/70 overflow-hidden rounded-lg">
+                                    <SyntaxHighlighter
+                                        language={fileName.split('.').pop() || 'text'}
+                                        style={vscDarkPlus}
+                                        customStyle={{
+                                            margin: 0,
+                                            padding: '1.5rem',
+                                            fontSize: '13px',
+                                            lineHeight: '1.6',
+                                            backgroundColor: 'transparent',
+                                            background: 'transparent',
+                                        }}
+                                        showLineNumbers={true}
+                                        wrapLongLines={true}
+                                    >
+                                        {displayedContent}
+                                    </SyntaxHighlighter>
                                     {isTyping && (
                                         <motion.span
                                             animate={{ opacity: [0, 1, 0] }}
                                             transition={{ repeat: Infinity, duration: 0.8 }}
-                                            className="inline-block w-2.5 h-5 bg-sky-500 ml-1 translate-y-1 shadow-[0_0_10px_rgba(56,189,248,0.8)]"
+                                            className="inline-block w-2.5 h-5 bg-sky-500 ml-4 mb-1 shadow-[0_0_10px_rgba(56,189,248,0.8)]"
                                         />
                                     )}
                                 </div>

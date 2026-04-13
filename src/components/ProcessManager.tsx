@@ -9,6 +9,15 @@ import { listProcesses, stopProcess, startProcess, checkProcessHealth, discoverP
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+interface ProcessMetadata {
+    internalDomain?: string;
+    source?: string;
+    appName?: string;
+    runMode?: string;
+    containerName?: string;
+    [key: string]: unknown;
+}
+
 interface Process {
     id: string;
     name: string;
@@ -22,7 +31,42 @@ interface Process {
     responseTime?: number;
     startedAt: Date;
     lastHealthCheck?: Date;
-    metadata?: any;
+    metadata?: ProcessMetadata;
+}
+
+type ProcessAction = (id: string) => void | Promise<void>;
+
+interface RowProps {
+    processes: Process[];
+    actioningId: string | null;
+    onStop: ProcessAction;
+    onStartLocal: ProcessAction;
+    onStartContainer: ProcessAction;
+    onRestart: ProcessAction;
+    onRebuild: ProcessAction;
+    onFixPort: ProcessAction;
+    onGetLogs: ProcessAction;
+    onHealthCheck: ProcessAction;
+    onDelete: ProcessAction;
+}
+
+type RowRendererProps = {
+    index: number;
+    style: React.CSSProperties;
+} & RowProps;
+
+interface ProcessRowWrapperProps {
+    process: Process;
+    isActioning: boolean;
+    onStop: ProcessAction;
+    onStartLocal: ProcessAction;
+    onStartContainer: ProcessAction;
+    onRestart: ProcessAction;
+    onRebuild: ProcessAction;
+    onFixPort: ProcessAction;
+    onGetLogs: ProcessAction;
+    onHealthCheck: ProcessAction;
+    onDelete: ProcessAction;
 }
 
 export default function ProcessManager() {
@@ -251,7 +295,8 @@ export default function ProcessManager() {
             return;
         }
 
-        const port = Number((global as any).process?.env?.NEXT_PUBLIC_PROCESS_WS_PORT) || 4001;
+        const envPort = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.NEXT_PUBLIC_PROCESS_WS_PORT;
+        const port = Number(envPort) || 4001;
         const host = window.location.hostname || 'localhost';
         let cancelled = false;
 
@@ -288,7 +333,7 @@ export default function ProcessManager() {
                         const incoming = msg.data as Process[];
                         setProcesses((prev) => {
                             const prevKey = prev.map((p) => `${p.id}:${p.status}:${p.port || ''}`).join('|');
-                            const nextKey = incoming.map((p: any) => `${p.id}:${p.status}:${p.port || ''}`).join('|');
+                            const nextKey = incoming.map((p) => `${p.id}:${p.status}:${p.port || ''}`).join('|');
                             if (prevKey === nextKey) return prev;
                             return incoming as Process[];
                         });
@@ -530,7 +575,7 @@ export default function ProcessManager() {
                     <div className="w-full">
                         {/* Use react-window v2 List API (rowComponent + rowProps) */}
                         {/* Row renderer forwards index/style and a rowProps object */}
-                        <List
+                        <List<RowProps>
                             style={{ width: '100%' }}
                             rowCount={filteredProcesses.length}
                             rowHeight={160}
@@ -539,15 +584,16 @@ export default function ProcessManager() {
                             rowComponent={RowRenderer}
                             rowProps={{
                                 processes: filteredProcesses,
-                                handleStop,
-                                handleStart,
-                                handleStartContainer,
-                                handleRestart,
-                                handleRebuild,
-                                handleFixPort,
-                                handleGetLogs,
-                                handleHealthCheck,
-                                handleDelete
+                                actioningId,
+                                onStop: handleStop,
+                                onStartLocal: handleStartLocal,
+                                onStartContainer: handleStartContainer,
+                                onRestart: handleRestart,
+                                onRebuild: handleRebuild,
+                                onFixPort: handleFixPort,
+                                onGetLogs: handleGetLogs,
+                                onHealthCheck: handleHealthCheck,
+                                onDelete: handleDelete
                             }}
                         />
                     </div>
@@ -579,7 +625,7 @@ export default function ProcessManager() {
                                 <div className="flex items-center gap-2">
                                     {logs && processes.find(p => p.id === logs.id) && (() => {
                                         const p = processes.find(p => p.id === logs.id)!;
-                                        const internal = p.metadata?.internalDomain as string | undefined;
+                                        const internal = typeof p.metadata?.internalDomain === 'string' ? p.metadata.internalDomain : undefined;
                                         const url = p.port ? `http://localhost:${p.port}` : (internal ? `http://${internal}` : undefined);
                                         return url ? (
                                             <button
@@ -616,24 +662,24 @@ export default function ProcessManager() {
 /**
  * Stable Row Renderer for react-window
  */
-function RowRenderer({ index, style, rowProps }: any) {
-    const process = rowProps?.processes?.[index];
+function RowRenderer({ index, style, processes, actioningId, onStop, onStartLocal, onStartContainer, onRestart, onRebuild, onFixPort, onGetLogs, onHealthCheck, onDelete }: RowRendererProps) {
+    const process = processes?.[index];
     if (!process) return <div style={style} />;
 
     return (
         <div style={style}>
             <ProcessRowWrapper
                 process={process}
-                isActioning={rowProps.actioningId === process.id}
-                onStop={rowProps.onStop}
-                onStartLocal={rowProps.onStartLocal}
-                onStartContainer={rowProps.onStartContainer}
-                onRestart={rowProps.onRestart}
-                onRebuild={rowProps.onRebuild}
-                onFixPort={rowProps.onFixPort}
-                onGetLogs={rowProps.onGetLogs}
-                onHealthCheck={rowProps.onHealthCheck}
-                onDelete={rowProps.onDelete}
+                isActioning={actioningId === process.id}
+                onStop={onStop}
+                onStartLocal={onStartLocal}
+                onStartContainer={onStartContainer}
+                onRestart={onRestart}
+                onRebuild={onRebuild}
+                onFixPort={onFixPort}
+                onGetLogs={onGetLogs}
+                onHealthCheck={onHealthCheck}
+                onDelete={onDelete}
             />
         </div>
     );
@@ -654,7 +700,7 @@ const ProcessRowWrapper = React.memo(function ProcessRowWrapper({
     onGetLogs,
     onHealthCheck,
     onDelete
-}: any) {
+}: ProcessRowWrapperProps) {
     const isRunning = process.status === 'running' || process.status === 'healthy';
     const isError = process.status === 'error' || process.status === 'unhealthy';
 

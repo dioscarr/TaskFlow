@@ -97,6 +97,7 @@ export default function StandaloneEditor({
         lineNumbers(),
         highlightActiveLineGutter(),
         highlightActiveLine(),
+        EditorView.lineWrapping,
         codeTheme,
         syntaxHighlighting(codeHighlight)
     ], [codeTheme, codeHighlight]);

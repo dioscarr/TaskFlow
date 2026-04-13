@@ -1,8 +1,55 @@
+# TaskFlow
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Local database setup
+
+This project uses Prisma with PostgreSQL. The current schema is Postgres-specific, so the safest setup is a self-hosted local Postgres instance instead of a hosted database.
+
+Default local database:
+
+- Host: `localhost`
+- Port: `5435`
+- Database: `taskflow`
+- User: `postgres`
+
+Recommended one-time setup:
+
+```bash
+npm run db:local:setup
+```
+
+That will:
+
+1. initialize a dedicated local Postgres data directory under `.local/postgres`
+2. start a local Postgres server on port `5435`
+3. create the `taskflow` database if needed
+4. apply Prisma migrations
+5. seed the demo user
+
+If you want the app to use the local database during development, create or keep [/.env.local](.env.local) with a local `DATABASE_URL`. A starter file is included in [/.env.local.example](.env.local.example).
+
+Useful DB commands:
+
+```bash
+npm run db:local:up
+npm run db:local:down
+npm run db:local:logs
+npm run db:local:migrate
+npm run db:seed
+```
+
+Optional Docker fallback:
+
+```bash
+npm run db:docker:up
+npm run db:docker:down
+npm run db:docker:logs
+```
 
 ## Getting Started
 
-First, run the development server:
+After the database is ready, run the development server:
 
 ```bash
 npm run dev

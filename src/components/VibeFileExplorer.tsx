@@ -20,6 +20,35 @@ export type RepoEntry = {
     size: number | null;
 };
 
+type RunMode = 'dev' | 'prod';
+
+type ProcessMetadata = {
+    appName?: string;
+    runMode?: RunMode;
+    containerName?: string;
+    source?: string;
+    [key: string]: unknown;
+};
+
+type ProcessSummary = {
+    name: string;
+    status?: string;
+    type?: string;
+    path?: string;
+    metadata?: ProcessMetadata;
+};
+
+type ManageAppLifecycleResponse = {
+    success: boolean;
+    message?: string;
+    previewUrl?: string;
+};
+
+type SetRunModeResponse = {
+    success: boolean;
+    message?: string;
+};
+
 interface VibeFileExplorerProps {
     onFileSelect: (file: RepoEntry) => void;
     activeFile?: RepoEntry | null;
@@ -28,7 +57,7 @@ interface VibeFileExplorerProps {
 export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileExplorerProps) {
     const [entries, setEntries] = useState<RepoEntry[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [processes, setProcesses] = useState<any[]>([]);
+    const [processes, setProcesses] = useState<ProcessSummary[]>([]);
 
     // Progress viewer state
     const [showBuildProgress, setShowBuildProgress] = useState(false);
@@ -64,7 +93,7 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
             // Step 2: Load processes in background to avoid blocking the file list
             const procRes = await listProcesses();
             if (procRes.success && procRes.processes) {
-                setProcesses(procRes.processes);
+                setProcesses(procRes.processes as unknown as ProcessSummary[]);
             }
         } catch (error) {
             console.error('Failed to load data:', error);
@@ -108,7 +137,7 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
             target: appName,
             stopOthers,
             runMode
-        }) as any;
+        }) as ManageAppLifecycleResponse;
 
         if (res.success) {
             const isExisting = res.message?.includes('Hooked into existing');
@@ -195,7 +224,7 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
                                     action: 'start',
                                     target: buildingApp.appName,
                                     runMode: 'dev'
-                                }) as any;
+                                }) as ManageAppLifecycleResponse;
 
                                 // Start progress will auto-close after animation
                                 setTimeout(() => {
@@ -208,9 +237,10 @@ export default function VibeFileExplorer({ onFileSelect, activeFile }: VibeFileE
                                     }
                                     loadEntries(); // Refresh
                                 }, 5000);
-                            } catch (error: any) {
+                            } catch (error) {
                                 setShowStartProgress(false);
-                                toast.error(`Failed to start container: ${error.message}`);
+                                const message = error instanceof Error ? error.message : 'Unknown error';
+                                toast.error(`Failed to start container: ${message}`);
                             }
                         } else {
                             toast.error('Build failed. Check logs for details.');
@@ -253,7 +283,7 @@ const FileTree = ({ path, level, onSelect, activeFilePath, processes, onToggleAp
     level: number,
     onSelect: (f: RepoEntry) => void,
     activeFilePath?: string,
-    processes: any[],
+    processes: ProcessSummary[],
     onToggleApp: (name: string, status: string) => void,
     onShowLogs: (containerName: string) => void
 }) => {
@@ -271,7 +301,7 @@ const FileTree = ({ path, level, onSelect, activeFilePath, processes, onToggleAp
         try {
             const result = await listRepoAppEntries(path);
             if (result.success && result.entries) {
-                const sorted = (result.entries as RepoEntry[]).sort((a: any, b: any) => {
+                const sorted = (result.entries as RepoEntry[]).sort((a, b) => {
                     if (a.type === b.type) return a.name.localeCompare(b.name);
                     return a.type === 'folder' ? -1 : 1;
                 });
@@ -308,7 +338,7 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onTogg
     level: number,
     onSelect: (f: RepoEntry) => void,
     activeFilePath?: string,
-    processes: any[],
+    processes: ProcessSummary[],
     onToggleApp: (name: string, status: string) => void,
     onShowLogs: (containerName: string) => void
 }) => {
@@ -331,7 +361,7 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onTogg
     }) : undefined;
 
     const isRunning = relatedProcess?.status === 'running';
-    const runMode = isAppRoot ? ((relatedProcess as any)?.metadata?.runMode as string | undefined) : undefined;
+    const runMode = isAppRoot ? relatedProcess?.metadata?.runMode : undefined;
     const nextRunMode = runMode === 'prod' ? 'dev' : 'prod';
 
     const toggleOpen = async (e: React.MouseEvent) => {
@@ -343,7 +373,7 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onTogg
             setLoadState(s => ({ ...s, loading: true }));
             const result = await listRepoAppEntries(item.path);
             if (result.success && result.entries) {
-                const sorted = (result.entries as RepoEntry[]).sort((a: any, b: any) => {
+                const sorted = (result.entries as RepoEntry[]).sort((a, b) => {
                     if (a.type === b.type) return a.name.localeCompare(b.name);
                     return a.type === 'folder' ? -1 : 1;
                 });
@@ -395,7 +425,7 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onTogg
                             e.stopPropagation();
                             toast.info(`Switching ${item.name} to ${nextRunMode} mode...`);
                             if (!isRunning) {
-                                const res = await setAppRunMode(item.name, nextRunMode as any) as any;
+                                const res = await setAppRunMode(item.name, nextRunMode) as SetRunModeResponse;
                                 if (res.success) {
                                     toast.success(`Mode set to ${nextRunMode}`);
                                 } else {
@@ -411,11 +441,12 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onTogg
                             const stopRes = await manageAppLifecycle({
                                 action: 'stop',
                                 target: item.name
-                            }) as any;
+                            }) as ManageAppLifecycleResponse;
                             clearTimeout(restartToastTimer);
                             if (!stopRes.success) {
                                 if (restartToastId !== undefined) {
-                                    (toast as any).dismiss?.(restartToastId);
+                                    const toastApi = toast as typeof toast & { dismiss?: (id?: string | number) => void };
+                                    toastApi.dismiss?.(restartToastId);
                                 }
                                 toast.error(`Failed to stop: ${stopRes.message || 'Unknown error'}`);
                                 return;
@@ -424,8 +455,8 @@ const FileTreeItem = ({ item, level, onSelect, activeFilePath, processes, onTogg
                                 action: 'start',
                                 target: item.name,
                                 stopOthers: false,
-                                runMode: nextRunMode as any
-                            }) as any;
+                                runMode: nextRunMode
+                            }) as ManageAppLifecycleResponse;
                             if (res.success) {
                                 toast.success(`Mode set to ${nextRunMode}`);
                             } else {

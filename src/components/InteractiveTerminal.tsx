@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Terminal, Send, ChevronRight, X, Trash2, Maximize2 } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Terminal, Send, ChevronRight, X, Trash2 } from 'lucide-react';
 import { runShellCommand, TerminalResponse } from '@/app/terminalActions';
 import { cn } from '@/lib/utils';
-import TerminalView from './TerminalView';
 
 interface TerminalEntry {
     type: 'command' | 'response';
@@ -23,23 +22,7 @@ export default function InteractiveTerminal({ onClose, initialCommand }: { onClo
     const inputRef = useRef<HTMLInputElement>(null);
     const hasRunInitial = useRef(false);
 
-    useEffect(() => {
-        if (initialCommand && !hasRunInitial.current) {
-            hasRunInitial.current = true;
-            // Small delay to allow render
-            setTimeout(() => {
-                handleExecute(undefined, initialCommand);
-            }, 500);
-        }
-    }, [initialCommand]);
-
-    useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [history]);
-
-    const handleExecute = async (e?: React.FormEvent, commandOverride?: string) => {
+    const handleExecute = useCallback(async (e?: React.FormEvent, commandOverride?: string) => {
         if (e) e.preventDefault();
 
         const cmd = commandOverride || input.trim();
@@ -60,7 +43,7 @@ export default function InteractiveTerminal({ onClose, initialCommand }: { onClo
             setHistory(prev => [...prev, {
                 type: 'response',
                 content: res.output,
-                style: res.type as any
+                style: res.type
             }]);
 
             // Dispatch preview event if URL returned
@@ -78,7 +61,23 @@ export default function InteractiveTerminal({ onClose, initialCommand }: { onClo
             // Re-focus input after execution
             setTimeout(() => inputRef.current?.focus(), 100);
         }
-    };
+    }, [input, isExecuting]);
+
+    useEffect(() => {
+        if (initialCommand && !hasRunInitial.current) {
+            hasRunInitial.current = true;
+            // Small delay to allow render
+            setTimeout(() => {
+                handleExecute(undefined, initialCommand);
+            }, 500);
+        }
+    }, [initialCommand, handleExecute]);
+
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [history]);
 
     return (
         <div className="flex flex-col h-full bg-[#08080c] border theme-border-medium rounded-xl overflow-hidden shadow-2xl relative">

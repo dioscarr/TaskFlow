@@ -899,3 +899,28 @@ const RESOURCE_TEMPLATES = {
 export async function getResourceTemplates() {
     return RESOURCE_TEMPLATES;
 }
+
+// ============================================
+// PREVIEW SETTINGS
+// ============================================
+
+export async function getPreviewAutoOpen(): Promise<boolean> {
+    try {
+        const setting = await getSetting('preview', 'autoOpen');
+        if (!setting) return true; // Default to true (auto-open enabled)
+        return setting.value as boolean;
+    } catch (error) {
+        console.error('Failed to get preview auto-open setting:', error);
+        return true; // Default to true on error
+    }
+}
+
+export async function setPreviewAutoOpen(enabled: boolean) {
+    return await setSetting({
+        category: 'preview',
+        key: 'autoOpen',
+        value: enabled,
+        description: 'Automatically open preview links when available'
+    });
+}
+

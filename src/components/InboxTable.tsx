@@ -2,14 +2,13 @@
 
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MOCK_EMAILS, Email } from '@/lib/mockData';
 import { useFocus } from './Layout';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { deleteTask, updateTaskStatus } from '@/app/actions';
 import ConfirmationModal from './ConfirmationModal';
 import ContextMenu from './ContextMenu';
-import { Mail, Paperclip, ChevronRight, User, Trash2, CheckSquare, FileText } from 'lucide-react';
+import { Mail, ChevronRight, User, Trash2, CheckSquare, FileText } from 'lucide-react';
 import { Task } from '@prisma/client';
 import { cn } from '@/lib/utils';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -205,10 +204,10 @@ export default function InboxTable({ tasks }: InboxTableProps) {
 
                     {/* Filter Tabs */}
                     <div className="flex p-1 theme-overlay-subtle border theme-border-medium rounded-xl">
-                        {['All', 'Unread', 'Campaigns'].map((filter) => (
+                        {(['All', 'Unread', 'Campaigns'] as const).map((filter) => (
                             <button
                                 key={filter}
-                                onClick={() => setActiveFilter(filter as any)}
+                                onClick={() => setActiveFilter(filter)}
                                 className={cn(
                                     "px-4 py-1.5 rounded-lg text-xs font-medium transition-all",
                                     activeFilter === filter

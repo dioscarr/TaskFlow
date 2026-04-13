@@ -15,14 +15,11 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 const STORAGE_KEY = 'taskflow-theme';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [theme, setTheme] = useState<Theme>('dark');
-
-    useEffect(() => {
-        const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
-        if (stored === 'light' || stored === 'dark') {
-            setTheme(stored);
-        }
-    }, []);
+    const [theme, setTheme] = useState<Theme>(() => {
+        if (typeof window === 'undefined') return 'dark';
+        const stored = window.localStorage.getItem(STORAGE_KEY);
+        return stored === 'light' || stored === 'dark' ? stored : 'dark';
+    });
 
     useEffect(() => {
         if (typeof document === 'undefined') return;
