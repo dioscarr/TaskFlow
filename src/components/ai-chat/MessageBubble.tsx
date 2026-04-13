@@ -143,13 +143,29 @@ export const MessageBubble = ({ msg, attachedFiles, showThinking, setInput, setA
             )}
         >
             {msg.files && msg.files.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-1 justify-end">
-                    {msg.files.map((f) => (
-                        <div key={f.id} className="flex items-center gap-1.5 px-2 py-1 bg-foreground/5 rounded-lg text-[10px] text-foreground/60 border border-[color:var(--border)]">
-                            {f.type === 'pdf' ? <FileText size={10} /> : <ImageIcon size={10} />}
-                            <span className="truncate max-w-[150px]">{f.name}</span>
-                        </div>
-                    ))}
+                <div className="flex flex-wrap gap-2 mb-2 justify-end">
+                    {msg.files.map((f) => {
+                        const isImage = /^(image|png|jpg|jpeg|gif|webp|heic|heif)$/i.test(f.type || '');
+                        const imgSrc = isImage && f.storagePath ? `/${f.storagePath}` : null;
+                        return (
+                            <div key={f.id} className={cn(
+                                "rounded-lg border border-[color:var(--border)] overflow-hidden",
+                                imgSrc ? "w-32 bg-black/20" : "flex items-center gap-1.5 px-2 py-1 bg-foreground/5 text-[10px] text-foreground/60"
+                            )}>
+                                {imgSrc ? (
+                                    <div className="flex flex-col">
+                                        <img src={imgSrc} alt={f.name} className="w-full h-24 object-cover" />
+                                        <span className="px-1.5 py-0.5 text-[9px] text-foreground/50 truncate">{f.name}</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {f.type === 'pdf' ? <FileText size={10} /> : <ImageIcon size={10} />}
+                                        <span className="truncate max-w-[150px]">{f.name}</span>
+                                    </>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 

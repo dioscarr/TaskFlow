@@ -290,17 +290,39 @@ export async function POST(request: Request) {
                     const toolInstructions = [
                         'You have access to a curated capability set. Use tools when they are necessary and aligned with the selected agent, workflow, and scope.',
                         `ENABLED CAPABILITIES: ${enabledCapabilities.join(', ') || 'none'}`,
-                        `ENABLED FUNCTIONS: ${enabledFunctionNames.join(', ') || 'none'}`
+                        `ENABLED FUNCTIONS: ${enabledFunctionNames.join(', ') || 'none'}`,
+                        'TOOL DISCIPLINE:',
+                        '- When files are attached to the message, use them directly via their IDs. Do NOT search the filesystem for them.',
+                        '- When a skill (like receipt_intelligence) returns structured data, TRUST the result and present it. Do NOT re-search for the same information.',
+                        '- Prefer ONE precise tool call over multiple exploratory calls. Minimize list_dir and search_codebase usage.',
+                        '- Be concise in your responses. Present extracted data as a clean summary, not verbose paragraphs.'
                     ].join('\n');
+                    // Build attached-file context so the AI knows what's available without searching
+                    let attachedFileContext = '';
+                    if (fileIds && fileIds.length > 0) {
+                        try {
+                            const attachedFiles = await Promise.all(
+                                fileIds.map((id: string) => prisma.workspaceFile.findUnique({ where: { id }, select: { id: true, name: true, type: true, storagePath: true } }))
+                            );
+                            const validFiles = attachedFiles.filter(Boolean);
+                            if (validFiles.length > 0) {
+                                attachedFileContext = [
+                                    'ATTACHED FILES (already available — do NOT search for them):',
+                                    ...validFiles.map(f => `- ${f!.name} (id: ${f!.id}, type: ${f!.type}${f!.storagePath ? ', path: ' + f!.storagePath : ''})`)
+                                ].join('\n');
+                            }
+                        } catch { /* non-critical */ }
+                    }
+
                     const systemInstruction = [
                         agentPrompt,
                         agentInstruction,
                         scopeInstruction,
                         workflowInstruction,
                         activeAppName ? `ACTIVE APP: ${activeAppName}${activeAppPath ? ` at ${activeAppPath}` : ''}. Keep commands and edits inside this app unless the user broadens scope.` : '',
+                        attachedFileContext,
                         toolInstructions,
-                        'MODE: STREAMING ASSISTANT.',
-                        'THINKING PROTOCOL: Use <thinking>...</thinking> tags at the start of your response for complex plans.',
+                        'MODE: STREAMING ASSISTANT. Be concise. Present results clearly. Avoid verbose narration.',
                         'Respect the selected agent, scope, and workflows over generic defaults.'
                     ].filter(Boolean).join('\n\n');
                     const appliedContext: AppliedContext = {

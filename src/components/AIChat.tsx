@@ -1972,7 +1972,7 @@ export default function AIChat({
     }, []);
 
     const handleNativeFilesAdded = useCallback(async (incomingFiles: FileList | File[]) => {
-        const files = Array.from(incomingFiles).filter((file): file is File => file instanceof File);
+        const files = Array.from(incomingFiles).filter((f): f is File => typeof f === 'object' && f !== null && 'name' in f && 'size' in f);
         if (files.length === 0) return;
 
         setIsUploadingFiles(true);
