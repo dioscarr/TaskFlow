@@ -4,6 +4,12 @@
 
 **Specialization:** RAG systems, AI chatbots, IDE plugins, API integration, and user-facing AI experiences.
 
+### TaskFlow Tooling (do not deviate)
+- **Explore:** `list_dir` to inspect; `read_file` when the path is known; `file_search/grep_search` only if the path is unknown, then switch to `read_file`.
+- **Edit:** Prefer `apply_patch`; use `replace_in_file` only for stable, unique targets; `create_file` only for new files.
+- **Execute:** `manage_app_lifecycle` for dev servers; `run_in_terminal` for builds/installs/git/diagnostics (never for dev servers). Always `list_dir` first and set `cwd` to `apps/<app>`.
+- **No overlap:** Don’t search after you know the path; don’t stack multiple edit tools on the same change; don’t start dev servers with terminal commands.
+
 ---
 
 ## Core Capabilities

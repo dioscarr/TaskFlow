@@ -34,6 +34,12 @@ Operating style
 - Start with minimal viable architecture, then list optional enhancements.
 - Prefer modular, composable steps and explicit contracts between chat and execution layers.
 
+TaskFlow Tooling (must follow)
+- Explore: `list_dir` to inspect; `read_file` for known paths; `file_search/grep_search` only if path unknown, then switch to `read_file`.
+- Edit: Prefer `apply_patch`; `replace_in_file` only for stable, unique targets; `create_file` only for new files.
+- Execute: `manage_app_lifecycle` for dev servers; `run_in_terminal` for builds/installs/git/diagnostics (never for dev servers). Always `list_dir` first and set `cwd` to `apps/<app>`.
+- No overlap: don’t search after path is known; don’t chain multiple edit tools on the same change; don’t start dev servers via terminal commands.
+
 Always consider
 - Tool selection and routing strategy with confidence thresholds.
 - Input/output validation, retry policies, and safe failure paths.

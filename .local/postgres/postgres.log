@@ -1,0 +1,304 @@
+2026-03-15 13:43:58.283 PDT [37572] LOG:  starting PostgreSQL 17.2 on x86_64-windows, compiled by msvc-19.42.34435, 64-bit
+2026-03-15 13:43:58.284 PDT [37572] LOG:  listening on IPv4 address "127.0.0.1", port 5435
+2026-03-15 13:43:58.352 PDT [34796] LOG:  database system was shut down at 2026-03-15 13:43:53 PDT
+2026-03-15 13:43:58.380 PDT [37572] LOG:  database system is ready to accept connections
+2026-03-15 13:48:58.362 PDT [33988] LOG:  checkpoint starting: time
+2026-03-15 13:50:51.220 PDT [33988] LOG:  checkpoint complete: wrote 1011 buffers (6.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=111.355 s, sync=1.310 s, total=112.859 s; sync files=384, longest=0.062 s, average=0.004 s; distance=5041 kB, estimate=5041 kB; lsn=0/1A5EAC0, redo lsn=0/1A5EA30
+2026-03-16 23:42:30.295 PDT [37572] LOG:  could not reserve shared memory region (addr=000001D457A30000) for child 0000000000000E70: error code 487
+2026-03-17 14:17:12.494 PDT [37572] LOG:  could not reserve shared memory region (addr=000001D457A30000) for child 00000000000009DC: error code 487
+2026-03-18 04:22:29.317 PDT [37572] LOG:  could not reserve shared memory region (addr=000001D455230000) for child 0000000000000A6C: error code 487
+2026-03-18 09:22:54.905 PDT [37572] LOG:  could not reserve shared memory region (addr=000001D457A30000) for child 0000000000000CE4: error code 487
+2026-03-21 13:08:26.286 PDT [37572] LOG:  could not reserve shared memory region (addr=000001D455230000) for child 0000000000000808: error code 487
+2026-04-12 12:07:16.556 PDT [30176] LOG:  starting PostgreSQL 17.2 on x86_64-windows, compiled by msvc-19.42.34435, 64-bit
+2026-04-12 12:07:16.559 PDT [30176] LOG:  listening on IPv4 address "127.0.0.1", port 5435
+2026-04-12 12:07:16.709 PDT [29192] LOG:  database system was interrupted; last known up at 2026-03-15 13:50:51 PDT
+2026-04-12 12:07:17.460 PDT [25688] FATAL:  the database system is starting up
+2026-04-12 12:07:22.562 PDT [20628] FATAL:  the database system is starting up
+2026-04-12 12:07:23.086 PDT [29192] LOG:  database system was not properly shut down; automatic recovery in progress
+2026-04-12 12:07:23.099 PDT [29192] LOG:  redo starts at 0/1A5EA30
+2026-04-12 12:07:23.099 PDT [29192] LOG:  invalid record length at 0/1A5EB70: expected at least 24, got 0
+2026-04-12 12:07:23.100 PDT [29192] LOG:  redo done at 0/1A5EB38 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+2026-04-12 12:07:23.107 PDT [10808] LOG:  checkpoint starting: end-of-recovery immediate wait
+2026-04-12 12:07:23.125 PDT [10808] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.004 s, total=0.023 s; sync files=2, longest=0.002 s, average=0.002 s; distance=0 kB, estimate=0 kB; lsn=0/1A5EB70, redo lsn=0/1A5EB70
+2026-04-12 12:07:23.147 PDT [30176] LOG:  database system is ready to accept connections
+2026-04-12 12:07:23.377 PDT [27976] ERROR:  database "taskflow" already exists
+2026-04-12 12:07:23.377 PDT [27976] STATEMENT:  CREATE DATABASE taskflow;
+2026-04-12 12:07:25.767 PDT [13436] ERROR:  relation "public.ProcessRegistry" does not exist at character 834
+2026-04-12 12:07:25.767 PDT [13436] STATEMENT:  SELECT "public"."ProcessRegistry"."id", "public"."ProcessRegistry"."name", "public"."ProcessRegistry"."type", "public"."ProcessRegistry"."port", "public"."ProcessRegistry"."pid", "public"."ProcessRegistry"."path", "public"."ProcessRegistry"."command", "public"."ProcessRegistry"."status", "public"."ProcessRegistry"."healthUrl", "public"."ProcessRegistry"."healthCheckType", "public"."ProcessRegistry"."healthInterval", "public"."ProcessRegistry"."startedAt", "public"."ProcessRegistry"."stoppedAt", "public"."ProcessRegistry"."lastHealthCheck", "public"."ProcessRegistry"."healthStatus", "public"."ProcessRegistry"."responseTime", "public"."ProcessRegistry"."errorCount", "public"."ProcessRegistry"."metadata", "public"."ProcessRegistry"."userId", "public"."ProcessRegistry"."createdAt", "public"."ProcessRegistry"."updatedAt" FROM "public"."ProcessRegistry" WHERE "public"."ProcessRegistry"."status" = $1 OFFSET $2
+2026-04-12 12:07:28.034 PDT [13436] ERROR:  relation "public.ProcessRegistry" does not exist at character 834
+2026-04-12 12:07:28.034 PDT [13436] STATEMENT:  SELECT "public"."ProcessRegistry"."id", "public"."ProcessRegistry"."name", "public"."ProcessRegistry"."type", "public"."ProcessRegistry"."port", "public"."ProcessRegistry"."pid", "public"."ProcessRegistry"."path", "public"."ProcessRegistry"."command", "public"."ProcessRegistry"."status", "public"."ProcessRegistry"."healthUrl", "public"."ProcessRegistry"."healthCheckType", "public"."ProcessRegistry"."healthInterval", "public"."ProcessRegistry"."startedAt", "public"."ProcessRegistry"."stoppedAt", "public"."ProcessRegistry"."lastHealthCheck", "public"."ProcessRegistry"."healthStatus", "public"."ProcessRegistry"."responseTime", "public"."ProcessRegistry"."errorCount", "public"."ProcessRegistry"."metadata", "public"."ProcessRegistry"."userId", "public"."ProcessRegistry"."createdAt", "public"."ProcessRegistry"."updatedAt" FROM "public"."ProcessRegistry" WHERE "public"."ProcessRegistry"."status" = $1 OFFSET $2
+2026-04-12 12:08:17.604 PDT [30292] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 12:12:23.141 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 12:12:34.022 PDT [10808] LOG:  checkpoint complete: wrote 98 buffers (0.6%); 0 WAL file(s) added, 0 removed, 0 recycled; write=10.689 s, sync=0.171 s, total=10.882 s; sync files=91, longest=0.019 s, average=0.002 s; distance=510 kB, estimate=510 kB; lsn=0/1ADE4C0, redo lsn=0/1ADE430
+2026-04-12 13:19:51.480 PDT [11080] ERROR:  insert or update on table "ChatMessage" violates foreign key constraint "ChatMessage_sessionId_fkey"
+2026-04-12 13:19:51.480 PDT [11080] DETAIL:  Key (sessionId)=(cmnw4s1kt00148zqk3g3r6pf8) is not present in table "ChatSession".
+2026-04-12 13:19:51.480 PDT [11080] STATEMENT:  INSERT INTO "public"."ChatMessage" ("id","role","content","fileIds","sessionId","createdAt") VALUES ($1,$2,$3,$4,$5,$6) RETURNING "public"."ChatMessage"."id", "public"."ChatMessage"."role", "public"."ChatMessage"."content", "public"."ChatMessage"."fileIds", "public"."ChatMessage"."toolUsed", "public"."ChatMessage"."toolResult", "public"."ChatMessage"."toolArgs", "public"."ChatMessage"."thinking", "public"."ChatMessage"."sessionId", "public"."ChatMessage"."createdAt"
+2026-04-12 13:21:07.793 PDT [29164] ERROR:  insert or update on table "ChatMessage" violates foreign key constraint "ChatMessage_sessionId_fkey"
+2026-04-12 13:21:07.793 PDT [29164] DETAIL:  Key (sessionId)=(cmnw4s1kt00148zqk3g3r6pf8) is not present in table "ChatSession".
+2026-04-12 13:21:07.793 PDT [29164] STATEMENT:  INSERT INTO "public"."ChatMessage" ("id","role","content","fileIds","sessionId","createdAt") VALUES ($1,$2,$3,$4,$5,$6) RETURNING "public"."ChatMessage"."id", "public"."ChatMessage"."role", "public"."ChatMessage"."content", "public"."ChatMessage"."fileIds", "public"."ChatMessage"."toolUsed", "public"."ChatMessage"."toolResult", "public"."ChatMessage"."toolArgs", "public"."ChatMessage"."thinking", "public"."ChatMessage"."sessionId", "public"."ChatMessage"."createdAt"
+2026-04-12 13:21:17.674 PDT [29164] ERROR:  insert or update on table "ChatMessage" violates foreign key constraint "ChatMessage_sessionId_fkey"
+2026-04-12 13:21:17.674 PDT [29164] DETAIL:  Key (sessionId)=(cmnw4s1kt00148zqk3g3r6pf8) is not present in table "ChatSession".
+2026-04-12 13:21:17.674 PDT [29164] STATEMENT:  INSERT INTO "public"."ChatMessage" ("id","role","content","fileIds","sessionId","createdAt") VALUES ($1,$2,$3,$4,$5,$6) RETURNING "public"."ChatMessage"."id", "public"."ChatMessage"."role", "public"."ChatMessage"."content", "public"."ChatMessage"."fileIds", "public"."ChatMessage"."toolUsed", "public"."ChatMessage"."toolResult", "public"."ChatMessage"."toolArgs", "public"."ChatMessage"."thinking", "public"."ChatMessage"."sessionId", "public"."ChatMessage"."createdAt"
+2026-04-12 13:22:23.122 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 13:22:26.045 PDT [10808] LOG:  checkpoint complete: wrote 26 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.817 s, sync=0.046 s, total=2.924 s; sync files=19, longest=0.008 s, average=0.003 s; distance=27 kB, estimate=461 kB; lsn=0/1AE5290, redo lsn=0/1AE5238
+2026-04-12 13:27:23.054 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 13:27:24.661 PDT [10808] LOG:  checkpoint complete: wrote 15 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.545 s, sync=0.046 s, total=1.608 s; sync files=12, longest=0.025 s, average=0.004 s; distance=33 kB, estimate=419 kB; lsn=0/1AED6C8, redo lsn=0/1AED670
+2026-04-12 13:47:23.691 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 13:47:24.273 PDT [10808] LOG:  checkpoint complete: wrote 6 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.554 s, sync=0.009 s, total=0.583 s; sync files=6, longest=0.002 s, average=0.002 s; distance=1 kB, estimate=377 kB; lsn=0/1AEDE28, redo lsn=0/1AEDDD0
+2026-04-12 13:53:12.398 PDT [19560] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 13:53:12.398 PDT [33932] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 13:57:23.300 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 13:57:24.971 PDT [10808] LOG:  checkpoint complete: wrote 15 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.591 s, sync=0.041 s, total=1.674 s; sync files=12, longest=0.007 s, average=0.004 s; distance=44 kB, estimate=344 kB; lsn=0/1AF91E0, redo lsn=0/1AF9150
+2026-04-12 14:02:23.980 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 14:02:26.046 PDT [10808] LOG:  checkpoint complete: wrote 19 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.011 s, sync=0.036 s, total=2.067 s; sync files=13, longest=0.008 s, average=0.003 s; distance=64 kB, estimate=316 kB; lsn=0/1B093C0, redo lsn=0/1B09330
+2026-04-12 14:07:23.049 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 14:07:25.186 PDT [10808] LOG:  checkpoint complete: wrote 20 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.096 s, sync=0.019 s, total=2.138 s; sync files=14, longest=0.002 s, average=0.002 s; distance=46 kB, estimate=289 kB; lsn=0/1B15BD0, redo lsn=0/1B14ED0
+2026-04-12 14:12:23.217 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 14:12:24.803 PDT [10808] LOG:  checkpoint complete: wrote 12 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.540 s, sync=0.025 s, total=1.586 s; sync files=11, longest=0.007 s, average=0.003 s; distance=10 kB, estimate=261 kB; lsn=0/1B17AC8, redo lsn=0/1B17A70
+2026-04-12 14:28:08.075 PDT [35664] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:32:23.843 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 14:32:24.447 PDT [10808] LOG:  checkpoint complete: wrote 6 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.558 s, sync=0.015 s, total=0.608 s; sync files=6, longest=0.006 s, average=0.003 s; distance=4 kB, estimate=235 kB; lsn=0/1B18B50, redo lsn=0/1B18AF8
+2026-04-12 14:35:43.997 PDT [39664] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:35:43.997 PDT [38924] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:35:43.997 PDT [38936] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:35:43.997 PDT [40512] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:35:43.997 PDT [35532] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:35:43.997 PDT [38264] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:35:43.999 PDT [37100] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:14.776 PDT [41680] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:16.002 PDT [36784] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:16.105 PDT [17280] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:16.106 PDT [6016] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:17.343 PDT [40860] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:17.443 PDT [17620] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:17.445 PDT [28308] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:22.926 PDT [34356] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:23.026 PDT [4100] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:23.027 PDT [3400] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:24.075 PDT [9344] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:24.168 PDT [33396] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:24.970 PDT [39540] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:25.054 PDT [37712] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:25.055 PDT [34932] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:26.090 PDT [21320] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:26.157 PDT [37536] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:36:26.157 PDT [32392] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 14:37:23.466 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 14:37:24.285 PDT [10808] LOG:  checkpoint complete: wrote 8 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.786 s, sync=0.018 s, total=0.820 s; sync files=8, longest=0.004 s, average=0.003 s; distance=14 kB, estimate=213 kB; lsn=0/1B1C438, redo lsn=0/1B1C3E0
+2026-04-12 14:47:23.299 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 14:47:23.660 PDT [10808] LOG:  checkpoint complete: wrote 4 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.334 s, sync=0.009 s, total=0.362 s; sync files=4, longest=0.003 s, average=0.003 s; distance=8 kB, estimate=193 kB; lsn=0/1B1E6D0, redo lsn=0/1B1E678
+2026-04-12 19:32:24.136 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 19:32:25.359 PDT [10808] LOG:  checkpoint complete: wrote 7 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.968 s, sync=0.018 s, total=1.236 s; sync files=7, longest=0.004 s, average=0.003 s; distance=10 kB, estimate=174 kB; lsn=0/1B21060, redo lsn=0/1B21008
+2026-04-12 19:44:29.192 PDT [37732] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 19:47:24.396 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 19:47:24.958 PDT [10808] LOG:  checkpoint complete: wrote 6 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.540 s, sync=0.010 s, total=0.565 s; sync files=6, longest=0.003 s, average=0.002 s; distance=4 kB, estimate=157 kB; lsn=0/1B22398, redo lsn=0/1B22340
+2026-04-12 19:57:34.963 PDT [32324] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 19:58:37.675 PDT [29904] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 19:59:54.377 PDT [40852] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:00:12.614 PDT [37900] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:00:12.709 PDT [15828] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:00:12.709 PDT [19620] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:00:13.521 PDT [10404] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:00:13.663 PDT [20676] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:00:13.663 PDT [41172] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:00:16.800 PDT [30484] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:00:17.908 PDT [35508] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:00:18.021 PDT [37388] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:00:18.022 PDT [33692] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:00:18.958 PDT [35204] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:00:19.057 PDT [37076] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:00:19.057 PDT [37264] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:58:27.210 PDT [26080] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:58:27.210 PDT [33068] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:58:27.211 PDT [3064] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:58:27.212 PDT [35236] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:58:27.213 PDT [38836] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:58:27.213 PDT [35716] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 20:58:27.215 PDT [35632] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:01:21.736 PDT [1284] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:01:21.881 PDT [34792] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:02:25.059 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 21:02:26.102 PDT [10808] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.008 s, sync=0.015 s, total=1.050 s; sync files=10, longest=0.003 s, average=0.002 s; distance=20 kB, estimate=144 kB; lsn=0/1B27558, redo lsn=0/1B27500
+2026-04-12 21:08:04.425 PDT [42228] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:08:04.446 PDT [42368] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:08:04.446 PDT [40396] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:08:04.448 PDT [35972] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:08:27.193 PDT [40048] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:08:27.209 PDT [19708] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:08:27.209 PDT [42492] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:12:04.986 PDT [37644] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:13:12.027 PDT [41116] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:14:13.545 PDT [4872] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:14:13.562 PDT [34188] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:14:13.568 PDT [37716] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:14:13.572 PDT [42276] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:16:08.146 PDT [32704] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:16:08.223 PDT [28704] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:16:08.223 PDT [41472] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:17:25.116 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 21:17:26.301 PDT [10808] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.082 s, sync=0.016 s, total=1.186 s; sync files=10, longest=0.002 s, average=0.002 s; distance=20 kB, estimate=131 kB; lsn=0/1B2C6F0, redo lsn=0/1B2C698
+2026-04-12 21:22:25.309 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 21:22:31.788 PDT [10808] LOG:  checkpoint complete: wrote 60 buffers (0.4%); 0 WAL file(s) added, 0 removed, 0 recycled; write=6.448 s, sync=0.018 s, total=6.479 s; sync files=8, longest=0.006 s, average=0.003 s; distance=446 kB, estimate=446 kB; lsn=0/1B9C238, redo lsn=0/1B9C1E0
+2026-04-12 21:24:28.314 PDT [18348] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 21:27:25.792 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 21:27:26.792 PDT [10808] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.973 s, sync=0.015 s, total=1.000 s; sync files=10, longest=0.003 s, average=0.002 s; distance=21 kB, estimate=404 kB; lsn=0/1BA1968, redo lsn=0/1BA1910
+2026-04-12 21:32:25.811 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 21:32:27.009 PDT [10808] LOG:  checkpoint complete: wrote 12 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.169 s, sync=0.017 s, total=1.199 s; sync files=11, longest=0.003 s, average=0.002 s; distance=34 kB, estimate=367 kB; lsn=0/1BAA4F0, redo lsn=0/1BAA498
+2026-04-12 21:40:43.412 PDT [38840] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:17:25.091 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 22:17:25.444 PDT [10808] LOG:  checkpoint complete: wrote 4 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.327 s, sync=0.012 s, total=0.356 s; sync files=4, longest=0.008 s, average=0.003 s; distance=5 kB, estimate=331 kB; lsn=0/1BABBB0, redo lsn=0/1BABB58
+2026-04-12 22:19:19.273 PDT [39856] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:25:33.315 PDT [43492] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:26:24.216 PDT [42516] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:26:24.326 PDT [46392] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:26:24.824 PDT [44476] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:26:24.946 PDT [41148] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:26:24.947 PDT [17316] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:26:25.355 PDT [46596] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:26:25.437 PDT [39708] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:26:25.437 PDT [29056] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:26:25.438 PDT [4180] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:26:26.252 PDT [51728] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:26:26.345 PDT [31716] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:26:26.345 PDT [45356] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:26:26.345 PDT [46544] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:27:25.468 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 22:27:25.815 PDT [10808] LOG:  checkpoint complete: wrote 4 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.320 s, sync=0.007 s, total=0.349 s; sync files=4, longest=0.003 s, average=0.002 s; distance=5 kB, estimate=298 kB; lsn=0/1BAD378, redo lsn=0/1BAD320
+2026-04-12 22:37:25.841 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 22:37:28.459 PDT [10808] LOG:  checkpoint complete: wrote 22 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.506 s, sync=0.033 s, total=2.620 s; sync files=16, longest=0.005 s, average=0.003 s; distance=62 kB, estimate=275 kB; lsn=0/1BBCE98, redo lsn=0/1BBCE40
+2026-04-12 22:39:38.504 PDT [48500] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:39.634 PDT [33060] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:39.756 PDT [33784] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:39.760 PDT [41632] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:40.772 PDT [10308] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:40.898 PDT [23612] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:41.797 PDT [38892] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:41.902 PDT [50760] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:41.902 PDT [42968] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:42.808 PDT [26016] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:42.898 PDT [25236] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:42.899 PDT [48396] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:43.651 PDT [45144] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:43.742 PDT [49428] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:43.743 PDT [37320] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:47.153 PDT [52580] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:47.220 PDT [47380] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:39:47.221 PDT [39408] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-12 22:42:25.463 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 22:42:27.053 PDT [10808] LOG:  checkpoint complete: wrote 15 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.551 s, sync=0.020 s, total=1.590 s; sync files=11, longest=0.004 s, average=0.002 s; distance=31 kB, estimate=250 kB; lsn=0/1BC4CC8, redo lsn=0/1BC4C70
+2026-04-12 22:52:25.072 PDT [10808] LOG:  checkpoint starting: time
+2026-04-12 22:52:26.381 PDT [10808] LOG:  checkpoint complete: wrote 12 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.272 s, sync=0.025 s, total=1.309 s; sync files=11, longest=0.008 s, average=0.003 s; distance=32 kB, estimate=228 kB; lsn=0/1BCCF88, redo lsn=0/1BCCF30
+2026-04-13 17:01:35.894 PDT [27284] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-13 17:01:36.009 PDT [52464] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-13 17:01:36.011 PDT [16212] LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-13 17:07:27.189 PDT [10808] LOG:  checkpoint starting: time
+2026-04-13 17:07:28.719 PDT [10808] LOG:  checkpoint complete: wrote 14 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.428 s, sync=0.047 s, total=1.536 s; sync files=13, longest=0.013 s, average=0.004 s; distance=33 kB, estimate=209 kB; lsn=0/1BD54C8, redo lsn=0/1BD5470

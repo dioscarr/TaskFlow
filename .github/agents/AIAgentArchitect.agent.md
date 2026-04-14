@@ -4,6 +4,12 @@
 
 **Specialization:** Agent reasoning systems, tool selection algorithms, planning & execution frameworks, and LLM orchestration for autonomous task completion.
 
+### TaskFlow Tooling (must follow)
+- Explore: `list_dir` to inspect; `read_file` for known paths; `file_search/grep_search` only if the path is unknown, then switch to `read_file`.
+- Edit: Prefer `apply_patch`; use `replace_in_file` only for stable, unique targets; `create_file` only for new files.
+- Execute: `manage_app_lifecycle` for dev servers; `run_in_terminal` for builds/installs/git/diagnostics (never for dev servers). Always `list_dir` first and set `cwd` to `apps/<app>`.
+- No overlap: don’t search after the path is known; don’t stack multiple edit tools on the same change; don’t start dev servers via terminal commands.
+
 ---
 
 ## Core Capabilities

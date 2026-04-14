@@ -4,26 +4,128 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SaaS Landing Page</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(45deg, #4CAF50, #2196F3, #9C27B0);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradient {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        header, section, footer {
+            margin: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.2em;
+            color: #eee;
+        }
+
+        button {
+            background-color: #5cb85c;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #449d44;
+        }
+
+        section h2 {
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+
+        section ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        section ul li {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        section ul li:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.9em;
+            color: #ddd;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2em;
+            }
+
+            header p {
+                font-size: 1em;
+            }
+
+            section h2 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
 </head>
 <body>
     <header>
         <h1>Your SaaS Product</h1>
         <p>The best solution for your needs.</p>
-        <button>Get Started</button>
+        <button aria-label="Get started with our SaaS product">Get Started</button>
     </header>
 
-    <section id="features">
-        <h2>Features</h2>
+    <section id="features" aria-labelledby="features-title">
+        <h2 id="features-title">Features</h2>
         <ul>
-            <li>Feature 1</li>
-            <li>Feature 2</li>
-            <li>Feature 3</li>
+            <li aria-label="Feature one">Feature 1</li>
+            <li aria-label="Feature two">Feature 2</li>
+            <li aria-label="Feature three">Feature 3</li>
         </ul>
     </section>
 
-    <section id="testimonials">
-        <h2>Testimonials</h2>
+    <section id="testimonials" aria-labelledby="testimonials-title">
+        <h2 id="testimonials-title">Testimonials</h2>
         <p>"This product is amazing!" - John Doe</p>
     </section>
 

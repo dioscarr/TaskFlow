@@ -1,0 +1,23 @@
+{
+  "cmnxv1c4h002g8zok2os6n2xs": {
+    "sessionId": "cmnxv1c4h002g8zok2os6n2xs",
+    "startTime": 1776125121538,
+    "lastActive": 1776125147078,
+    "totalTurns": 1,
+    "totalTokensInput": 0,
+    "totalTokensOutput": 0,
+    "toolUsage": {
+      "receipt_intelligence": {
+        "count": 1,
+        "errors": 0,
+        "totalLatencyMs": 992
+      },
+      "search_web": {
+        "count": 2,
+        "errors": 0,
+        "totalLatencyMs": 3021
+      }
+    },
+    "errors": []
+  }
+}
