@@ -91,7 +91,7 @@ async function buildCopilotAttachments(fileIds: string[] = []) {
         .filter(file => file.type !== 'folder')
         .map(file => ({
             type: 'file' as const,
-            path: file.storagePath ? join(process.cwd(), file.storagePath) : join(process.cwd(), 'data', 'workspace', file.name),
+            path: file.storagePath ? join(process.cwd(), 'public', 'uploads', file.storagePath) : join(process.cwd(), 'public', 'uploads', file.name),
             displayName: file.name
         }));
 }
@@ -121,8 +121,8 @@ async function extractImageContextWithVision(fileIds: string[]): Promise<string>
     for (const file of imageFiles) {
         try {
             const filePath = file.storagePath
-                ? join(process.cwd(), file.storagePath)
-                : join(process.cwd(), 'data', 'workspace', file.name);
+                ? join(process.cwd(), 'public', 'uploads', file.storagePath)
+                : join(process.cwd(), 'public', 'uploads', file.name);
             const buffer = await readFileFS(filePath);
             if (buffer.length === 0) continue;
 
@@ -568,8 +568,8 @@ export async function POST(request: Request) {
                     };
 
                     const getWorkspaceFilePath = (file: { storagePath?: string | null; name: string }) => {
-                        if (file.storagePath) return join(process.cwd(), file.storagePath);
-                        return join(process.cwd(), 'data', 'workspace', file.name);
+                        if (file.storagePath) return join(process.cwd(), 'public', 'uploads', file.storagePath);
+                        return join(process.cwd(), 'public', 'uploads', file.name);
                     };
 
                     if (fileIds && fileIds.length > 0) {

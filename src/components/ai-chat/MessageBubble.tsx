@@ -143,11 +143,8 @@ export const MessageBubble = ({ msg, attachedFiles, showThinking, setInput, setA
                 <div className="flex flex-wrap gap-2 mb-2 justify-end">
                     {msg.files.map((f) => {
                         const isImage = /^(image|png|jpg|jpeg|gif|webp|heic|heif)$/i.test(f.type || '');
-                        // storagePath may be a virtual path like "_root_/file.jpg" or an actual
-                        // storage path like "userId/file.jpg". Only build an img src for real paths.
-                        const hasRealStorage = f.storagePath && !f.storagePath.startsWith('_root_');
-                        const imgSrc = isImage && hasRealStorage
-                            ? `/uploads/${f.storagePath!.replace(/^public\//, '').replace(/^uploads\//, '')}`
+                        const imgSrc = isImage && f.storagePath
+                            ? `/uploads/${f.storagePath}`
                             : null;
                         return (
                             <div key={f.id} className={cn(
