@@ -119,11 +119,28 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
 
     if (SKILLS_LIBRARY[actionId]) {
         const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+        const userId = user?.id || 'demo';
+        // Hydrate workspace files so skills have access to the user's file context
+        let workspaceFiles: Array<{ id: string; name: string; type: string; storagePath?: string }> = [];
+        try {
+            const files = await prisma.file.findMany({
+                where: { userId },
+                select: { id: true, name: true, type: true, storagePath: true },
+                take: 100,
+                orderBy: { updatedAt: 'desc' }
+            });
+            workspaceFiles = files.map(f => ({
+                id: f.id,
+                name: f.name,
+                type: f.type,
+                storagePath: f.storagePath ?? undefined
+            }));
+        } catch { /* DB unavailable — proceed with empty */ }
         return await executeSkill(actionId, args, {
-            userId: user?.id || 'demo',
+            userId,
             fileIds: Array.isArray(args?.fileIds) ? args.fileIds : [],
             query: typeof args?.query === 'string' ? args.query : '',
-            workspaceFiles: []
+            workspaceFiles
         });
     }
 
@@ -2065,7 +2082,7 @@ export async function getPrompts() {
 * Accuracy First: Prioritize accuracy above all else.
 * System Architect: You can create specialized Agents (create_agent) and architect complex Workflows (create_workflow). Proactively suggest workflows for repetitive tasks.
 * Micro-Tool Composition: Use granular tools (extract_receipt_info, generate_markdown_report, organize_files) in sequence.
-* Workspace Hygiene: Maintain a clean root directory. If a "Receipts" or "${new Date().getFullYear()}" folder exists, prioritize using it. Group files by vendor within subfolders (e.g., "Receipts/Bravo").
+* Workspace Hygiene: Maintain a clean root directory. Organize receipts into Receipts/{Year}/{Month} hierarchy (e.g., "Receipts/2025/06 - June"). Reuse existing folders.
 
 **4. GUARDRAILS:**
 * No Interpretation: Strictly data extraction only.
@@ -2685,6 +2702,54 @@ export async function createFolder(data: {
     } catch (error) {
         console.error('Failed to create folder:', error);
         return { success: false, message: 'Failed to create folder' };
+    }
+}
+
+/**
+ * Ensure a nested folder path exists, creating any missing levels.
+ * e.g. ["Receipts", "2025", "06 - June"] → creates Receipts > 2025 > 06 - June
+ * Returns the leaf folder ID.
+ */
+export async function ensureNestedFolderPath(pathSegments: string[]): Promise<{ success: boolean; folderId?: string; folderName?: string; message?: string }> {
+    try {
+        const user = await prisma.user.findUnique({ where: { email: 'demo@example.com' } });
+        if (!user) throw new Error('User not found');
+        if (!pathSegments.length) return { success: false, message: 'Empty path' };
+
+        let currentParentId: string | null = null;
+
+        for (const segment of pathSegments) {
+            if (!segment) continue;
+
+            const existing = await prisma.workspaceFile.findFirst({
+                where: {
+                    userId: user.id,
+                    parentId: currentParentId,
+                    type: 'folder',
+                    name: segment
+                }
+            });
+
+            if (existing) {
+                currentParentId = existing.id;
+            } else {
+                const created = await prisma.workspaceFile.create({
+                    data: {
+                        name: segment,
+                        type: 'folder',
+                        userId: user.id,
+                        parentId: currentParentId
+                    }
+                });
+                currentParentId = created.id;
+            }
+        }
+
+        safeRevalidatePath('/');
+        return { success: true, folderId: currentParentId!, folderName: pathSegments[pathSegments.length - 1] };
+    } catch (error) {
+        console.error('ensureNestedFolderPath failed:', error);
+        return { success: false, message: 'Failed to create nested folder path' };
     }
 }
 
@@ -5332,7 +5397,10 @@ export async function chatWithAI(
 
                     // Fallback to injection instructions if server workflow fails
                     const stepsList = matchedWorkflowValue.steps.map((s: any, i: number) => `${i + 1}. Tool: "${s.action}"`).join('\n');
-                    workflowInstructions = `\n\nSYSTEM OVERRIDE: The user has triggered the workflow "${matchedWorkflowValue.name}".\n\nEXECUTION RULES:\n1. You are MANDATED to execute the following tools in this exact order to complete the workflow:\n${stepsList}\n2. IGNORE the rule about asking for folders. For this workflow, AUTOMATICALLY store files in "Receipts/${new Date().getFullYear()}" without asking.\n3. Analyze the provided image/context to extract any required parameters for these tools.\n4. Do not stop. Execute all steps sequentially now.`;
+                    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                    const now = new Date();
+                    const monthLabel = `${String(now.getMonth() + 1).padStart(2, '0')} - ${monthNames[now.getMonth()]}`;
+                    workflowInstructions = `\n\nSYSTEM OVERRIDE: The user has triggered the workflow "${matchedWorkflowValue.name}".\n\nEXECUTION RULES:\n1. You are MANDATED to execute the following tools in this exact order to complete the workflow:\n${stepsList}\n2. IGNORE the rule about asking for folders. For this workflow, AUTOMATICALLY store files in "Receipts/${now.getFullYear()}/${monthLabel}" without asking.\n3. Analyze the provided image/context to extract any required parameters for these tools.\n4. Do not stop. Execute all steps sequentially now.`;
                 }
             } else {
                 const rules = await prisma.intentRule.findMany({ where: { userId: demoUser.id, enabled: true } });
@@ -5451,7 +5519,7 @@ OPERATIONAL RULES:
 5. DOCUMENT PROCESSING: Use 'document_processing' skill for content extraction and categorization.
 6. BUSINESS NAMES: The skills handle DGII verification automatically - you don't need to call it separately.
 7. FILE CREATION FLOW: Skills handle folder creation automatically. Don't ask about folders - let the skills decide.
-8. WORKSPACE HYGIENE: Maintain a clean root directory. REUSE existing folders instead of creating new ones if a similar purpose exists (e.g., if "Receipts" or "2026" exists, use it). Organize files hierarchically (e.g., "Receipts/VendorName").
+8. WORKSPACE HYGIENE: Maintain a clean root directory. REUSE existing folders instead of creating new ones if a similar purpose exists. Organize receipts hierarchically by Year then Month (e.g., "Receipts/2025/06 - June"). The receipt_intelligence skill handles this automatically.
 9. WORKSPACE DISCOVERY: You have full access to the workspace. If the user mentions a project or vendor, proactively SEARCH for related files or folders first before asking the user for details.
 10. PROACTIVE CONTEXT: Use the 'USER'S CURRENT VIEW' as the default location for new folders or file moves if no other destination is obvious. For example, if the user is in "Invoices" and asks to "Organize these", perform the actions relative to that folder.
 11. PRIORITIZE ACTIVE PREVIEW: If the message includes "[CONTEXT: User is currently PREVIEWING...]", you MUST prioritize that file and its folder. 

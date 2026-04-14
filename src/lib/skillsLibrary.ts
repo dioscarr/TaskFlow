@@ -37,9 +37,9 @@ export const SKILLS_LIBRARY: Record<string, Omit<SkillDefinition, 'handler'>> = 
                     organizeFiles: { type: 'boolean', description: 'Whether to organize files into folders', default: true },
                     folderStrategy: {
                         type: 'string',
-                        enum: ['year', 'month', 'provider', 'auto'],
-                        description: 'How to organize files',
-                        default: 'year'
+                        enum: ['year_month', 'year', 'month', 'provider', 'auto'],
+                        description: 'How to organize files. year_month creates Receipts/Year/Month hierarchy.',
+                        default: 'year_month'
                     }
                 }
             }

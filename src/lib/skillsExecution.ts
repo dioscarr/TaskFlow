@@ -15,7 +15,8 @@ import {
     copyFilesToFolder,
     highlightWorkspaceFile,
     verifyRNC,
-    extractReceiptInfo
+    extractReceiptInfo,
+    ensureNestedFolderPath
 } from '@/app/actions';
 
 export interface SkillContext {
@@ -38,7 +39,7 @@ export async function handleReceiptIntelligence(args: any, context: SkillContext
         imageAnalysis = true,
         createReport = true,
         organizeFiles = true,
-        folderStrategy = 'year'
+        folderStrategy = 'year_month'
     } = args;
 
     const results: any[] = [];
@@ -78,30 +79,47 @@ export async function handleReceiptIntelligence(args: any, context: SkillContext
             }
         }
 
-        // Step 3: Determine folder name using extracted data
+        // Step 3: Determine folder structure using extracted data
+        const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+
+        let folderPathSegments: string[] = ['Receipts'];
+
         if (allExtractions.length > 0) {
             const first = allExtractions[0].data;
+            const receiptDate = first?.date ? new Date(first.date) : new Date();
+            const year = isNaN(receiptDate.getFullYear()) ? new Date().getFullYear() : receiptDate.getFullYear();
+            const monthIdx = isNaN(receiptDate.getMonth()) ? new Date().getMonth() : receiptDate.getMonth();
+
             switch (folderStrategy) {
+                case 'year_month': {
+                    const monthLabel = `${String(monthIdx + 1).padStart(2, '0')} - ${MONTH_NAMES[monthIdx]}`;
+                    folderPathSegments = ['Receipts', String(year), monthLabel];
+                    break;
+                }
                 case 'year': {
-                    const year = first?.date ? new Date(first.date).getFullYear() : new Date().getFullYear();
-                    folderName = `Receipts/${isNaN(year) ? new Date().getFullYear() : year}`;
+                    folderPathSegments = ['Receipts', String(year)];
                     break;
                 }
                 case 'month': {
-                    const d = first?.date ? new Date(first.date) : new Date();
-                    const y = isNaN(d.getFullYear()) ? new Date().getFullYear() : d.getFullYear();
-                    const m = isNaN(d.getMonth()) ? new Date().getMonth() : d.getMonth();
-                    folderName = `Receipts/${y}-${String(m + 1).padStart(2, '0')}`;
+                    folderPathSegments = ['Receipts', `${year}-${String(monthIdx + 1).padStart(2, '0')}`];
                     break;
                 }
                 case 'provider': {
                     const providerClean = first?.provider?.replace(/[^a-zA-Z0-9 ]/g, '').trim() || 'Unknown';
-                    folderName = `Receipts/${providerClean}`;
+                    folderPathSegments = ['Receipts', providerClean];
                     break;
                 }
                 default:
-                    folderName = 'Receipts';
+                    folderPathSegments = ['Receipts'];
             }
+        }
+
+        // Create nested folder hierarchy (e.g. Receipts > 2025 > 06 - June)
+        const nestedResult = await ensureNestedFolderPath(folderPathSegments);
+        if (nestedResult.success && nestedResult.folderId) {
+            createdFolderId = nestedResult.folderId;
+            folderName = folderPathSegments.join('/');
         }
 
         // Step 4: Create Report
@@ -114,12 +132,12 @@ export async function handleReceiptIntelligence(args: any, context: SkillContext
             const reportResult = await createMarkdownFile({
                 content: markdownContent,
                 filename: `receipt-${Date.now()}`,
-                folderName
+                folderId: createdFolderId
             });
 
             if (reportResult.success) {
                 createdFileId = reportResult.file?.id;
-                createdFolderId = reportResult.folderId;
+                if (!createdFolderId) createdFolderId = reportResult.folderId;
                 results.push({ step: 'report_creation', success: true, data: reportResult });
             }
         }
