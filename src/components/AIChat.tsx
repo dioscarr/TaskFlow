@@ -1404,6 +1404,14 @@ export default function AIChat({
                                 };
                             }
 
+                            // Handle thinking events from Copilot reasoning_delta
+                            if (payload.type === 'thinking' && typeof payload.text === 'string') {
+                                streamedThinking += payload.text;
+                                if (streamedMessageId) {
+                                    updateStreamingMeta(streamedMessageId, { thinking: streamedThinking });
+                                }
+                            }
+
                             if (payload.type === 'delta' && typeof payload.text === 'string') {
                                 accumulated += payload.text;
                                 chunkCount++;

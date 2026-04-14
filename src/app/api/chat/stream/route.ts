@@ -245,8 +245,20 @@ export async function POST(request: Request) {
 
     const stream = new ReadableStream({
         async start(controller) {
+            let streamClosed = false;
             const enqueue = (data: any) => {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+                if (streamClosed) return;
+                try {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+                } catch {
+                    streamClosed = true;
+                }
+            };
+            const safeClose = () => {
+                if (!streamClosed) {
+                    streamClosed = true;
+                    controller.close();
+                }
             };
 
             // Send initial trace ID event
@@ -274,7 +286,7 @@ export async function POST(request: Request) {
                     const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
                     if (AI_CONFIG.provider !== 'github-copilot' && !apiKey) {
                         enqueue({ type: 'error', message: 'API Key missing' });
-                        controller.close();
+                        safeClose();
                         return;
                     }
 
@@ -380,7 +392,11 @@ export async function POST(request: Request) {
                         activeAppName ? `ACTIVE APP: ${activeAppName}${activeAppPath ? ` at ${activeAppPath}` : ''}. Keep commands and edits inside this app unless the user broadens scope.` : '',
                         attachedFileContext,
                         toolInstructions,
-                        'MODE: STREAMING ASSISTANT. Be concise. Present results clearly. Avoid verbose narration.',
+                        verbosity === 'concise'
+                            ? 'MODE: STREAMING ASSISTANT. Be very concise — short answers, bullet points, no narration.'
+                            : verbosity === 'verbose'
+                            ? 'MODE: STREAMING ASSISTANT. Be thorough and detailed. Explain reasoning, show examples, include context.'
+                            : 'MODE: STREAMING ASSISTANT. Be concise. Present results clearly. Avoid verbose narration.',
                         'Respect the selected agent, scope, and workflows over generic defaults.'
                     ].filter(Boolean).join('\n\n');
                     const appliedContext: AppliedContext = {
@@ -404,6 +420,8 @@ export async function POST(request: Request) {
                     const selectedModel = resolveModelId(requestedModel, getProviderDefaultModel('fast'));
 
                     if (AI_CONFIG.provider === 'github-copilot') {
+                        let copilotFailed = false;
+                        try {
                         const attachments = await buildCopilotAttachments(fileIds || []);
 
                         // Pre-process images with Gemini Vision since Copilot can't handle inline images
@@ -527,10 +545,16 @@ export async function POST(request: Request) {
                             });
                         }
 
-                        controller.close();
+                        safeClose();
                         return;
+                        } catch (copilotError) {
+                            console.warn('⚠️ Copilot SDK failed, falling back to Gemini:', copilotError instanceof Error ? copilotError.message : copilotError);
+                            partialContent = '';
+                            enqueue({ type: 'debug', message: 'Copilot unavailable — falling back to Gemini.' });
+                        }
                     }
 
+                    // Gemini fallback (or primary when provider is not copilot)
                     const tools = [{ functionDeclarations: scopeFilteredDecls }];
 
                     // P3-CONTEXT-BUDGET: History Truncation
@@ -615,6 +639,7 @@ export async function POST(request: Request) {
                                     }
                                 } catch (err) {
                                     console.error(`Error reading image:`, err);
+                                    enqueue({ type: 'debug', message: `Failed to read image: ${file.name}` });
                                 }
                             } else if (file.type === 'pdf') {
                                 try {
@@ -646,7 +671,11 @@ export async function POST(request: Request) {
                                             truncated: false, percentage: 100, strategy: 'none'
                                         });
                                     }
-                                } catch (e) { console.error(e); }
+                                } catch (e) {
+                                    console.error(e);
+                                    enqueue({ type: 'debug', message: `Failed to read PDF: ${file.name}` });
+                                    appendToPrompt(`\n[Error reading PDF: ${file.name}]`);
+                                }
                             } else {
                                 const textLikeExts = new Set(['txt', 'md', 'markdown', 'json', 'jsonl', 'csv', 'log', 'ts', 'tsx', 'js', 'jsx', 'css', 'scss', 'html', 'xml', 'yml', 'yaml']);
                                 const textLikeTypes = new Set(['text', 'markdown', 'md', 'json', 'jsonl', 'csv', 'log', 'ts', 'tsx', 'js', 'jsx', 'css', 'scss', 'html', 'xml', 'yml', 'yaml']);
@@ -676,7 +705,11 @@ export async function POST(request: Request) {
                                                 truncated: false, percentage: 100, strategy: 'none'
                                             });
                                         }
-                                    } catch(e) { console.error(e); }
+                                    } catch(e) {
+                                        console.error(e);
+                                        enqueue({ type: 'debug', message: `Failed to read file: ${file.name}` });
+                                        appendToPrompt(`\n[Error reading file: ${file.name}]`);
+                                    }
                                 }
                             }
                         }
@@ -777,7 +810,14 @@ export async function POST(request: Request) {
                             console.log(`🔧 [Stream] Executing tool: ${call.name} [Trace: ${traceId}]`, call.args);
 
                             const hydratedArgs = hydrateToolArgsWithContext(call.name, call.args, fileIds || []);
-                            const res = await executeWithRetry(call.name, hydratedArgs, traceContext);
+                            let res: any;
+                            let toolFailed = false;
+                            try {
+                                res = await executeWithRetry(call.name, hydratedArgs, traceContext);
+                            } catch (toolErr) {
+                                toolFailed = true;
+                                res = { success: false, error: toolErr instanceof Error ? toolErr.message : String(toolErr) };
+                            }
 
                             // Emit tool finish event with elapsed time
                             const toolEndTime = Date.now();
@@ -792,7 +832,7 @@ export async function POST(request: Request) {
 
                             // P3-OBSERVABILITY: Record Tool Usage
                             if (sessionId) {
-                                const isSuccess = res && res.success !== false; // assume success unless explicit false
+                                const isSuccess = !toolFailed && res && res.success !== false;
                                 sessionMetricStore.recordToolUsage(sessionId, call.name, isSuccess, elapsedMs);
                             }
 
@@ -806,10 +846,13 @@ export async function POST(request: Request) {
                             // Mark tool as completed to prevent duplicate execution
                             completedTools.add(toolKey);
 
+                            // Format response so Gemini knows about tool failures
                             toolResults.push({
                                 functionResponse: {
                                     name: call.name,
-                                    response: res
+                                    response: toolFailed
+                                        ? { error: res.error, success: false }
+                                        : res
                                 }
                             });
                         }
@@ -834,7 +877,7 @@ export async function POST(request: Request) {
                         appliedContext
                     });
 
-                    controller.close();
+                    safeClose();
                 } catch (error) {
                     console.error('💥 Stream Route Error:', error);
                     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -851,11 +894,11 @@ export async function POST(request: Request) {
                         if (sessionId) {
                             sessionMetricStore.recordError(sessionId, `Recovered from ${errorMessage}`);
                         }
-                        controller.close();
+                        safeClose();
                         return;
                     }
 
-                    // Check if error is transient and we haven't exceeded retry limit
+                    // Check if error is transientand we haven't exceeded retry limit
                     if (isTransientError(error) && retryCount < RETRY_CONFIG.maxRetries) {
                         retryCount++;
                         const backoffMs = Math.min(
@@ -890,7 +933,7 @@ export async function POST(request: Request) {
                     if (sessionId) {
                         sessionMetricStore.recordError(sessionId, errorMessage);
                     }
-                    controller.close();
+                    safeClose();
                 }
             };
 

@@ -123,7 +123,7 @@ async function executeAction(actionId: string, args: any): Promise<{ success: bo
         // Hydrate workspace files so skills have access to the user's file context
         let workspaceFiles: Array<{ id: string; name: string; type: string; storagePath?: string }> = [];
         try {
-            const files = await prisma.file.findMany({
+            const files = await prisma.workspaceFile.findMany({
                 where: { userId },
                 select: { id: true, name: true, type: true, storagePath: true },
                 take: 100,
@@ -4159,12 +4159,23 @@ export async function processAgentJob(jobId: string) {
         }
 
         // Shared context for tool execution
+        let workerWorkspaceFiles: Array<{ id: string; name: string; type: string; storagePath?: string }> = [];
+        try {
+            const wf = await prisma.workspaceFile.findMany({
+                where: { userId: job.userId },
+                select: { id: true, name: true, type: true, storagePath: true },
+                take: 100,
+                orderBy: { updatedAt: 'desc' }
+            });
+            workerWorkspaceFiles = wf.map(f => ({ id: f.id, name: f.name, type: f.type, storagePath: f.storagePath ?? undefined }));
+        } catch { /* DB unavailable */ }
         const skillContext = {
             userId: job.userId,
             sessionId: job.sessionId || undefined,
             fileIds: payload?.fileIds || [],
             query: payload?.query || '',
-            activeRepoApp // Add to context
+            activeRepoApp,
+            workspaceFiles: workerWorkspaceFiles
         };
 
 
